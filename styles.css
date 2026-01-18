@@ -4,6 +4,7 @@
 body {
     font-family: 'Prompt', sans-serif;
     touch-action: pan-y; /* ป้องกันการเลื่อนหน้าจอแนวขวางในบางอุปกรณ์ */
+	overscroll-behavior-y: none; /* เปลี่ยนจาก contain เป็น none */
 }
 
 /* ซ่อนปุ่มลูกศรขึ้นลงใน Input Type Number */

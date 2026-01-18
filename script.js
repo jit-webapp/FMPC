@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v7.6.9';
+	const APP_VERSION = 'v7.7.2';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -2377,6 +2377,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 showPage('page-home', false);
             }
         });
+		
+		// =======================================================
+		// ป้องกันการรีเฟรช (Prevent Refresh Logic)
+		// =======================================================
+		
+		// 1. ดักจับปุ่ม F5 และ Ctrl+R (สำหรับ Desktop)
+		document.addEventListener('keydown', (e) => {
+			if (
+				(e.key === 'F5') || 
+				(e.ctrlKey && e.key === 'r') || 
+				(e.metaKey && e.key === 'r')
+			) {
+				e.preventDefault();
+				// อาจจะแสดง Toast แจ้งเตือนแทน
+				const Toast = Swal.mixin({
+					toast: true, position: "top-end", showConfirmButton: false, timer: 2000,
+					customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
+					background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
+				});
+				Toast.fire({ icon: "warning", title: "ระบบป้องกันการรีเฟรชหน้าจอ" });
+			}
+		});
+		
+		// 2. แจ้งเตือนเมื่อพยายามจะปิดหรือรีเฟรช (Browser Confirmation)
+		// หมายเหตุ: Browser สมัยใหม่จะบังคับให้แสดงข้อความมาตรฐานของ Browser เท่านั้น เปลี่ยนข้อความเองไม่ได้
+		window.addEventListener('beforeunload', (e) => {
+			// เช็คว่ามี Modal หรือ Form เปิดค้างอยู่ไหม ถ้ามีให้เตือน
+			const isFormOpen = !document.getElementById('form-modal').classList.contains('hidden');
+			const isRecFormOpen = !document.getElementById('recurring-form-modal').classList.contains('hidden');
+			
+			if (isFormOpen || isRecFormOpen) {
+				e.preventDefault();
+				e.returnValue = ''; // จำเป็นสำหรับ Chrome
+				return '';
+			}
+		});
 		
 		// [เพิ่มใหม่] --- Biometric Buttons ---
         // 1. ปุ่มตั้งค่าในหน้า Settings
