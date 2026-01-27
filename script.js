@@ -1,15 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v7.7.9';
-	
-	const savedCustomColor = localStorage.getItem('custom-primary-color');
-    if (savedCustomColor) {
-        applyCustomColor(savedCustomColor);
-        if(document.getElementById('customColorPicker')) {
-            document.getElementById('customColorPicker').value = savedCustomColor;
-        }
-    }
+	const APP_VERSION = 'v7.7.7';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -74,10 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ********** NEW DARK MODE VARIABLE **********
     const DARK_MODE_CONFIG_KEY = 'isDarkMode'; 
     // *********************************************
-	
-    // *********************************************	
-	const THEME_CONFIG_KEY = 'appTheme';
-	// *********************************************
 	
 	// +++ เพิ่มส่วนนี้ +++
     const AUTO_CONFIRM_CONFIG_KEY = 'autoConfirmPassword';
@@ -865,10 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const darkModeConfig = await dbGet(STORE_CONFIG, DARK_MODE_CONFIG_KEY);
             state.isDarkMode = darkModeConfig ? darkModeConfig.value : false;
-			
-			const themeConfig = await dbGet(STORE_CONFIG, THEME_CONFIG_KEY);
-			state.currentTheme = themeConfig ? themeConfig.value : 'purple';
-			applyTheme(state.currentTheme);
 
             const autoConfirmConfig = await dbGet(STORE_CONFIG, AUTO_CONFIRM_CONFIG_KEY);
             state.autoConfirmPassword = autoConfirmConfig ? autoConfirmConfig.value : false;
@@ -1209,9 +1193,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		function onAppStart() {
 			const getEl = (id) => document.getElementById(id);
-			getEl('nav-home').classList.add('text-primary-600');
+			getEl('nav-home').classList.add('text-purple-600');
 			getEl('nav-home').classList.remove('text-gray-600');
-			getEl('nav-home-mobile').classList.add('text-primary-600'); 
+			getEl('nav-home-mobile').classList.add('text-purple-600'); 
 			getEl('nav-home-mobile').classList.remove('text-gray-600');
 
 			getEl('shared-controls-header').style.display = 'flex';
@@ -1423,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				Swal.fire.defaults = {
 					customClass: { 
 						popup: 'swal2-popup', 
-						confirmButton: 'bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-xl shadow-lg text-lg',
+						confirmButton: 'bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-xl shadow-lg text-lg',
 						cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-xl text-lg'
 					}, 
 					background: '#1a1a1a', 
@@ -1454,49 +1438,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				myCalendar.destroy(); 
 				myCalendar = null;
 			}
-		}
-		
-		// ฟังก์ชันเปลี่ยนธีม
-		function applyTheme(themeName) {
-			const html = document.documentElement;
-			const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-			
-			// ตั้งค่า attribute data-theme
-			if (themeName && themeName !== 'purple') {
-				html.setAttribute('data-theme', themeName);
-			} else {
-				html.removeAttribute('data-theme'); // ค่าเริ่มต้น (สีม่วง)
-			}
-
-			// อัปเดตสถานะปุ่มเลือก (UI Active State)
-			document.querySelectorAll('.theme-btn').forEach(btn => {
-				if (btn.dataset.theme === themeName) {
-					btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-400');
-					// เพิ่มเครื่องหมายถูก
-					btn.innerHTML = '<i class="fa-solid fa-check text-white text-xs"></i>';
-				} else {
-					btn.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400');
-					btn.innerHTML = '';
-				}
-			});
-			
-			// เปลี่ยนสี Meta Tag (สำหรับ Mobile Browser Header)
-			// mapping สีหลักของแต่ละธีม
-			const themeColors = {
-				'purple': '#9333ea',
-				'blue': '#2563eb',
-				'green': '#16a34a',
-				'orange': '#ea580c',
-				'pink': '#db2777',
-				'teal': '#0d9488'
-			};
-			
-			if (metaThemeColor) {
-				metaThemeColor.setAttribute('content', themeColors[themeName] || '#9333ea');
-			}
-			
-			// บันทึกค่าลง State
-			state.currentTheme = themeName;
 		}
 
 		function setupDarkModeListener() {
@@ -2110,10 +2051,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listCurrentPage = 1;
 
             document.querySelectorAll('#list-filter-buttons .filter-btn').forEach(btn => {
-                btn.classList.remove('bg-primary-500', 'text-white');
+                btn.classList.remove('bg-purple-500', 'text-white');
                 btn.classList.add('bg-gray-200', 'text-gray-700');
                 if (btn.dataset.filter === type) {
-                    btn.classList.add('bg-primary-500', 'text-white');
+                    btn.classList.add('bg-purple-500', 'text-white');
                     btn.classList.remove('bg-gray-200', 'text-gray-700');
                 }
             });
@@ -2371,10 +2312,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 4. อัปเดต UI ปุ่มกรอง
                     document.querySelectorAll('#list-filter-buttons .filter-btn').forEach(btn => {
-                        btn.classList.remove('bg-primary-500', 'text-white');
+                        btn.classList.remove('bg-purple-500', 'text-white');
                         btn.classList.add('bg-gray-200', 'text-gray-700');
                         if (btn.dataset.filter === 'expense') {
-                            btn.classList.add('bg-primary-500', 'text-white');
+                            btn.classList.add('bg-purple-500', 'text-white');
                             btn.classList.remove('bg-gray-200', 'text-gray-700');
                         }
                     });
@@ -2522,44 +2463,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 		
-		// ปุ่ม Reset Data
-		const btnResetData = document.getElementById('btn-reset-data');
-		if (btnResetData) {
-			btnResetData.addEventListener('click', confirmResetData);
-		}
-		
-		// -------------------------------------------------------
-		// >>> วางโค้ดข้อ 3.4 ตรงนี้ (ก่อนปีกกาปิดฟังก์ชัน) <<<
-		// -------------------------------------------------------
-		const themeContainer = document.getElementById('theme-selector-container');
-		if (themeContainer) {
-			themeContainer.addEventListener('click', async (e) => {
-				const btn = e.target.closest('.theme-btn');
-				if (btn) {
-					const selectedTheme = btn.dataset.theme;
-					applyTheme(selectedTheme);
-					
-					try {
-						await dbPut(STORE_CONFIG, { key: THEME_CONFIG_KEY, value: selectedTheme });
-						
-						const Toast = Swal.mixin({
-							toast: true, position: "top-end", showConfirmButton: false, timer: 1000,
-							customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-							background: state.isDarkMode ? '#1a1a1a' : '#fff',
-							color: state.isDarkMode ? '#e5e7eb' : '#545454',
-						});
-						Toast.fire({ icon: "success", title: "เปลี่ยนธีมเรียบร้อย" });
-						
-						if (currentPage === 'home') renderAll();
-						if (currentPage === 'list') renderListPage();
-
-					} catch (err) {
-						console.error("Failed to save theme:", err);
-					}
-				}
-			});
-		}
-		
     }
 
     function setupSwipeNavigation() {
@@ -2685,7 +2588,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
             navButtons.forEach(btn => {
                 if(btn) { // เพิ่ม check null กัน error
-                    btn.classList.remove('text-primary-600');
+                    btn.classList.remove('text-purple-600');
                     btn.classList.add('text-gray-600');
                 }
             });
@@ -2701,18 +2604,18 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             Object.values(mobileNavButtons).forEach(btn => {
                 if(btn) {
-                    btn.classList.remove('text-primary-600');
+                    btn.classList.remove('text-purple-600');
                     btn.classList.add('text-gray-600');
                 }
             });
             const currentNavEl = getEl('nav-' + currentPage);
             if (currentNavEl) {
-                currentNavEl.classList.add('text-primary-600');
+                currentNavEl.classList.add('text-purple-600');
                 currentNavEl.classList.remove('text-gray-600');
             }
             const currentMobileNavEl = mobileNavButtons[pageId];
             if (currentMobileNavEl) {
-                currentMobileNavEl.classList.add('text-primary-600');
+                currentMobileNavEl.classList.add('text-purple-600');
                 currentMobileNavEl.classList.remove('text-gray-600');
             }
 
@@ -2906,7 +2809,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sortedAccounts.length === 0) { 
             container.innerHTML = `<p class="text-gray-500 col-span-full text-center">ยังไม่มีบัญชี
-            <button id="nav-settings-shortcut" class="text-primary-600 hover:underline">สร้างบัญชีใหม่ในหน้าตั้งค่า</button>
+            <button id="nav-settings-shortcut" class="text-purple-600 hover:underline">สร้างบัญชีใหม่ในหน้าตั้งค่า</button>
             </p>`;
             document.getElementById('nav-settings-shortcut').addEventListener('click', () => showPage('page-accounts'));
             return;
@@ -2923,7 +2826,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardHtml = `
                 <div class="bg-gray-50 p-3 rounded-xl shadow-md border border-gray-200 compact-account-card cursor-pointer" data-id="${acc.id}">
                     <div class="flex items-center gap-3">
-                        <i class="fa-solid ${currentIcon} text-primary-600 text-lg"></i>
+                        <i class="fa-solid ${currentIcon} text-purple-600 text-lg"></i>
                         <h3 class="text-base font-semibold text-gray-800 truncate">${escapeHTML(acc.name)}</h3>
                     </div>
                     <div class="w-full mt-2">
@@ -3113,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ----------------------------------------------------------------
         
         const receiptIcon = tx.receiptBase64 ? 
-            `<button type="button" class="view-receipt-icon text-primary-500 hover:text-primary-700 ml-2 z-10 relative" data-base64="${tx.receiptBase64}" title="คลิกเพื่อดูรูป">
+            `<button type="button" class="view-receipt-icon text-purple-500 hover:text-purple-700 ml-2 z-10 relative" data-base64="${tx.receiptBase64}" title="คลิกเพื่อดูรูป">
                 <i class="fa-solid fa-receipt"></i>
             </button>` : '';
 
@@ -3129,7 +3032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             name = escapeHTML(tx.name) + receiptIcon + futureBadge;
             category = `<span class="block">${escapeHTML(tx.category)}</span>
-                        <span class="text-sm text-primary-600">${fromAccName}</span>`;
+                        <span class="text-sm text-purple-600">${fromAccName}</span>`;
             amount = formatCurrency(tx.amount);
             
             if (tx.type === 'income') {
@@ -3735,7 +3638,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 					state.calendarCurrentDate = `${yyyyMM}-01`;
 				},
-				dayCellClassNames: 'hover:bg-primary-50 cursor-pointer', 
+				dayCellClassNames: 'hover:bg-purple-50 cursor-pointer', 
 				eventClassNames: 'hover:opacity-80'
 			});
 			myCalendar.render();
@@ -3792,7 +3695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="text-xl font-bold text-gray-800">สรุปวันที่ ${new Date(date).toLocaleDateString('th-TH', {day: 'numeric', month: 'long', year: 'numeric'})}</h3>
             </div>
             <div class="flex justify-end w-full mb-2">
-                 <button id="cal-add-tx-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition duration-300 flex items-center gap-2 text-sm">
+                 <button id="cal-add-tx-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition duration-300 flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-plus"></i> เพิ่มธุรกรรมใหม่
                  </button>
             </div>
@@ -3811,7 +3714,7 @@ document.addEventListener('DOMContentLoaded', () => {
             txsOnDay.forEach(tx => {
                 let txHtml = '';
                 const receiptIconHtml = tx.receiptBase64 ? 
-                    `<button type="button" class="view-receipt-btn text-primary-500 hover:text-primary-700 ml-2" data-base64="${tx.receiptBase64}">
+                    `<button type="button" class="view-receipt-btn text-purple-500 hover:text-purple-700 ml-2" data-base64="${tx.receiptBase64}">
                         <i class="fa-solid fa-receipt"></i>
                     </button>` : '';
 
@@ -4132,23 +4035,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = `
                 <li class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
                     <div class="flex items-center gap-3">
-                        <i class="fa-solid ${currentIcon} text-primary-600 text-xl"></i>
+                        <i class="fa-solid ${currentIcon} text-purple-600 text-xl"></i>
                         <div>
                             <span class="text-lg text-gray-700 font-medium">${escapeHTML(acc.name)}</span>
                             <span class="block text-sm text-gray-500 ${balanceClass} font-bold">ยอดปัจจุบัน: ${formatCurrency(balance)}</span>
                         </div>
                     </div>
                     <div class="flex-shrink-0 flex items-center">
-                        <button class="edit-icon-btn text-primary-500 hover:text-primary-700 p-3" data-id="${acc.id}">
+                        <button class="edit-icon-btn text-purple-500 hover:text-purple-700 p-3" data-id="${acc.id}">
                             <i class="fa-solid fa-paintbrush"></i>
                         </button>
                         <button 
-                            class="move-account-btn text-gray-500 hover:text-primary-600 p-3 ${isFirst ? 'opacity-20 cursor-not-allowed' : ''}" 
+                            class="move-account-btn text-gray-500 hover:text-purple-600 p-3 ${isFirst ? 'opacity-20 cursor-not-allowed' : ''}" 
                             data-id="${acc.id}" data-direction="up" ${isFirst ? 'disabled' : ''}>
                             <i class="fa-solid fa-arrow-up"></i>
                         </button>
                         <button 
-                            class="move-account-btn text-gray-500 hover:text-primary-600 p-3 ${isLast ? 'opacity-20 cursor-not-allowed' : ''}" 
+                            class="move-account-btn text-gray-500 hover:text-purple-600 p-3 ${isLast ? 'opacity-20 cursor-not-allowed' : ''}" 
                             data-id="${acc.id}" data-direction="down" ${isLast ? 'disabled' : ''}>
                             <i class="fa-solid fa-arrow-down"></i>
                         </button>
@@ -4260,7 +4163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         const prevDisabled = currentPage === 1;
-        html += `<button class="px-4 py-2 rounded-lg font-medium border border-gray-300 shadow-sm ${prevDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-primary-100 text-primary-600'}" 
+        html += `<button class="px-4 py-2 rounded-lg font-medium border border-gray-300 shadow-sm ${prevDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-purple-100 text-purple-600'}" 
                     data-page="${currentPage - 1}" ${prevDisabled ? 'disabled' : ''}>
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>`;
@@ -4268,7 +4171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     หน้า ${currentPage} / ${totalPages}
                 </span>`;
         const nextDisabled = currentPage === totalPages;
-        html += `<button class="px-4 py-2 rounded-lg font-medium border border-gray-300 shadow-sm ${nextDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-primary-100 text-primary-600'}" 
+        html += `<button class="px-4 py-2 rounded-lg font-medium border border-gray-300 shadow-sm ${nextDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-purple-100 text-purple-600'}" 
                     data-page="${currentPage + 1}" ${nextDisabled ? 'disabled' : ''}>
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>`;
@@ -4812,9 +4715,9 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredIcons.forEach(iconClass => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'icon-select-btn p-3 rounded-xl hover:bg-primary-100 transition duration-150';
+            button.className = 'icon-select-btn p-3 rounded-xl hover:bg-purple-100 transition duration-150';
             button.setAttribute('data-icon', iconClass);
-            button.innerHTML = `<i class="fa-solid ${iconClass} text-2xl text-primary-600"></i>`;
+            button.innerHTML = `<i class="fa-solid ${iconClass} text-2xl text-purple-600"></i>`;
             container.appendChild(button);
         });
     }
@@ -4829,7 +4732,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getEl('edit-icon-account-id').value = accountId;
         getEl('icon-acc-name').textContent = escapeHTML(acc.name);
-        getEl('icon-preview').className = `fa-solid ${currentIcon} text-primary-600 text-2xl ml-2`;
+        getEl('icon-preview').className = `fa-solid ${currentIcon} text-purple-600 text-2xl ml-2`;
         getEl('icon-preview').setAttribute('data-current-icon', currentIcon);
         getEl('icon-search').value = '';
         
@@ -5012,7 +4915,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const balanceClass = balanceVal >= 0 ? 'text-blue-700' : 'text-red-700';
             
             const receiptIconHtml = row.receiptBase64 ? 
-                `<button type="button" class="view-receipt-icon text-primary-500 hover:text-primary-700 ml-2 z-10 relative" data-base64="${row.receiptBase64}" title="คลิกเพื่อดูรูป">
+                `<button type="button" class="view-receipt-icon text-purple-500 hover:text-purple-700 ml-2 z-10 relative" data-base64="${row.receiptBase64}" title="คลิกเพื่อดูรูป">
                     <i class="fa-solid fa-receipt"></i>
                 </button>` : '';
 
@@ -5409,10 +5312,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFilter(buttonEl) {
         document.querySelectorAll('#list-filter-buttons .filter-btn').forEach(btn => {
-            btn.classList.remove('bg-primary-500', 'text-white');
+            btn.classList.remove('bg-purple-500', 'text-white');
             btn.classList.add('bg-gray-200', 'text-gray-700');
         });
-        buttonEl.classList.add('bg-primary-500', 'text-white');
+        buttonEl.classList.add('bg-purple-500', 'text-white');
         buttonEl.classList.remove('bg-gray-200', 'text-gray-700');
         
         state.filterType = buttonEl.dataset.filter;
@@ -5422,10 +5325,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleHomeFilter(buttonEl) {
         document.querySelectorAll('#home-filter-buttons .home-filter-btn').forEach(btn => {
-            btn.classList.remove('bg-primary-500', 'text-white');
+            btn.classList.remove('bg-purple-500', 'text-white');
             btn.classList.add('bg-gray-200', 'text-gray-700');
         });
-        buttonEl.classList.add('bg-primary-500', 'text-white');
+        buttonEl.classList.add('bg-purple-500', 'text-white');
         buttonEl.classList.remove('bg-gray-200', 'text-gray-700');
         
         state.homeFilterType = buttonEl.dataset.filter;
@@ -5538,7 +5441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getEl('form-add-account').reset();
             getEl('input-account-balance').value = 0;
             getEl('acc-calc-preview').textContent = '';
-            Swal.fire('เพิ่มสำเร็จ', `บัญชี <b class="text-primary-600">${escapeHTML(name)}</b> ถูกเพิ่มเรียบร้อยแล้ว`, 'success');
+            Swal.fire('เพิ่มสำเร็จ', `บัญชี <b class="text-purple-600">${escapeHTML(name)}</b> ถูกเพิ่มเรียบร้อยแล้ว`, 'success');
 
         } catch (err) {
             console.error("Failed to add account:", err);
@@ -5678,7 +5581,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         Swal.fire({
             title: 'ยืนยันการลบ?',
-            html: `คุณต้องการลบบัญชี: <b class="text-primary-600">${escapeHTML(acc.name)}</b> ใช่หรือไม่?<br><small>(จะลบได้ก็ต่อเมื่อไม่มีธุรกรรมใดๆ อ้างอิงถึง)</small>`,
+            html: `คุณต้องการลบบัญชี: <b class="text-purple-600">${escapeHTML(acc.name)}</b> ใช่หรือไม่?<br><small>(จะลบได้ก็ต่อเมื่อไม่มีธุรกรรมใดๆ อ้างอิงถึง)</small>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -5742,7 +5645,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Swal.fire({
             title: 'ยืนยันการลบ?',
-            html: `คุณต้องการลบหมวดหมู่: <b class="text-primary-600">${escapeHTML(name)}</b> ใช่หรือไม่?`,
+            html: `คุณต้องการลบหมวดหมู่: <b class="text-purple-600">${escapeHTML(name)}</b> ใช่หรือไม่?`,
             icon: 'warning',
             showCancelButton: true,
              confirmButtonColor: '#d33',
@@ -5802,7 +5705,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Swal.fire({
             title: 'ยืนยันการลบ?',
-            html: `คุณต้องการลบรายการที่ใช้บ่อย: <b class="text-primary-600">${escapeHTML(name)}</b> ใช่หรือไม่?`,
+            html: `คุณต้องการลบรายการที่ใช้บ่อย: <b class="text-purple-600">${escapeHTML(name)}</b> ใช่หรือไม่?`,
             icon: 'warning',
             showCancelButton: true,
              confirmButtonColor: '#d33',
@@ -6204,7 +6107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Swal.fire({
             title: 'ยืนยันการนำเข้าข้อมูล?',
-            html: `คุณกำลังจะนำเข้าไฟล์: <b class="text-primary-600">${escapeHTML(file.name)}</b><br>การนำเข้าข้อมูลนี้จะเขียนทับ<br>รหัสผ่านและข้อมูลปัจจุบันของคุณทั้งหมด`,
+            html: `คุณกำลังจะนำเข้าไฟล์: <b class="text-purple-600">${escapeHTML(file.name)}</b><br>การนำเข้าข้อมูลนี้จะเขียนทับ<br>รหัสผ่านและข้อมูลปัจจุบันของคุณทั้งหมด`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#22c55e',
@@ -6676,32 +6579,32 @@ document.addEventListener('DOMContentLoaded', () => {
                         case 'cat-add':
                             actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-green-600">เพิ่ม</strong> หมวดหมู่นี้ (ซึ่งจะลบออก):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-green-600">เพิ่ม</strong> หมวดหมู่นี้:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.name)}</b>`;
                             break;
                         case 'cat-delete':
                             actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-red-600">ลบ</strong> หมวดหมู่นี้ (ซึ่งจะเพิ่มกลับมา):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-red-600">ลบ</strong> หมวดหมู่นี้:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.name)}</b>`;
                             break;
                         case 'item-add':
                             actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-green-600">เพิ่ม</strong> รายการที่ใช้บ่อย (ซึ่งจะลบออก):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-green-600">เพิ่ม</strong> รายการที่ใช้บ่อย:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.name)}</b>`;
                             break;
                         case 'item-delete':
                             actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-red-600">ลบ</strong> รายการที่ใช้บ่อย (ซึ่งจะเพิ่มกลับมา):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-red-600">ลบ</strong> รายการที่ใช้บ่อย:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.name)}</b>`;
                             break;
                         case 'account-add':
                             actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-green-600">เพิ่ม</strong> บัญชีนี้ (ซึ่งจะลบออก):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-green-600">เพิ่ม</strong> บัญชีนี้:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.data.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.data.name)}</b>`;
                             break;
                         case 'account-delete':
                              actionDescription = isUndo ?
                             'คุณกำลังจะย้อนกลับการ <strong class="text-red-600">ลบ</strong> บัญชีนี้ (ซึ่งจะเพิ่มกลับมา):' : 'คุณกำลังจะทำซ้ำการ <strong class="text-red-600">ลบ</strong> บัญชีนี้:';
-                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-primary-600 text-lg">${escapeHTML(action.data.name)}</b>`;
+                            htmlContent = `<div class="mb-2">${actionDescription}</div><b class="text-purple-600 text-lg">${escapeHTML(action.data.name)}</b>`;
                             break;
                         case 'account-edit':
                             actionDescription = isUndo ?
@@ -6713,11 +6616,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="text-center w-full max-w-md mx-auto space-y-3">
                                  <div>
                                         <strong class="text-sm font-medium text-gray-700">จาก:</strong>
-                                        <div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-primary-600 text-lg">${escapeHTML(oldAccName)}</b></div>
+                                        <div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(oldAccName)}</b></div>
                                     </div>
                                     <div>
                                  <strong class="text-sm font-medium text-gray-700">เป็น:</strong>
-                                        <div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-primary-600 text-lg">${escapeHTML(newAccName)}</b></div>
+                                        <div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(newAccName)}</b></div>
                                  </div>
                                 </div>
                             `;
@@ -6730,7 +6633,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             htmlContent = `
                                 <div class="mb-3">${actionDescription}</div>
                                 <div class="text-center w-full max-w-md mx-auto space-y-3">
-                                    <p>สลับลำดับระหว่าง <b class="text-primary-600">${escapeHTML(currentAcc ? currentAcc.name : 'N/A')}</b> และ <b class="text-primary-600">${escapeHTML(targetAcc ? targetAcc.name : 'N/A')}</b></p>
+                                    <p>สลับลำดับระหว่าง <b class="text-purple-600">${escapeHTML(currentAcc ? currentAcc.name : 'N/A')}</b> และ <b class="text-purple-600">${escapeHTML(targetAcc ? targetAcc.name : 'N/A')}</b></p>
                                 </div>
                             `;
                             break;
@@ -7827,48 +7730,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 					return false;
 				}
-				
-				// 1. ฟังก์ชันแปลง HEX เป็น RGB (เพื่อส่งให้ตัวแปร CSS)
-				function hexToRgb(hex) {
-					const r = parseInt(hex.slice(1, 3), 16);
-					const g = parseInt(hex.slice(3, 5), 16);
-					const b = parseInt(hex.slice(5, 7), 16);
-					return `${r} ${g} ${b}`;
-				}
-
-				// 2. ฟังก์ชันคำนวณความสว่าง/เข้มของสี
-				function adjustColor(hex, percent) {
-					const num = parseInt(hex.replace("#",""), 16),
-					amt = Math.round(2.55 * percent),
-					R = (num >> 16) + amt,
-					G = (num >> 8 & 0x00FF) + amt,
-					B = (num & 0x0000FF) + amt;
-					return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
-				}
-
-				// 3. ฟังก์ชันหลักสำหรับเปลี่ยนสี
-				window.applyCustomColor = function(hexColor) {
-					const root = document.documentElement;
-					
-					// ลบธีมเก่า (ถ้ามี) เพื่อใช้สีที่เราเลือกเอง
-					root.removeAttribute('data-theme');
-					
-					// สร้างเฉดสี 50 - 900
-					const shades = {
-						50: 95, 100: 90, 200: 75, 300: 50, 400: 25,
-						500: 0, 
-						600: -15, 700: -30, 800: -45, 900: -60
-					};
-
-					Object.entries(shades).forEach(([weight, percent]) => {
-						const adjustedHex = adjustColor(hexColor, percent);
-						root.style.setProperty(`--primary-${weight}`, hexToRgb(adjustedHex));
-					});
-
-					// บันทึกค่าสีลงเครื่อง
-					localStorage.setItem('custom-primary-color', hexColor);
-					localStorage.removeItem('user-theme'); // ล้างค่าธีมมาตรฐาน
-				};
 
             // Start the application
             initApp();
