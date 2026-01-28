@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.1.8';
+	const APP_VERSION = 'v8.1.9';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
