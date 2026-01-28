@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.1.9';
+	const APP_VERSION = 'v8.2';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -6819,8 +6819,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     html: html,
                     icon: 'warning',
                     showCancelButton: true,
-          
-                     confirmButtonColor: '#3085d6',
+                    confirmButtonColor: '#3085d6',
                     cancelButtonColor: '#d33',
                     confirmButtonText: 'ใช่, ย้อนกลับ',
                     cancelButtonText: 'ยกเลิก'
@@ -6838,18 +6837,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         case 'tx-add':
                             await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
                             state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
+                            // ✅ แจ้งเตือน: ย้อนกลับการเพิ่ม = ลบรายการ
+                            sendLineAlert(confirmedAction.data, 'delete'); 
                             redoAction = { type: 'tx-add', data: confirmedAction.data };
                             break;
                         case 'tx-delete':
                             await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
                             state.transactions.push(confirmedAction.data);
+                            // ✅ แจ้งเตือน: ย้อนกลับการลบ = เพิ่มรายการคืน
+                            sendLineAlert(confirmedAction.data, 'add');
                             redoAction = { type: 'tx-delete', data: confirmedAction.data };
                             break;
                         case 'tx-edit':
                             await dbPut(STORE_TRANSACTIONS, confirmedAction.oldData);
                             state.transactions = state.transactions.map(tx => tx.id === confirmedAction.oldData.id ? confirmedAction.oldData : tx);
+                            // ✅ แจ้งเตือน: ย้อนกลับการแก้ไข = แก้ไขกลับเป็นค่าเดิม
+                            sendLineAlert(confirmedAction.oldData, 'edit');
                             redoAction = confirmedAction;
                             break;
+                        // ... (เคสอื่นๆ cat-add, item-add ฯลฯ ปล่อยไว้เหมือนเดิม เพราะเราไม่แจ้งเตือนพวกนี้) ...
                         case 'cat-add':
                             state.categories[confirmedAction.catType] = state.categories[confirmedAction.catType].filter(cat => cat !== confirmedAction.name);
                             await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
@@ -6870,8 +6876,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             state.frequentItems.push(confirmedAction.name);
                             redoAction = { type: 'item-delete', name: confirmedAction.name };
                             break;
-
-                        // +++ ADDED CASES +++
                         case 'account-add':
                             await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
                             state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
@@ -6902,10 +6906,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (acc.id === targetAcc.id) return targetAcc;
                                     return acc;
                                 });
-                                redoAction = confirmedAction; // Redo is the original move action
+                                redoAction = confirmedAction;
                             }
                             break;
-                        // +++ END ADDED CASES +++
                     }
 
                     if (redoAction) {
@@ -6919,7 +6922,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 updateUndoRedoButtons();
                 await refreshAllUI();
-				await refreshAccountDetailModalIfOpen();
+                await refreshAccountDetailModalIfOpen();
             }
 			
 			// ============================================
@@ -6980,8 +6983,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 
-			// +++ MODIFIED: handleRedo +++
-            async function handleRedo() {
+			async function handleRedo() {
                 if (!lastRedoAction) return;
                 const action = lastRedoAction;
 
@@ -6991,8 +6993,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     html: html,
                     icon: 'warning',
                     showCancelButton: true,
-          
-                     confirmButtonColor: '#3085d6',
+                    confirmButtonColor: '#3085d6',
                     cancelButtonColor: '#d33',
                     confirmButtonText: 'ใช่, ทำซ้ำ',
                     cancelButtonText: 'ยกเลิก'
@@ -7010,18 +7011,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         case 'tx-add':
                             await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
                             state.transactions.push(confirmedAction.data);
+                            // ✅ แจ้งเตือน: ทำซ้ำการเพิ่ม = เพิ่มรายการใหม่
+                            sendLineAlert(confirmedAction.data, 'add');
                             undoAction = { type: 'tx-delete', data: confirmedAction.data };
                             break;
                         case 'tx-delete':
                             await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
                             state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
+                            // ✅ แจ้งเตือน: ทำซ้ำการลบ = ลบรายการอีกครั้ง
+                            sendLineAlert(confirmedAction.data, 'delete');
                             undoAction = { type: 'tx-add', data: confirmedAction.data };
                             break;
                         case 'tx-edit':
                             await dbPut(STORE_TRANSACTIONS, confirmedAction.newData);
                             state.transactions = state.transactions.map(tx => tx.id === confirmedAction.newData.id ? confirmedAction.newData : tx);
+                            // ✅ แจ้งเตือน: ทำซ้ำการแก้ไข = แก้ไขรายการอีกครั้ง
+                            sendLineAlert(confirmedAction.newData, 'edit');
                             undoAction = confirmedAction;
                             break;
+                        // ... (เคสอื่นๆ cat, item, account ปล่อยไว้เหมือนเดิม) ...
                         case 'cat-add':
                             state.categories[confirmedAction.catType].push(confirmedAction.name);
                             await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
@@ -7042,57 +7050,47 @@ document.addEventListener('DOMContentLoaded', () => {
                             state.frequentItems = state.frequentItems.filter(item => item !== confirmedAction.name);
                             undoAction = { type: 'item-add', name: confirmedAction.name };
                             break;
-                            
-                        // +++ ADDED/FIXED CASES +++
-                        case 'account-add': // Redo an "add"
+                        case 'account-add':
                             await dbPut(STORE_ACCOUNTS, confirmedAction.data);
                             state.accounts.push(confirmedAction.data);
-                            undoAction = { type: 'account-delete', data: confirmedAction.data }; // This sets the *next* undo action
+                            undoAction = { type: 'account-delete', data: confirmedAction.data };
                             break;
-                        case 'account-delete': // Redo a "delete"
+                        case 'account-delete':
                             await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
                             state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
-                            undoAction = { type: 'account-add', data: confirmedAction.data }; // This sets the *next* undo action
+                            undoAction = { type: 'account-add', data: confirmedAction.data };
                             break;
-                        case 'account-edit': // Redo an "edit"
+                        case 'account-edit':
                             await dbPut(STORE_ACCOUNTS, confirmedAction.newData);
                             state.accounts = state.accounts.map(acc => acc.id === confirmedAction.newData.id ? confirmedAction.newData : acc);
-                            undoAction = confirmedAction; // The undo action is the same edit object
+                            undoAction = confirmedAction;
                             break;
-                        case 'account-move': // Redo a "move"
+                        case 'account-move':
                             {
                                 const currentAcc = state.accounts.find(a => a.id === confirmedAction.currentAccountId);
                                 const targetAcc = state.accounts.find(a => a.id === confirmedAction.targetAccountId);
-                                
-                                // Redo: Apply the new order (which was the reverse of undo)
                                 currentAcc.displayOrder = confirmedAction.newCurrentOrder;
                                 targetAcc.displayOrder = confirmedAction.newTargetOrder;
-                                
                                 await Promise.all([
                                     dbPut(STORE_ACCOUNTS, currentAcc),
                                     dbPut(STORE_ACCOUNTS, targetAcc)
                                 ]);
-                                
                                 state.accounts = state.accounts.map(acc => {
                                     if (acc.id === currentAcc.id) return currentAcc;
                                     if (acc.id === targetAcc.id) return targetAcc;
                                     return acc;
                                 });
-                                
-                                // The new undo action should revert to the state before redo (the 'old' data)
                                 undoAction = {
                                     type: 'account-move',
                                     currentAccountId: confirmedAction.currentAccountId,
-                                    newCurrentOrder: confirmedAction.oldCurrentOrder, // Swap old and new for undo action data
+                                    newCurrentOrder: confirmedAction.oldCurrentOrder,
                                     oldCurrentOrder: confirmedAction.newCurrentOrder,
                                     targetAccountId: confirmedAction.targetAccountId,
                                     newTargetOrder: confirmedAction.oldTargetOrder,
                                     oldTargetOrder: confirmedAction.newTargetOrder
                                 };
-
                             }
                             break;
-                        // +++ END ADDED/FIXED CASES +++
                     }
 
                     if (undoAction) {
@@ -7106,7 +7104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 updateUndoRedoButtons();
                 await refreshAllUI();
-				await refreshAccountDetailModalIfOpen();
+                await refreshAccountDetailModalIfOpen();
             }
 
             function parseVoiceInput(text) {
@@ -7879,31 +7877,23 @@ document.addEventListener('DOMContentLoaded', () => {
 					return false;
 				}
 				
-				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันรองรับชื่อเล่น + หลายคน) ---
+				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันแสดงชื่อบัญชี) ---
 				async function sendLineAlert(transactionData, action = 'add') {
-					// 1. ดึงรายการ ID ทั้งหมดจากฐานข้อมูล
+					// 1. ดึงรายการ ID ทั้งหมด
 					let targetIds = [];
 					try {
 						const config = await dbGet(STORE_CONFIG, 'lineUserIds_List');
 						if (config && Array.isArray(config.value)) {
-							// *** จุดที่แก้ไข: ดึงเฉพาะ ID ออกมาจาก Object (ถ้ามีชื่อเล่น) ***
-							targetIds = config.value.map(item => {
-								// ถ้าเป็นข้อมูลเก่า (String) ให้ใช้เลย
-								// ถ้าเป็นข้อมูลใหม่ (Object {id, name}) ให้ดึงเฉพาะ .id
-								return (typeof item === 'string') ? item : item.id;
-							});
+							targetIds = config.value.map(item => (typeof item === 'string') ? item : item.id);
 						}
-					} catch (e) {
-						console.error("Error loading LINE IDs:", e);
-					}
+					} catch (e) { console.error(e); }
 
-					// ถ้าไม่มีผู้รับเลย ให้จบการทำงาน
 					if (targetIds.length === 0) return;
 
-					// 2. URL ของ Google Apps Script (ตรวจสอบให้แน่ใจว่าเป็นลิงก์ปัจจุบันของคุณ)
+					// 2. URL (อันเดิมของคุณ)
 					const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp6o2nI8VHen26WvvNO_Z3u0CI3EMHxkd7pxLFCzDVfoZjT-aqJrny9884hfIVbOe1Rg/exec'; 
 
-					// 3. เตรียมหัวข้อข้อความ
+					// 3. เตรียม Header
 					let headerText = '';
 					if (action === 'add') headerText = '✨ เพิ่มรายการใหม่';
 					else if (action === 'edit') headerText = '✏️ แก้ไขรายการ';
@@ -7912,6 +7902,18 @@ document.addEventListener('DOMContentLoaded', () => {
 					// 4. เตรียมรายละเอียด
 					const typeText = transactionData.type === 'income' ? '🟢 รายรับ' : (transactionData.type === 'expense' ? '🔴 รายจ่าย' : '🔵 โอนย้าย');
 					const amountText = Number(transactionData.amount).toLocaleString('th-TH');
+					
+					// --- 🏦 ส่วนดึงชื่อบัญชี (เหมือนเดิม) ---
+					let accountInfo = '';
+					if (transactionData.type === 'transfer') {
+						const fromAcc = state.accounts.find(a => a.id === transactionData.accountId);
+						const toAcc = state.accounts.find(a => a.id === transactionData.toAccountId);
+						accountInfo = `\n🏦 จาก: ${fromAcc ? fromAcc.name : 'ไม่ระบุ'}\n➡️ ไป: ${toAcc ? toAcc.name : 'ไม่ระบุ'}`;
+					} else {
+						const acc = state.accounts.find(a => a.id === transactionData.accountId);
+						const accLabel = transactionData.type === 'income' ? 'เข้าบัญชี' : 'จากบัญชี';
+						accountInfo = `\n🏦 ${accLabel}: ${acc ? acc.name : 'ไม่ระบุ'}`;
+					}
 					
 					let dateText = '-';
 					if (transactionData.date) {
@@ -7923,21 +7925,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 					const descText = transactionData.desc ? `\n📝 บันทึก: ${transactionData.desc}` : '';
 
-					// รวมข้อความ
-					const message = `${headerText}\n${typeText}: ${transactionData.name}\n💰 จำนวน: ${amountText} บาท\n📂 หมวดหมู่: ${transactionData.category || '-'}\n📅 วันที่: ${dateText}${descText}`;
+					// 🔥🔥🔥 แก้ตรงนี้: ย้าย ${accountInfo} ขึ้นไปอยู่ต่อจาก ${headerText} เลยครับ 🔥🔥🔥
+					const message = `${headerText}${accountInfo}\n${typeText}: ${transactionData.name}\n💰 จำนวน: ${amountText} บาท\n📂 หมวดหมู่: ${transactionData.category || '-'}\n📅 วันที่: ${dateText}${descText}`;
 
-					// 5. ส่งข้อมูลไปที่ Google Apps Script
+					// 5. ส่งข้อมูล
 					try {
 						await fetch(GAS_URL, {
 							method: 'POST',
 							mode: 'no-cors',
 							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({ 
-								userIds: targetIds,   // ส่งไปเฉพาะ Array ของ ID ['U1...', 'U2...']
-								message: message 
-							})
+							body: JSON.stringify({ userIds: targetIds, message: message })
 						});
-						console.log(`ส่ง LINE Alert หา ${targetIds.length} คน เรียบร้อย`);
+						console.log(`ส่ง LINE Alert เรียบร้อย`);
 					} catch (error) {
 						console.error('ส่ง LINE ไม่ผ่าน:', error);
 					}
