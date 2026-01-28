@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.1.6';
+	const APP_VERSION = 'v8.1.8';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -3973,7 +3973,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // หน้าที่: จัดการหน้าตั้งค่าทั่วไป (General Settings)
     // ส่วนจัดการบัญชี/หมวดหมู่ ย้ายไปที่ renderAccountsPage แล้ว
     // ============================================
-    function renderSettings() {
+    async function renderSettings() {
         const getEl = (id) => document.getElementById(id);
         
         // 1. ตั้งค่า Slider ขนาดตัวอักษร
@@ -4028,67 +4028,118 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 			
-		// 7. โหลดไอดีไลน์
-		// 1. ดึงค่า ID เดิมมาแสดง (ถ้ามี)
-		const lineIdInput = getEl('input-line-user-id');
-		if (lineIdInput) {
-			 dbGet(STORE_CONFIG, LINE_USER_ID_KEY).then(res => {
-				if (res) lineIdInput.value = res.value;
-			});
-		}
+		// 7. Line โหลดรายชื่อ ID จาก DB (เวอร์ชันใหม่: มีชื่อเล่น + รหัสผ่าน)
+		const idListContainer = getEl('line-id-list');
+		const inputId = getEl('input-line-user-id');
+		const inputName = getEl('input-line-nickname'); // <--- เพิ่มตัวแปรรับชื่อ
+		const btnAdd = getEl('btn-add-line-id');
 
-		// 2. จัดการปุ่มบันทึก
-		const btnSaveLineId = getEl('btn-save-line-id');
-		if (btnSaveLineId) {
-			// ลบ Listener เก่าก่อน (ป้องกันการกดซ้อน)
-			const newBtn = btnSaveLineId.cloneNode(true);
-			btnSaveLineId.parentNode.replaceChild(newBtn, btnSaveLineId);
+		if (idListContainer && btnAdd) {
+			let savedIds = [];
+			try {
+				const res = await dbGet(STORE_CONFIG, 'lineUserIds_List');
+				if (res && Array.isArray(res.value)) {
+					// Migration: ถ้าข้อมูลเก่าเป็น String ล้วน ให้แปลงเป็น Object
+					savedIds = res.value.map(item => {
+						if (typeof item === 'string') return { id: item, name: 'ไม่ระบุชื่อ' };
+						return item;
+					});
+				}
+			} catch(e) {}
 
-			newBtn.addEventListener('click', async () => {
-				const input = getEl('input-line-user-id');
-				const val = input.value.trim();
+			// ฟังก์ชันวาดรายการ
+			const renderList = () => {
+				idListContainer.innerHTML = '';
+				if (savedIds.length === 0) {
+					idListContainer.innerHTML = '<div class="text-sm text-gray-400 text-center py-2">ยังไม่มีผู้รับแจ้งเตือน</div>';
+					return;
+				}
 				
-				// Debug: เช็คว่าปุ่มทำงานไหม
-				console.log("กดปุ่มบันทึก LINE ID: ", val);
+				savedIds.forEach((item, index) => {
+					const div = document.createElement('div');
+					div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 text-sm';
+					
+					// แสดงผลแบบ: ชื่อเล่น (ID ย่อ)
+					const shortId = item.id.length > 10 ? '...' + item.id.substring(item.id.length - 6) : item.id;
+					
+					div.innerHTML = `
+						<div class="flex flex-col">
+							<span class="font-bold text-gray-700 text-xs">${item.name || 'ไม่ระบุชื่อ'}</span>
+							<span class="text-gray-500 font-mono text-[10px]">${item.id}</span> </div>
+						<button class="text-red-500 hover:text-red-700 delete-id-btn p-2" data-index="${index}">
+							<i class="fa-solid fa-trash"></i>
+						</button>
+					`;
+					idListContainer.appendChild(div);
+				});
+
+				// ผูกปุ่มลบ (เพิ่ม Password Prompt)
+				document.querySelectorAll('.delete-id-btn').forEach(btn => {
+					btn.addEventListener('click', async (e) => {
+						const idx = e.currentTarget.dataset.index;
+						const targetName = savedIds[idx].name;
+
+						// 🔒 ถามรหัสผ่านก่อนลบ
+						const hasAuth = await promptForPassword(`ยืนยันลบ: ${targetName}`);
+						if (!hasAuth) return;
+
+						savedIds.splice(idx, 1);
+						await dbPut(STORE_CONFIG, { key: 'lineUserIds_List', value: savedIds });
+						renderList();
+						Swal.fire('ลบสำเร็จ', '', 'success');
+					});
+				});
+			};
+
+			renderList();
+
+			// ฟังก์ชันปุ่มเพิ่ม (เพิ่ม Password Prompt)
+			const newBtnAdd = btnAdd.cloneNode(true);
+			btnAdd.parentNode.replaceChild(newBtnAdd, btnAdd);
+			
+			newBtnAdd.addEventListener('click', async () => {
+				const valId = inputId.value.trim();
+				const valName = inputName.value.trim(); // รับชื่อเล่น
 
 				// ตรวจสอบความถูกต้อง
-				if (!val.startsWith('U') || val.length < 30) {
-					Swal.fire('รูปแบบไม่ถูกต้อง', 'User ID ต้องขึ้นต้นด้วยตัว U และมีความยาว 33 ตัวอักษร', 'warning');
+				if (!valId.startsWith('U') || valId.length < 30) {
+					Swal.fire('ID ไม่ถูกต้อง', 'User ID ต้องขึ้นต้นด้วย U และยาว 33 ตัวอักษร', 'warning');
+					return;
+				}
+				if (!valName) {
+					Swal.fire('ระบุชื่อ', 'กรุณาใส่ชื่อเล่นให้ไอดีนี้ด้วยครับ', 'warning');
+					return;
+				}
+				if (savedIds.some(i => i.id === valId)) {
+					Swal.fire('ซ้ำ', 'ID นี้มีอยู่แล้ว', 'warning');
 					return;
 				}
 
-				try {
-					// บันทึกลง DB
-					await dbPut(STORE_CONFIG, { key: LINE_USER_ID_KEY, value: val });
-					state.lineUserId = val; // อัปเดตตัวแปร Global
+				// 🔒 ถามรหัสผ่านก่อนเพิ่ม
+				const hasAuth = await promptForPassword('ยืนยันรหัสผ่านเพื่อเพิ่มผู้รับแจ้งเตือน');
+				if (!hasAuth) return;
 
-					Swal.fire({
-						icon: 'success',
-						title: 'บันทึกสำเร็จ',
-						text: 'กำลังส่งข้อความทดสอบ...',
-						timer: 2000,
-						showConfirmButton: false
-					});
-
-					// --- ส่ง LINE ---
-					// ⚠️ สำคัญ: ใส่ URL ของคุณตรงนี้ให้ครบนะครับ อย่าใช้จุดไข่ปลา
-					const GAS_URL = 'https://script.google.com/macros/s/AKfycbyawPQQTJEyIiGJpTFCLyu1OfxX0gDzxl-vN4JsGpROB0qE51HM8UKMBtDS7-MK_cpI_w/exec'; 
-					
-					await fetch(GAS_URL, {
-						method: 'POST',
-						mode: 'no-cors',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ 
-							userId: val, 
-							message: "🎉 เชื่อมต่อสำเร็จ!\n\nระบบ FMPro จะแจ้งเตือนรายรับ-รายจ่าย ผ่านบัญชี LINE นี้ครับ ✅" 
-						})
-					});
-					console.log("ส่ง LINE Test สำเร็จ");
-
-				} catch (err) {
-					console.error("Save Error:", err);
-					Swal.fire('Error', 'บันทึกไม่สำเร็จ', 'error');
-				}
+				// บันทึกเป็น Object { id, name }
+				savedIds.push({ id: valId, name: valName });
+				await dbPut(STORE_CONFIG, { key: 'lineUserIds_List', value: savedIds });
+				
+				inputId.value = '';
+				inputName.value = '';
+				renderList();
+				
+				// ส่งข้อความต้อนรับ
+				const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp6o2nI8VHen26WvvNO_Z3u0CI3EMHxkd7pxLFCzDVfoZjT-aqJrny9884hfIVbOe1Rg/exec'; // <--- URL เดิมของคุณ
+				fetch(GAS_URL, {
+					method: 'POST', 
+					mode: 'no-cors',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify({ 
+						userIds: [valId], 
+						message: `🎉 สวัสดีคุณ ${valName}!\nคุณถูกเพิ่มเข้าสู่ระบบแจ้งเตือน FMPro แล้ว ✅` 
+					})
+				});
+				
+				Swal.fire('สำเร็จ', `เพิ่มคุณ ${valName} เรียบร้อยแล้ว`, 'success');
 			});
 		}
         
@@ -7828,38 +7879,40 @@ document.addEventListener('DOMContentLoaded', () => {
 					return false;
 				}
 				
-				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชัน Multi-User + แจ้งสถานะ) ---
+				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันรองรับชื่อเล่น + หลายคน) ---
 				async function sendLineAlert(transactionData, action = 'add') {
-					// 1. ดึง User ID ที่ผู้ใช้บันทึกไว้ในหน้าตั้งค่า (จาก IndexedDB)
-					let targetId = null;
+					// 1. ดึงรายการ ID ทั้งหมดจากฐานข้อมูล
+					let targetIds = [];
 					try {
-						// ใช้ key 'lineUserId' ตรงๆ หรือตัวแปร LINE_USER_ID_KEY ก็ได้
-						const config = await dbGet(STORE_CONFIG, 'lineUserId'); 
-						if (config) targetId = config.value;
-					} catch (e) { 
-						console.error("Load Line ID error", e); 
+						const config = await dbGet(STORE_CONFIG, 'lineUserIds_List');
+						if (config && Array.isArray(config.value)) {
+							// *** จุดที่แก้ไข: ดึงเฉพาะ ID ออกมาจาก Object (ถ้ามีชื่อเล่น) ***
+							targetIds = config.value.map(item => {
+								// ถ้าเป็นข้อมูลเก่า (String) ให้ใช้เลย
+								// ถ้าเป็นข้อมูลใหม่ (Object {id, name}) ให้ดึงเฉพาะ .id
+								return (typeof item === 'string') ? item : item.id;
+							});
+						}
+					} catch (e) {
+						console.error("Error loading LINE IDs:", e);
 					}
 
-					// ถ้าไม่มี ID บันทึกไว้ ก็จบฟังก์ชันเลย (ไม่ส่ง)
-					if (!targetId) {
-						console.log("ข้ามการแจ้งเตือน: ไม่พบ LINE User ID ในการตั้งค่า");
-						return; 
-					}
+					// ถ้าไม่มีผู้รับเลย ให้จบการทำงาน
+					if (targetIds.length === 0) return;
 
-					// 2. URL ของ Google Apps Script (อันเดิมของคุณ)
-					const GAS_URL = 'https://script.google.com/macros/s/AKfycbxehlSCGBrap9JyoyqqpRynv33GgheXPsxEQf0Zm46te_ZPVTlu24ppE7RWgNAxXALPyA/exec'; // <--- อย่าลืมเช็ค URL ให้ถูกต้อง
+					// 2. URL ของ Google Apps Script (ตรวจสอบให้แน่ใจว่าเป็นลิงก์ปัจจุบันของคุณ)
+					const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp6o2nI8VHen26WvvNO_Z3u0CI3EMHxkd7pxLFCzDVfoZjT-aqJrny9884hfIVbOe1Rg/exec'; 
 
-					// 3. กำหนดหัวข้อตามการกระทำ
+					// 3. เตรียมหัวข้อข้อความ
 					let headerText = '';
 					if (action === 'add') headerText = '✨ เพิ่มรายการใหม่';
 					else if (action === 'edit') headerText = '✏️ แก้ไขรายการ';
 					else if (action === 'delete') headerText = '🗑️ ลบรายการ';
 
-					// 4. จัดเตรียมเนื้อหาข้อความ
+					// 4. เตรียมรายละเอียด
 					const typeText = transactionData.type === 'income' ? '🟢 รายรับ' : (transactionData.type === 'expense' ? '🔴 รายจ่าย' : '🔵 โอนย้าย');
 					const amountText = Number(transactionData.amount).toLocaleString('th-TH');
 					
-					// แปลงวันที่ (ป้องกัน error กรณีข้อมูลเก่าไม่มีวันที่)
 					let dateText = '-';
 					if (transactionData.date) {
 						dateText = new Date(transactionData.date).toLocaleString('th-TH', { 
@@ -7870,21 +7923,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 					const descText = transactionData.desc ? `\n📝 บันทึก: ${transactionData.desc}` : '';
 
-					// รวมข้อความทั้งหมด
+					// รวมข้อความ
 					const message = `${headerText}\n${typeText}: ${transactionData.name}\n💰 จำนวน: ${amountText} บาท\n📂 หมวดหมู่: ${transactionData.category || '-'}\n📅 วันที่: ${dateText}${descText}`;
 
-					// 5. ส่งข้อมูลไปที่ Google Apps Script (แนบ userId ไปด้วย)
+					// 5. ส่งข้อมูลไปที่ Google Apps Script
 					try {
 						await fetch(GAS_URL, {
 							method: 'POST',
 							mode: 'no-cors',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ 
-								userId: targetId,   // <--- คีย์สำคัญ: ส่ง ID ที่ดึงมาจาก DB ให้ GAS
+								userIds: targetIds,   // ส่งไปเฉพาะ Array ของ ID ['U1...', 'U2...']
 								message: message 
 							})
 						});
-						console.log(`ส่ง LINE Alert (${action}) ไปยัง ${targetId} เรียบร้อย`);
+						console.log(`ส่ง LINE Alert หา ${targetIds.length} คน เรียบร้อย`);
 					} catch (error) {
 						console.error('ส่ง LINE ไม่ผ่าน:', error);
 					}
