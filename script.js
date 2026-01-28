@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v7.7.7';
+	const APP_VERSION = 'v8.1.6';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const STORE_AUTO_COMPLETE = 'autoComplete'; 
 	const STORE_RECURRING = 'recurring'; // *** เพิ่ม Store ใหม่ ***
 	const STORE_BUDGETS = 'budgets'; // [NEW]
+	const LINE_USER_ID_KEY = 'lineUserId'; // LineID
     
     const PAGE_IDS = ['page-home', 'page-list', 'page-calendar', 'page-accounts', 'page-settings', 'page-guide']; // เพิ่ม 'page-accounts'
     // ********** Master Password Config **********
@@ -2463,6 +2464,29 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 		
+		// Line User ID
+		const btnSaveLineId = getEl('btn-save-line-id');
+		if (btnSaveLineId) {
+			btnSaveLineId.addEventListener('click', async () => {
+				const input = getEl('input-line-user-id');
+				const val = input.value.trim();
+				
+				if (!val.startsWith('U') || val.length < 30) {
+					Swal.fire('รูปแบบไม่ถูกต้อง', 'User ID ต้องขึ้นต้นด้วยตัว U และมีความยาว 33 ตัวอักษร', 'warning');
+					return;
+				}
+
+				try {
+					await dbPut(STORE_CONFIG, { key: LINE_USER_ID_KEY, value: val });
+					state.lineUserId = val; // อัปเดต State ถ้ามี
+					Swal.fire('บันทึกสำเร็จ', 'ตั้งค่า LINE User ID เรียบร้อยแล้ว', 'success');
+				} catch (err) {
+					console.error(err);
+					Swal.fire('Error', 'บันทึกไม่สำเร็จ', 'error');
+				}
+			});
+		}
+		
     }
 
     function setupSwipeNavigation() {
@@ -4001,8 +4025,72 @@ document.addEventListener('DOMContentLoaded', () => {
 				bioBtn.classList.remove('bg-red-100', 'text-red-600');
 				bioStatus.textContent = 'ใช้ลายนิ้วมือหรือใบหน้าแทนรหัสผ่าน (เฉพาะเครื่องนี้)';
 				bioStatus.classList.remove('text-green-600');
-				}
 			}
+		}
+			
+		// 7. โหลดไอดีไลน์
+		// 1. ดึงค่า ID เดิมมาแสดง (ถ้ามี)
+		const lineIdInput = getEl('input-line-user-id');
+		if (lineIdInput) {
+			 dbGet(STORE_CONFIG, LINE_USER_ID_KEY).then(res => {
+				if (res) lineIdInput.value = res.value;
+			});
+		}
+
+		// 2. จัดการปุ่มบันทึก
+		const btnSaveLineId = getEl('btn-save-line-id');
+		if (btnSaveLineId) {
+			// ลบ Listener เก่าก่อน (ป้องกันการกดซ้อน)
+			const newBtn = btnSaveLineId.cloneNode(true);
+			btnSaveLineId.parentNode.replaceChild(newBtn, btnSaveLineId);
+
+			newBtn.addEventListener('click', async () => {
+				const input = getEl('input-line-user-id');
+				const val = input.value.trim();
+				
+				// Debug: เช็คว่าปุ่มทำงานไหม
+				console.log("กดปุ่มบันทึก LINE ID: ", val);
+
+				// ตรวจสอบความถูกต้อง
+				if (!val.startsWith('U') || val.length < 30) {
+					Swal.fire('รูปแบบไม่ถูกต้อง', 'User ID ต้องขึ้นต้นด้วยตัว U และมีความยาว 33 ตัวอักษร', 'warning');
+					return;
+				}
+
+				try {
+					// บันทึกลง DB
+					await dbPut(STORE_CONFIG, { key: LINE_USER_ID_KEY, value: val });
+					state.lineUserId = val; // อัปเดตตัวแปร Global
+
+					Swal.fire({
+						icon: 'success',
+						title: 'บันทึกสำเร็จ',
+						text: 'กำลังส่งข้อความทดสอบ...',
+						timer: 2000,
+						showConfirmButton: false
+					});
+
+					// --- ส่ง LINE ---
+					// ⚠️ สำคัญ: ใส่ URL ของคุณตรงนี้ให้ครบนะครับ อย่าใช้จุดไข่ปลา
+					const GAS_URL = 'https://script.google.com/macros/s/AKfycbyawPQQTJEyIiGJpTFCLyu1OfxX0gDzxl-vN4JsGpROB0qE51HM8UKMBtDS7-MK_cpI_w/exec'; 
+					
+					await fetch(GAS_URL, {
+						method: 'POST',
+						mode: 'no-cors',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ 
+							userId: val, 
+							message: "🎉 เชื่อมต่อสำเร็จ!\n\nระบบ FMPro จะแจ้งเตือนรายรับ-รายจ่าย ผ่านบัญชี LINE นี้ครับ ✅" 
+						})
+					});
+					console.log("ส่ง LINE Test สำเร็จ");
+
+				} catch (err) {
+					console.error("Save Error:", err);
+					Swal.fire('Error', 'บันทึกไม่สำเร็จ', 'error');
+				}
+			});
+		}
         
         // หมายเหตุ: รายการบัญชี, หมวดหมู่, และรายการประจำ 
         // ถูกย้ายไปจัดการในฟังก์ชัน renderAccountsPage() แล้ว
@@ -5098,6 +5186,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await dbPut(STORE_TRANSACTIONS, transaction);
+			// เช็คว่าถ้ามี txId แสดงว่าเป็นการ "แก้ไข" ถ้าไม่มีคือ "เพิ่มใหม่"
+			const actionType = txId ? 'edit' : 'add'; 
+			sendLineAlert(transaction, actionType);
+			// ++++++++++++++++++
             if (txId) {
                 const oldTx = state.transactions.find(t => t.id === txId);
                 state.transactions = state.transactions.map(t => t.id === txId ? transaction : t);
@@ -5364,6 +5456,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 const oldTx = state.transactions.find(tx => tx.id === txId);
+				// +++ เพิ่มบรรทัดนี้ครับ (ส่งแจ้งเตือนก่อนลบ) +++
+                if (oldTx) {
+                    sendLineAlert(oldTx, 'delete');
+                }
+                // +++++++++++++++++++++++++++++++++++++++
                 try {
                     await dbDelete(STORE_TRANSACTIONS, txId);
                     state.transactions = state.transactions.filter(tx => tx.id !== txId);
@@ -7729,6 +7826,68 @@ document.addEventListener('DOMContentLoaded', () => {
 						console.error("Biometric verify failed:", err);
 					}
 					return false;
+				}
+				
+				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชัน Multi-User + แจ้งสถานะ) ---
+				async function sendLineAlert(transactionData, action = 'add') {
+					// 1. ดึง User ID ที่ผู้ใช้บันทึกไว้ในหน้าตั้งค่า (จาก IndexedDB)
+					let targetId = null;
+					try {
+						// ใช้ key 'lineUserId' ตรงๆ หรือตัวแปร LINE_USER_ID_KEY ก็ได้
+						const config = await dbGet(STORE_CONFIG, 'lineUserId'); 
+						if (config) targetId = config.value;
+					} catch (e) { 
+						console.error("Load Line ID error", e); 
+					}
+
+					// ถ้าไม่มี ID บันทึกไว้ ก็จบฟังก์ชันเลย (ไม่ส่ง)
+					if (!targetId) {
+						console.log("ข้ามการแจ้งเตือน: ไม่พบ LINE User ID ในการตั้งค่า");
+						return; 
+					}
+
+					// 2. URL ของ Google Apps Script (อันเดิมของคุณ)
+					const GAS_URL = 'https://script.google.com/macros/s/AKfycbxehlSCGBrap9JyoyqqpRynv33GgheXPsxEQf0Zm46te_ZPVTlu24ppE7RWgNAxXALPyA/exec'; // <--- อย่าลืมเช็ค URL ให้ถูกต้อง
+
+					// 3. กำหนดหัวข้อตามการกระทำ
+					let headerText = '';
+					if (action === 'add') headerText = '✨ เพิ่มรายการใหม่';
+					else if (action === 'edit') headerText = '✏️ แก้ไขรายการ';
+					else if (action === 'delete') headerText = '🗑️ ลบรายการ';
+
+					// 4. จัดเตรียมเนื้อหาข้อความ
+					const typeText = transactionData.type === 'income' ? '🟢 รายรับ' : (transactionData.type === 'expense' ? '🔴 รายจ่าย' : '🔵 โอนย้าย');
+					const amountText = Number(transactionData.amount).toLocaleString('th-TH');
+					
+					// แปลงวันที่ (ป้องกัน error กรณีข้อมูลเก่าไม่มีวันที่)
+					let dateText = '-';
+					if (transactionData.date) {
+						dateText = new Date(transactionData.date).toLocaleString('th-TH', { 
+							year: 'numeric', month: 'short', day: 'numeric', 
+							hour: '2-digit', minute: '2-digit' 
+						});
+					}
+
+					const descText = transactionData.desc ? `\n📝 บันทึก: ${transactionData.desc}` : '';
+
+					// รวมข้อความทั้งหมด
+					const message = `${headerText}\n${typeText}: ${transactionData.name}\n💰 จำนวน: ${amountText} บาท\n📂 หมวดหมู่: ${transactionData.category || '-'}\n📅 วันที่: ${dateText}${descText}`;
+
+					// 5. ส่งข้อมูลไปที่ Google Apps Script (แนบ userId ไปด้วย)
+					try {
+						await fetch(GAS_URL, {
+							method: 'POST',
+							mode: 'no-cors',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ 
+								userId: targetId,   // <--- คีย์สำคัญ: ส่ง ID ที่ดึงมาจาก DB ให้ GAS
+								message: message 
+							})
+						});
+						console.log(`ส่ง LINE Alert (${action}) ไปยัง ${targetId} เรียบร้อย`);
+					} catch (error) {
+						console.error('ส่ง LINE ไม่ผ่าน:', error);
+					}
 				}
 
             // Start the application
