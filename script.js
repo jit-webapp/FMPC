@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.2';
+	const APP_VERSION = 'v8.2.3';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -4128,7 +4128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderList();
 				
 				// ส่งข้อความต้อนรับ
-				const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp6o2nI8VHen26WvvNO_Z3u0CI3EMHxkd7pxLFCzDVfoZjT-aqJrny9884hfIVbOe1Rg/exec'; // <--- URL เดิมของคุณ
+				const GAS_URL = 'https://script.google.com/macros/s/AKfycby1kYAHmnhoPQw3_aW1gvzXDM1QdBXSYAgjT0zUaXmE_UvntboXXMzOZGu_gMob3uzuOg/exec'; // <--- URL เดิมของคุณ
 				fetch(GAS_URL, {
 					method: 'POST', 
 					mode: 'no-cors',
@@ -7877,7 +7877,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					return false;
 				}
 				
-				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันแสดงชื่อบัญชี) ---
+				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันรองรับรายการล่วงหน้า) ---
 				async function sendLineAlert(transactionData, action = 'add') {
 					// 1. ดึงรายการ ID ทั้งหมด
 					let targetIds = [];
@@ -7890,20 +7890,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 					if (targetIds.length === 0) return;
 
-					// 2. URL (อันเดิมของคุณ)
-					const GAS_URL = 'https://script.google.com/macros/s/AKfycbwp6o2nI8VHen26WvvNO_Z3u0CI3EMHxkd7pxLFCzDVfoZjT-aqJrny9884hfIVbOe1Rg/exec'; 
+					// 2. ตรวจสอบว่าเป็นรายการล่วงหน้าหรือไม่
+					const txDate = new Date(transactionData.date);
+					const now = new Date();
+					// ถ้าเวลาในรายการมากกว่าเวลาปัจจุบัน ให้ถือว่าเป็นรายการล่วงหน้า
+					const isFuture = txDate > now;
 
-					// 3. เตรียม Header
+					// 3. เตรียม Header ตาม Action และสถานะเวลา
 					let headerText = '';
-					if (action === 'add') headerText = '✨ เพิ่มรายการใหม่';
-					else if (action === 'edit') headerText = '✏️ แก้ไขรายการ';
-					else if (action === 'delete') headerText = '🗑️ ลบรายการ';
+					if (action === 'add') {
+						headerText = isFuture ? '📅 เพิ่มรายการใหม่ล่วงหน้า' : '✨ เพิ่มรายการใหม่';
+					} else if (action === 'edit') {
+						headerText = isFuture ? '📝 แก้ไขรายการล่วงหน้า' : '✏️ แก้ไขรายการ';
+					} else if (action === 'delete') {
+						headerText = isFuture ? '🗑️ ลบรายการล่วงหน้า' : '🗑️ ลบรายการ';
+					}
 
-					// 4. เตรียมรายละเอียด
+					// 4. เตรียมรายละเอียดข้อมูล
 					const typeText = transactionData.type === 'income' ? '🟢 รายรับ' : (transactionData.type === 'expense' ? '🔴 รายจ่าย' : '🔵 โอนย้าย');
 					const amountText = Number(transactionData.amount).toLocaleString('th-TH');
 					
-					// --- 🏦 ส่วนดึงชื่อบัญชี (เหมือนเดิม) ---
 					let accountInfo = '';
 					if (transactionData.type === 'transfer') {
 						const fromAcc = state.accounts.find(a => a.id === transactionData.accountId);
@@ -7915,20 +7921,18 @@ document.addEventListener('DOMContentLoaded', () => {
 						accountInfo = `\n🏦 ${accLabel}: ${acc ? acc.name : 'ไม่ระบุ'}`;
 					}
 					
-					let dateText = '-';
-					if (transactionData.date) {
-						dateText = new Date(transactionData.date).toLocaleString('th-TH', { 
-							year: 'numeric', month: 'short', day: 'numeric', 
-							hour: '2-digit', minute: '2-digit' 
-						});
-					}
+					const dateText = txDate.toLocaleString('th-TH', { 
+						year: 'numeric', month: 'short', day: 'numeric', 
+						hour: '2-digit', minute: '2-digit' 
+					});
 
 					const descText = transactionData.desc ? `\n📝 บันทึก: ${transactionData.desc}` : '';
 
-					// 🔥🔥🔥 แก้ตรงนี้: ย้าย ${accountInfo} ขึ้นไปอยู่ต่อจาก ${headerText} เลยครับ 🔥🔥🔥
+					// 5. ประกอบข้อความ
 					const message = `${headerText}${accountInfo}\n${typeText}: ${transactionData.name}\n💰 จำนวน: ${amountText} บาท\n📂 หมวดหมู่: ${transactionData.category || '-'}\n📅 วันที่: ${dateText}${descText}`;
 
-					// 5. ส่งข้อมูล
+					// 6. ส่งข้อมูลไปยัง LINE Notify (ผ่าน Google Apps Script)
+					const GAS_URL = 'https://script.google.com/macros/s/AKfycby1kYAHmnhoPQw3_aW1gvzXDM1QdBXSYAgjT0zUaXmE_UvntboXXMzOZGu_gMob3uzuOg/exec'; 
 					try {
 						await fetch(GAS_URL, {
 							method: 'POST',
@@ -7936,7 +7940,7 @@ document.addEventListener('DOMContentLoaded', () => {
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ userIds: targetIds, message: message })
 						});
-						console.log(`ส่ง LINE Alert เรียบร้อย`);
+						console.log(`ส่ง LINE Alert (${isFuture ? 'Future' : 'Normal'}) เรียบร้อย`);
 					} catch (error) {
 						console.error('ส่ง LINE ไม่ผ่าน:', error);
 					}
