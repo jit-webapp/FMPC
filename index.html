@@ -468,6 +468,18 @@
 
             <div id="page-settings" class="app-page hidden">
 				<h1 class="text-xl font-bold text-purple-600 mb-6"><i class="fa-solid fa-gear mr-2"></i>ตั้งค่า</h1>
+				
+				<div id="install-app-container" class="mb-5 bg-gradient-to-r from-purple-500 to-indigo-600 p-4 rounded-xl shadow-lg text-white hidden">
+					<div class="flex justify-between items-center">
+						<div>
+							<h3 class="font-bold text-lg"><i class="fa-solid fa-mobile-screen-button mr-2"></i> ติดตั้งแอป</h3>
+							<p class="text-sm text-purple-100">ติดตั้งลงเครื่องเพื่อใช้งานได้ลื่นไหลและออฟไลน์</p>
+						</div>
+						<button id="btn-install-app" class="bg-white text-purple-600 hover:bg-gray-100 font-bold py-2 px-4 rounded-lg shadow transition duration-200 text-sm whitespace-nowrap">
+							ติดตั้งเลย
+						</button>
+					</div>
+				</div>
                 
                 <div class="mb-5 bg-white p-4 rounded-xl shadow-sm border border-transparent transition-colors duration-200 dark:border-gray-700">
 					<h3 class="mt-0 text-base font-bold text-gray-800 mb-3 flex items-center gap-2 dark:text-gray-200">
@@ -658,8 +670,8 @@
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <button id="btn-backup" class="bg-blue-700 hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-xl shadow-lg transition duration-300 text-lg h-auto"> 
                                     <div class="flex flex-col items-center leading-tight">
-                                        <span><i class="fa-solid fa-upload mr-2"></i> สำรองข้อมูล</span>
-                                        <span class="text-xs font-normal opacity-80 mt-1">(บนอุปกรณ์)</span>
+										<span><i class="fa-solid fa-vault mr-2"></i> ศูนย์สำรองข้อมูล</span>
+										<span class="text-xs font-normal opacity-80 mt-1">JSON / Excel / Cloud</span>
                                     </div>
                                 </button>
 
@@ -670,21 +682,10 @@
                                     </div>
                                 </button>
                                 <input type="file" id="import-file-input" class="hidden" accept=".json">
-
-                                <button id="btn-export-csv" class="col-span-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl shadow-lg transition duration-300 text-lg h-auto"> 
-                                    <div class="flex flex-col items-center leading-tight">
-                                        <span><i class="fa-solid fa-file-csv mr-2"></i> ส่งออกเป็น CSV (Excel)</span>
-                                        <span class="text-xs font-normal opacity-80 mt-1">(บนอุปกรณ์)</span>
-                                    </div>
-                                </button>
-								
 								<button id="btn-system-update" class="col-span-2 bg-gradient-to-r from-orange-400 to-pink-500 hover:from-orange-500 hover:to-pink-600 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg mb-2">
 									<i class="fa-solid fa-rotate mr-2 animate-spin-slow"></i> ตรวจสอบและอัปเดตเวอร์ชันล่าสุด / ล้างแคช
 								</button>
 
-                                <button id="btn-force-sync" class="col-span-2 bg-sky-400 hover:bg-sky-500 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg">
-                                    <i class="fa-solid fa-cloud-upload-alt mr-2"></i> สำรองข้อมูลทั้งหมดขึ้น Cloud
-                                </button>
                                 <button id="btn-clear-all" class="col-span-2 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg"> <i class="fa-solid fa-trash-alt mr-2"></i> รีเซ็ตและล้างข้อมูลทั้งหมด
                                 </button>
                             </div>
@@ -996,7 +997,7 @@
     </div> 
     
     <footer class="text-center p-6 text-gray-600 text-base">
-        © 2025 Finance Manager Pro v8.2.3 Cloud | Developed by James IT
+        © 2025 Finance Manager Pro v8.2.7 Cloud | Developed by James IT
     </footer>
 
     <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
@@ -1573,38 +1574,7 @@
 				// +++++++++++++++++++++++++++++
 			}
 		});
-	</script>
-	<head>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    
-    <link rel="stylesheet" href="styles.css">
-    </head>
-    <script src="script.js"></script>
-	<script>
-		if ('serviceWorker' in navigator) {
-			// เมื่อ SW ตัวใหม่ทำงาน (จากการ skipWaiting) ให้แจ้งเตือนผู้ใช้
-			navigator.serviceWorker.addEventListener('controllerchange', () => {
-				 Swal.fire({
-					title: 'มีการอัปเดต!',
-					text: 'ระบบเวอร์ชันใหม่พร้อมใช้งานแล้ว',
-					icon: 'success',
-					confirmButtonText: 'อัปเดตทันที',
-					allowOutsideClick: false
-				}).then((result) => {
-					if (result.isConfirmed) {
-						window.location.reload();
-					}
-				});
-			});
-
-			window.addEventListener('load', () => {
-				navigator.serviceWorker.register('./service-worker.js') // ตรวจสอบชื่อไฟล์ให้ตรง (sw.js หรือ service-worker.js)
-					.then((reg) => console.log('Service Worker Registered!'))
-					.catch((err) => console.log('Service Worker Registration Failed:', err));
-			});
-		}
-	</script>
-	
+		
 		<div id="recurring-form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[65]">
 		<div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
 			<div class="flex justify-between items-center mb-4">
@@ -1669,42 +1639,224 @@
 			</form>
 		</div>
 	</div>
-	<script>
-        // โค้ดตรวจสอบและอัปเดต Service Worker อัตโนมัติ
+	<script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script type="module">
+		// 1. Import Library
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+		import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+		import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, updateDoc, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+		// 2. Config
+		const firebaseConfig = {
+			apiKey: "AIzaSyBU9M5C5Q6yIdlvjEQsUpxcYOjHKV_JRc4",
+			authDomain: "fmpro-d66c3.firebaseapp.com",
+			projectId: "fmpro-d66c3",
+			storageBucket: "fmpro-d66c3.firebasestorage.app",
+			messagingSenderId: "1046027421115",
+			appId: "1:1046027421115:web:333a51f45fbf09c556309e",
+			measurementId: "G-KGGDYWYGNM"
+		};
+
+		// 3. Initialize
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const db = getFirestore(app);
+		const provider = new GoogleAuthProvider();
+
+		// 4. Export to Window
+		window.db = db;
+		window.auth = auth;
+		window.dbCollection = collection;
+		window.dbAddDoc = addDoc;
+		window.dbSetDoc = setDoc;
+		window.dbDoc = doc;
+		window.dbDelete = deleteDoc;
+		window.dbUpdate = updateDoc;
+		window.dbQuery = query;
+		window.dbWhere = where;
+		window.dbOrderBy = orderBy;
+		window.dbOnSnapshot = onSnapshot;
+		window.dbGetDocs = getDocs;
+
+		// แก้ไขฟังก์ชัน Login ให้รีโหลดหน้าเมื่อสำเร็จ
+		window.loginWithGoogle = () => {
+			signInWithPopup(auth, provider)
+				.then((result) => {
+					// แสดงข้อความต้อนรับก่อนรีโหลด
+					const Toast = Swal.mixin({
+						toast: true, position: "top-end", showConfirmButton: false, timer: 1500,
+						customClass: { popup: document.body.classList.contains('dark') ? 'swal2-toast' : '' },
+						background: document.body.classList.contains('dark') ? '#1a1a1a' : '#fff',
+						color: document.body.classList.contains('dark') ? '#e5e7eb' : '#545454',
+					});
+					Toast.fire({ icon: "success", title: "เข้าสู่ระบบสำเร็จ" }).then(() => {
+						window.location.reload(); // รีเฟรชหน้าเพื่อโหลดข้อมูลใหม่
+					});
+				}).catch((error) => {
+					console.error("Login Error:", error);
+					Swal.fire('ข้อผิดพลาด', error.message, 'error');
+				});
+		};
+
+		// --- ฟังก์ชัน Logout ---
+		window.logout = async () => {
+			const isDark = document.body.classList.contains('dark');
+
+			// 1. ตรวจสอบรหัสผ่านก่อน
+			if (typeof window.verifyPasswordForLogout === 'function') {
+				const authorized = await window.verifyPasswordForLogout();
+				if (!authorized) {
+					return;
+				}
+			}
+
+			// 2. ถ้ารหัสผ่านถูกต้อง ให้แสดง Popup ยืนยัน
+			Swal.fire({
+				title: 'ออกจากระบบ?',
+				text: "ข้อมูลในเครื่องนี้จะถูกล้างค่า (ข้อมูลบน Cloud ยังอยู่)",
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonColor: '#d33',
+				confirmButtonText: 'ออกจากระบบ',
+				cancelButtonText: 'ยกเลิก',
+				customClass: { popup: isDark ? 'swal2-popup' : '' },
+				background: isDark ? '#1a1a1a' : '#fff',
+				color: isDark ? '#e5e7eb' : '#545454',
+			}).then(async (result) => {
+				if (result.isConfirmed) {
+					Swal.fire({
+						title: 'กำลังออกจากระบบ...',
+						allowOutsideClick: false,
+						didOpen: () => { Swal.showLoading(); },
+						customClass: { popup: isDark ? 'swal2-popup' : '' },
+						background: isDark ? '#1a1a1a' : '#fff',
+						color: isDark ? '#e5e7eb' : '#545454',
+					});
+
+					// 3. ล้างข้อมูล LocalDB
+					if (typeof window.clearLocalDataForLogout === 'function') {
+						await window.clearLocalDataForLogout();
+					}
+
+					// 4. ล้าง LocalStorage
+					localStorage.clear();
+					sessionStorage.clear();
+
+					// 5. Logout Firebase
+					signOut(auth).then(() => {
+						window.location.reload(); 
+					}).catch((error) => {
+						console.error("Logout Error:", error);
+						window.location.reload(); 
+					});
+				}
+			});
+		};
+
+		// --- ตรวจจับสถานะ User ---
+		onAuthStateChanged(auth, (user) => {
+			const nameDisplay = document.getElementById('user-name-display');
+			const statusDisplay = document.getElementById('user-status');
+			const avatar = document.getElementById('user-avatar');
+			const btnLogin = document.getElementById('btn-login');
+			const btnLogout = document.getElementById('btn-logout');
+
+			const cloudMobile = document.getElementById('status-cloud-mobile');
+			const cloudDesktop = document.getElementById('status-cloud-desktop');
+
+			if (!nameDisplay) return;
+
+			if (user) {
+				// === Login แล้ว ===
+				nameDisplay.innerText = user.displayName;
+				statusDisplay.innerHTML = '<i class="fa-solid fa-circle text-green-500 text-[10px] mr-1"></i> ออนไลน์ (ซิงค์อัตโนมัติ)';
+				statusDisplay.className = "text-xs md:text-sm text-green-600 dark:text-green-400 block font-medium";
+
+				if(user.photoURL) {
+					avatar.innerHTML = `<img src="${user.photoURL}" class="w-full h-full object-cover">`;
+					avatar.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+				}
+
+				btnLogin.style.display = 'none';
+				btnLogout.style.display = 'inline-flex';
+				
+				if(cloudMobile) {
+					cloudMobile.classList.remove('text-gray-300');
+					cloudMobile.classList.add('text-green-500');
+					cloudMobile.title = "ออนไลน์: ซิงค์ข้อมูลกับ Cloud แล้ว";
+				}
+				if(cloudDesktop) {
+					cloudDesktop.classList.remove('text-gray-300');
+					cloudDesktop.classList.add('text-green-500');
+					cloudDesktop.title = "ออนไลน์: ซิงค์ข้อมูลกับ Cloud แล้ว";
+				}
+
+				if (typeof window.loadDataFromCloud === 'function') {
+					window.loadDataFromCloud(user.uid);
+				}
+
+			} else {
+				// === Offline ===
+				nameDisplay.innerText = "Guest (Offline)";
+				statusDisplay.innerText = "ข้อมูลเก็บในเครื่องนี้เท่านั้น";
+				statusDisplay.className = "text-xs md:text-sm text-gray-500 dark:text-gray-400 block";
+				
+				avatar.innerHTML = `<i class="fas fa-user text-gray-500 dark:text-gray-400 text-xl"></i>`;
+				avatar.classList.add('bg-gray-200', 'dark:bg-gray-700');
+
+				btnLogin.style.display = 'inline-flex';
+				btnLogout.style.display = 'none';
+
+				if(cloudMobile) {
+					cloudMobile.classList.remove('text-green-500');
+					cloudMobile.classList.add('text-gray-300');
+					cloudMobile.title = "ออฟไลน์: ข้อมูลอยู่ในเครื่องเท่านั้น";
+				}
+				if(cloudDesktop) {
+					cloudDesktop.classList.remove('text-green-500');
+					cloudDesktop.classList.add('text-gray-300');
+					cloudDesktop.title = "ออฟไลน์: ข้อมูลอยู่ในเครื่องเท่านั้น";
+				}
+			}
+		});
+    </script>
+    <script src="script.js"></script>
+
+    <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(registration => {
-                
-                // เช็คว่ามีการอัปเดตหรือไม่
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    
-                    newWorker.addEventListener('statechange', () => {
-                        // ถ้าสถานะเปลี่ยนเป็น installed และมี Service Worker ตัวเก่าคุมอยู่
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // แจ้งเตือนผู้ใช้
-                            const Toast = Swal.mixin({
-                                toast: true,
-                                position: 'top-end',
-                                showConfirmButton: true,
-                                confirmButtonText: 'อัปเดต',
-                                timer: null // ไม่หายไปเอง
-                            });
-                            
-                            Toast.fire({
-                                icon: 'info',
-                                title: 'มีเวอร์ชันใหม่!',
-                                text: 'กดปุ่มเพื่ออัปเดตระบบ'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.reload();
+            window.addEventListener('load', () => {
+                // *** แก้ไขชื่อไฟล์ตรงนี้ให้เป็น ./sw.js ให้ตรงกับไฟล์จริง ***
+                navigator.serviceWorker.register('./sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker Registered with scope:', registration.scope);
+                        
+                        // เช็คการอัปเดต
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // แจ้งเตือนผู้ใช้เมื่อมีเวอร์ชันใหม่
+                                    Swal.fire({
+                                        title: 'มีการอัปเดต!',
+                                        text: 'ระบบเวอร์ชันใหม่พร้อมใช้งานแล้ว',
+                                        icon: 'info',
+                                        confirmButtonText: 'อัปเดตทันที',
+                                        allowOutsideClick: false
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            window.location.reload();
+                                        }
+                                    });
                                 }
                             });
-                        }
+                        });
+                    })
+                    .catch((err) => {
+                        console.log('Service Worker Registration Failed:', err);
                     });
-                });
             });
 
-            // ถ้า Service Worker เปลี่ยนตัวควบคุม (หลังจาก skipWaiting ทำงาน) ให้รีโหลดหน้าจอ
+            // บังคับรีโหลดเมื่อมีการเปลี่ยน Controller
             let refreshing;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (refreshing) return;

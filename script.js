@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.2.3';
+	const APP_VERSION = 'v8.2.7';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -1918,10 +1918,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getEl('btn-import').addEventListener('click', () => getEl('import-file-input').click());
         getEl('import-file-input').addEventListener('change', handleImport);
         getEl('btn-clear-all').addEventListener('click', handleClearAll);
-		const btnForceSync = document.getElementById('btn-force-sync');
-		if(btnForceSync) btnForceSync.addEventListener('click', handleForceSync);
         getEl('btn-manage-password').addEventListener('click', handleManagePassword);
-        getEl('btn-export-csv').addEventListener('click', handleExportCSV); 
         
         const toggleBalanceBtn = getEl('toggle-show-balance');
         if(toggleBalanceBtn) {
@@ -2487,6 +2484,93 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 		
+		// เรียกใช้ฟังก์ชันปุ่ม Install
+        setupInstallButton();
+		
+    }
+	
+	// ============================================
+    // PWA INSTALL LOGIC (Android & iOS)
+    // ============================================
+    function setupInstallButton() {
+        const installContainer = document.getElementById('install-app-container');
+        const installBtn = document.getElementById('btn-install-app');
+        let deferredPrompt; // ตัวแปรเก็บ Event ของ Android/Chrome
+
+        // 1. ตรวจสอบว่าเป็น iOS หรือไม่
+        const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
+        // 2. ตรวจสอบว่าแอปเปิดแบบ Standalone (ติดตั้งแล้ว) หรือยัง
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        // ถ้าติดตั้งแล้ว ไม่ต้องทำอะไร (ซ่อนปุ่มไว้เหมือนเดิม)
+        if (isStandalone) {
+            console.log('App is already installed/standalone.');
+            return;
+        }
+
+        // === กรณี Android / Desktop (Chrome/Edge) ===
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // ป้องกันแถบ Install เด้งเองด้านล่าง
+            e.preventDefault();
+            // เก็บ Event ไว้ใช้ทีหลัง
+            deferredPrompt = e;
+            // โชว์ปุ่มในหน้าตั้งค่า
+            if (installContainer) installContainer.classList.remove('hidden');
+        });
+
+        // === กรณี iOS (Safari) ===
+        if (isIos) {
+            // iOS ไม่มี event beforeinstallprompt แต่เราจะโชว์ปุ่มเลยถ้ายังไม่ Install
+            if (installContainer) installContainer.classList.remove('hidden');
+        }
+
+        // === จัดการเมื่อกดปุ่ม ===
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                
+                if (isIos) {
+                    // --- Logic สำหรับ iOS: แสดง Popup สอนวิธีติดตั้ง ---
+                    Swal.fire({
+                        title: 'วิธีติดตั้งบน iOS',
+                        html: `
+                            <div class="text-left text-sm space-y-3">
+                                <p>1. กดปุ่ม <b>"แชร์"</b> <i class="fa-solid fa-arrow-up-from-bracket text-blue-500 text-lg mx-1"></i> ที่แถบด้านล่างของ Safari</p>
+                                <p>2. เลื่อนหาเมนู <b>"เพิ่มไปยังหน้าจอโฮม"</b> <br>(Add to Home Screen) <i class="fa-regular fa-square-plus text-gray-600 text-lg mx-1"></i></p>
+                                <p>3. กดปุ่ม <b>"เพิ่ม"</b> (Add) มุมขวาบน</p>
+                            </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'เข้าใจแล้ว',
+                        customClass: { popup: state.isDarkMode ? 'swal2-popup' : '' },
+                        background: state.isDarkMode ? '#1a1a1a' : '#fff',
+                        color: state.isDarkMode ? '#e5e7eb' : '#545454'
+                    });
+
+                } else {
+                    // --- Logic สำหรับ Android / PC ---
+                    if (deferredPrompt) {
+                        // สั่งให้ Prompt เด้งขึ้นมา
+                        deferredPrompt.prompt();
+                        
+                        // รอผลลัพธ์ว่าผู้ใช้กด Install หรือ Cancel
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`User response to the install prompt: ${outcome}`);
+                        
+                        // เคลียร์ตัวแปร (ใช้ได้ครั้งเดียว)
+                        deferredPrompt = null;
+                        
+                        // ถ้าติดตั้งสำเร็จ ซ่อนปุ่มไปเลย
+                        if (outcome === 'accepted') {
+                            installContainer.classList.add('hidden');
+                        }
+                    } else {
+                        // กรณีไม่มี Prompt (อาจจะติดตั้งแล้ว หรือ Browser ไม่รองรับ)
+                        Swal.fire('แจ้งเตือน', 'อุปกรณ์นี้อาจติดตั้งแอปแล้ว หรือไม่รองรับการติดตั้งอัตโนมัติ', 'info');
+                    }
+                }
+            });
+        }
     }
 
     function setupSwipeNavigation() {
@@ -6053,94 +6137,259 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function handleBackup() {
-        // ใช้ตัวแปร APP_VERSION หรือใช้ค่า Default ถ้าหาไม่เจอ
-        const currentVersion = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : 'v7.5';
+		// ============================================
+		// รวมศูนย์สำรองข้อมูล (Backup Center) - 3 Options
+		// ============================================
+		async function handleBackup() {
+			// 1. ตรวจสอบรหัสผ่าน / สแกนนิ้ว ก่อนเข้าเมนู
+			const hasPermission = await promptForPassword('ป้อนรหัสผ่านเพื่อจัดการสำรองข้อมูล');
+			if (!hasPermission) return;
 
-        const isConfirmed = await Swal.fire({
-            title: 'ยืนยันการสำรองข้อมูล?',
-            text: `คุณต้องการสำรองข้อมูล (.json) เวอร์ชัน ${currentVersion} ใช่หรือไม่?`,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#3b82f6',
-            cancelButtonColor: '#aaa',
-            confirmButtonText: 'ใช่, สำรองข้อมูล',
-            cancelButtonText: 'ยกเลิก'
-        }).then(result => result.isConfirmed);
+			// ตัวแปรเก็บค่าที่เลือก
+			let selectedChoice = null;
 
-        if (isConfirmed) {
-            try {
-                // แสดง Loading เพราะถ้าข้อมูลเยอะอาจใช้เวลาสักครู่
-                Swal.fire({
-                    title: 'กำลังเตรียมไฟล์...',
-                    text: 'กรุณารอสักครู่ ระบบกำลังรวบรวมข้อมูล',
-                    allowOutsideClick: false,
-                    didOpen: () => { Swal.showLoading(); }
-                });
+			// 2. แสดงเมนูเลือก 3 แบบ
+			const { value: choice } = await Swal.fire({
+				title: 'เลือกวิธีการสำรองข้อมูล',
+				html: `
+					<div class="flex flex-col gap-3 mt-4">
+						<button id="btn-opt-json" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+							<i class="fa-solid fa-file-code mr-3"></i> สำรองไฟล์ลงเครื่อง (.json)
+						</button>
 
-                // ตรวจสอบว่ามี Store รายการประจำหรือไม่ (กัน Error กรณีฐานข้อมูลเก่ายังไม่ได้อัปเกรด)
-                const hasRecurring = db.objectStoreNames.contains(STORE_RECURRING);
-                const recurringData = hasRecurring ? await dbGetAll(STORE_RECURRING) : [];
+						<button id="btn-opt-csv" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+							<i class="fa-solid fa-file-csv mr-3"></i> ส่งออกเป็น Excel (CSV)
+						</button>
 
-                // ตรวจสอบตัวแปร Config (กัน Error กรณีไม่ได้ประกาศไว้)
-                const autoConfirmKey = (typeof AUTO_CONFIRM_CONFIG_KEY !== 'undefined') ? AUTO_CONFIRM_CONFIG_KEY : 'autoConfirmPassword';
+						<button id="btn-opt-cloud" class="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+							<i class="fa-solid fa-cloud-arrow-up mr-3"></i> สำรองข้อมูลขึ้น Cloud
+						</button>
+					</div>
+				`,
+				showConfirmButton: false,
+				showCancelButton: true,
+				cancelButtonText: 'ปิดเมนู',
+				cancelButtonColor: '#9ca3af',
+				didOpen: () => {
+					// ผูกปุ่มกด
+					document.getElementById('btn-opt-json').onclick = () => {
+						selectedChoice = 'json'; Swal.clickConfirm();
+					};
+					document.getElementById('btn-opt-csv').onclick = () => {
+						selectedChoice = 'csv'; Swal.clickConfirm();
+					};
+					document.getElementById('btn-opt-cloud').onclick = () => {
+						selectedChoice = 'cloud'; Swal.clickConfirm();
+					};
+				}
+			});
 
-                const backupState = {
-                    accounts: await dbGetAll(STORE_ACCOUNTS), 
-                    transactions: await dbGetAll(STORE_TRANSACTIONS),
-                    categories: {
-                        income: (await dbGet(STORE_CATEGORIES, 'income'))?.items || [],
-                        expense: (await dbGet(STORE_CATEGORIES, 'expense'))?.items || []
-                    },
-                    frequentItems: (await dbGetAll(STORE_FREQUENT_ITEMS)).map(item => item.name),
-                    autoCompleteList: await dbGetAll(STORE_AUTO_COMPLETE),
-                    recurringRules: recurringData, 
-					budgets: await dbGetAll(STORE_BUDGETS),
-                    password: (await dbGet(STORE_CONFIG, 'password'))?.value || null,
-                    autoLockTimeout: (await dbGet(STORE_CONFIG, AUTOLOCK_CONFIG_KEY))?.value || 0, 
-                    isDarkMode: (await dbGet(STORE_CONFIG, DARK_MODE_CONFIG_KEY))?.value || false,
-                    autoConfirmPassword: (await dbGet(STORE_CONFIG, autoConfirmKey))?.value || false
-                };
-                
-                // *** แก้ไขจุดสำคัญ: ใช้ Blob แทน Data URI เพื่อรองรับไฟล์ขนาดใหญ่ (รูปใบเสร็จ) ***
-                const dataStr = JSON.stringify(backupState);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                // สร้างชื่อไฟล์
-                const now = new Date();
-                const y = now.getFullYear();
-                const m = (now.getMonth() + 1).toString().padStart(2, '0');
-                const d = now.getDate().toString().padStart(2, '0');
-                const h = now.getHours().toString().padStart(2, '0');
-                const min = now.getMinutes().toString().padStart(2, '0');
+			if (!selectedChoice) return;
 
-                let filenamePrefix = `backup_${currentVersion}`;
-                
-                if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
-                    filenamePrefix = `${window.auth.currentUser.email}_${currentVersion}`; 
-                }
+			// 3. แยกทำงานตามฟังก์ชัน
+			if (selectedChoice === 'json') {
+				await executeJsonBackup();
+			} else if (selectedChoice === 'csv') {
+				await executeCsvExport();
+			} else if (selectedChoice === 'cloud') {
+				await executeCloudSync();
+			}
+		}
 
-                const exportFileDefaultName = `${filenamePrefix}_${y}-${m}-${d}_${h}${min}.json`;
-                
-                // สร้างลิงก์ดาวน์โหลด
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', url);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                document.body.appendChild(linkElement); // จำเป็นสำหรับบาง Browser
-                linkElement.click();
-                document.body.removeChild(linkElement);
-                
-                // คืนค่า Memory
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-                
-                Swal.fire('สำรองข้อมูลสำเร็จ', `ดาวน์โหลดไฟล์: ${exportFileDefaultName} เรียบร้อยแล้ว`, 'success');
-            } catch (err) {
-                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสำรองข้อมูลได้: ' + err.message, 'error');
-                console.error("Backup failed: ", err);
-            }
-        }
-    }
+		// --- Logic 1: JSON Backup (ย้ายมาจาก handleBackup เดิม) ---
+		async function executeJsonBackup() {
+			const currentVersion = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : 'v7.5';
+
+			const isConfirmed = await Swal.fire({
+				title: 'ยืนยันการสำรองข้อมูล?',
+				text: `คุณต้องการสำรองข้อมูล (.json) เวอร์ชัน ${currentVersion} ใช่หรือไม่?`,
+				icon: 'info',
+				showCancelButton: true,
+				confirmButtonColor: '#6366f1',
+				cancelButtonColor: '#aaa',
+				confirmButtonText: 'ใช่, ดาวน์โหลดไฟล์',
+				cancelButtonText: 'ยกเลิก'
+			}).then(result => result.isConfirmed);
+
+			if (isConfirmed) {
+				try {
+					Swal.fire({ title: 'กำลังสร้างไฟล์...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+					// รวบรวมข้อมูล
+					const hasRecurring = db.objectStoreNames.contains(STORE_RECURRING);
+					const recurringData = hasRecurring ? await dbGetAll(STORE_RECURRING) : [];
+					const autoConfirmKey = (typeof AUTO_CONFIRM_CONFIG_KEY !== 'undefined') ? AUTO_CONFIRM_CONFIG_KEY : 'autoConfirmPassword';
+
+					const backupState = {
+						accounts: await dbGetAll(STORE_ACCOUNTS), 
+						transactions: await dbGetAll(STORE_TRANSACTIONS),
+						categories: {
+							income: (await dbGet(STORE_CATEGORIES, 'income'))?.items || [],
+							expense: (await dbGet(STORE_CATEGORIES, 'expense'))?.items || []
+						},
+						frequentItems: (await dbGetAll(STORE_FREQUENT_ITEMS)).map(item => item.name),
+						autoCompleteList: await dbGetAll(STORE_AUTO_COMPLETE),
+						recurringRules: recurringData, 
+						budgets: await dbGetAll(STORE_BUDGETS),
+						password: (await dbGet(STORE_CONFIG, 'password'))?.value || null,
+						autoLockTimeout: (await dbGet(STORE_CONFIG, AUTOLOCK_CONFIG_KEY))?.value || 0, 
+						isDarkMode: (await dbGet(STORE_CONFIG, DARK_MODE_CONFIG_KEY))?.value || false,
+						autoConfirmPassword: (await dbGet(STORE_CONFIG, autoConfirmKey))?.value || false
+					};
+					
+					// สร้าง Blob
+					const dataStr = JSON.stringify(backupState);
+					const blob = new Blob([dataStr], { type: 'application/json' });
+					const url = URL.createObjectURL(blob);
+					
+					// ตั้งชื่อไฟล์
+					const now = new Date();
+					const dateStr = now.toISOString().slice(0,10);
+					const timeStr = now.toTimeString().slice(0,5).replace(':','');
+					let filenamePrefix = `backup_${currentVersion}`;
+					if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
+						filenamePrefix = `${window.auth.currentUser.email}_${currentVersion}`; 
+					}
+					const exportFileDefaultName = `${filenamePrefix}_${dateStr}_${timeStr}.json`;
+					
+					// ดาวน์โหลด
+					const linkElement = document.createElement('a');
+					linkElement.setAttribute('href', url);
+					linkElement.setAttribute('download', exportFileDefaultName);
+					document.body.appendChild(linkElement);
+					linkElement.click();
+					document.body.removeChild(linkElement);
+					setTimeout(() => URL.revokeObjectURL(url), 100);
+					
+					Swal.fire('สำเร็จ', `ดาวน์โหลดไฟล์เรียบร้อย`, 'success');
+				} catch (err) {
+					Swal.fire('ผิดพลาด', err.message, 'error');
+				}
+			}
+		}
+
+		// --- Logic 2: CSV Export (ย้ายมาจาก handleExportCSV เดิม) ---
+		async function executeCsvExport() {
+			const isConfirmed = await Swal.fire({
+				title: 'ส่งออกเป็น Excel (CSV)?',
+				text: `เหมาะสำหรับนำไปคำนวณต่อในคอมพิวเตอร์`,
+				icon: 'info',
+				showCancelButton: true,
+				confirmButtonColor: '#16a34a',
+				cancelButtonColor: '#aaa',
+				confirmButtonText: 'ใช่, ส่งออก',
+				cancelButtonText: 'ยกเลิก'
+			}).then(result => result.isConfirmed);
+
+			if (!isConfirmed) return;
+
+			try {
+				const transactions = state.transactions;
+				const accountsMap = new Map(state.accounts.map(a => [a.id, a.name]));
+
+				const header = [
+					"ID", "วันที่และเวลา", "ประเภท", "ชื่อรายการ", "หมวดหมู่", 
+					"จำนวนเงิน", "บัญชีต้นทาง (From/Account)", "บัญชีปลายทาง (To)", "คำอธิบาย", "มีรูปใบเสร็จ"
+				];
+				
+				let csvContent = header.join(",") + "\n";
+
+				const escapeCSVValue = (value) => {
+					if (value === null || value === undefined) return "";
+					let str = String(value);
+					if (typeof value === 'number') str = value.toFixed(2); 
+					str = str.replace(/,/g, ''); 
+					return `"${str.replace(/"/g, '""')}"`; 
+				};
+
+				transactions.forEach(tx => {
+					const dateObj = new Date(tx.date);
+					const dateTime = dateObj.toISOString().slice(0, 19).replace('T', ' '); 
+					
+					const row = [
+						escapeCSVValue(tx.id),
+						escapeCSVValue(dateTime),
+						escapeCSVValue(tx.type),
+						escapeCSVValue(tx.name), 
+						escapeCSVValue(tx.category || ''),
+						escapeCSVValue(tx.amount), 
+						escapeCSVValue(accountsMap.get(tx.accountId) || 'N/A'),
+						escapeCSVValue(tx.toAccountId ? accountsMap.get(tx.toAccountId) || 'N/A' : ''),
+						escapeCSVValue(tx.desc || ''),
+						escapeCSVValue(!!tx.receiptBase64 ? 'Yes' : 'No') 
+					];
+					csvContent += row.join(",") + "\n";
+				});
+				
+				const finalContent = '\uFEFF' + csvContent; 
+				const blob = new Blob([finalContent], { type: 'text/csv;charset=utf-8;' });
+
+				const now = new Date();
+				const dateStr = now.toISOString().slice(0,10);
+				const versionStr = (typeof APP_VERSION !== 'undefined') ? `_${APP_VERSION}` : '';
+				let filename = `transactions${versionStr}_${dateStr}.csv`;
+
+				if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
+					filename = `${window.auth.currentUser.email}${versionStr}_transactions_${dateStr}.csv`;
+				}
+				
+				const url = URL.createObjectURL(blob);
+				const linkElement = document.createElement('a');
+				linkElement.setAttribute('href', url);
+				linkElement.setAttribute('download', filename);
+				document.body.appendChild(linkElement);
+				linkElement.click();
+				document.body.removeChild(linkElement);
+				URL.revokeObjectURL(url); 
+				
+				Swal.fire('สำเร็จ', `ส่งออกไฟล์ ${filename} เรียบร้อย`, 'success');
+				
+			} catch (err) {
+				Swal.fire('ผิดพลาด', err.message, 'error');
+			}
+		}
+
+		// --- Logic 3: Cloud Sync (ย้ายมาจาก handleForceSync เดิม) ---
+		async function executeCloudSync() {
+			const result = await Swal.fire({
+				title: 'ยืนยันการส่งข้อมูลขึ้น Cloud?',
+				text: "ข้อมูลในเครื่องนี้จะถูกส่งไปบันทึกทับ/รวมกับข้อมูลบน Cloud (เหมาะสำหรับ Manual Sync)",
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonColor: '#0ea5e9',
+				confirmButtonText: 'ใช่, อัปโหลดเดี๋ยวนี้',
+				cancelButtonText: 'ยกเลิก'
+			});
+
+			if (result.isConfirmed) {
+				const Toast = Swal.mixin({
+					toast: true, position: "top-end", showConfirmButton: false, timer: 10000,
+					customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
+					background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
+				});
+				Toast.fire({ icon: "info", title: "กำลังทยอยส่งข้อมูล... ห้ามปิดหน้าจอ" });
+
+				try {
+					const collections = [
+						STORE_TRANSACTIONS, STORE_ACCOUNTS, STORE_CATEGORIES, 
+						STORE_FREQUENT_ITEMS, STORE_CONFIG, STORE_AUTO_COMPLETE,
+						STORE_RECURRING, STORE_BUDGETS
+					];
+
+					let totalCount = 0;
+					for (const storeName of collections) {
+						const items = await dbGetAll(storeName);
+						if (items.length > 0) {
+							await Promise.all(items.map(item => saveToCloud(storeName, item)));
+							totalCount += items.length;
+						}
+					}
+					Swal.fire('สำเร็จ!', `ส่งข้อมูล ${totalCount} รายการ ขึ้น Cloud เรียบร้อยแล้ว`, 'success');
+				} catch (err) {
+					Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
+				}
+			}
+		}
     
     async function handleExportCSV() {
         const isConfirmed = await Swal.fire({
@@ -6397,76 +6646,178 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ============================================
+    // ฟังก์ชันล้างข้อมูล (แบบปุ่ม 3 สี) + บังคับ Logout
+    // ============================================
     async function handleClearAll() {
-        const hasPermission = await promptForPassword('ป้อนรหัสผ่านเพื่อล้างข้อมูลทั้งหมด');
+        // 1. ตรวจสอบรหัสผ่าน / สแกนนิ้ว ก่อนเริ่ม
+        const hasPermission = await promptForPassword('ป้อนรหัสผ่านเพื่อล้างข้อมูล');
         if (!hasPermission) {
             return;
         }
 
-        const { isConfirmed } = await Swal.fire({
-                title: 'ยืนยันการล้างข้อมูลครั้งสุดท้าย',
-                html: 'การดำเนินการนี้จะลบรหัสผ่านและข้อมูลทั้งหมด<br>ไม่สามารถกู้คืนได้! คุณแน่ใจหรือไม่?',
-                icon: 'warning',
+        // ตัวแปรสำหรับเก็บค่าที่เลือก
+        let selectedChoice = null;
 
-                 showCancelButton: true,
-                confirmButtonText: 'ใช่, ลบทั้งหมด',
-                cancelButtonText: 'ยกเลิก',
-                confirmButtonColor: '#d33'
+        // 2. แสดง Popup แบบปุ่มกด 3 สี
+        const { value: choice } = await Swal.fire({
+            title: 'เลือกข้อมูลที่ต้องการล้าง',
+            html: `
+                <div class="flex flex-col gap-3 mt-4">
+                    <button id="btn-clear-local" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-mobile-screen mr-2"></i> ล้างข้อมูลเฉพาะในแอป
+                    </button>
 
-                 });
-        if (isConfirmed) {
+                    <button id="btn-clear-cloud" class="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-cloud mr-2"></i> ล้างข้อมูลเฉพาะบนคลาวด์
+                    </button>
+
+                    <button id="btn-clear-both" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-trash-can mr-2"></i> ล้างข้อมูลทั้งหมด
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mt-4">* หลังดำเนินการระบบจะออกจากระบบทันที</p>
+            `,
+            showConfirmButton: false, // ซ่อนปุ่ม OK มาตรฐาน
+            showCancelButton: true,
+            cancelButtonText: 'ยกเลิก',
+            cancelButtonColor: '#9ca3af',
+            didOpen: () => {
+                // ผูกเหตุการณ์คลิกให้ปุ่มทั้ง 3
+                const btnLocal = document.getElementById('btn-clear-local');
+                const btnCloud = document.getElementById('btn-clear-cloud');
+                const btnBoth = document.getElementById('btn-clear-both');
+
+                if (btnLocal) {
+                    btnLocal.onclick = () => {
+                        selectedChoice = 'local';
+                        Swal.clickConfirm(); // สั่งให้ Swal รับค่าและปิดตัวลง
+                    };
+                }
+                if (btnCloud) {
+                    btnCloud.onclick = () => {
+                        selectedChoice = 'cloud';
+                        Swal.clickConfirm();
+                    };
+                }
+                if (btnBoth) {
+                    btnBoth.onclick = () => {
+                        selectedChoice = 'both';
+                        Swal.clickConfirm();
+                    };
+                }
+            },
+            preConfirm: () => {
+                // ส่งค่าที่เลือกกลับไป
+                return selectedChoice;
+            }
+        });
+
+        // ถ้าผู้ใช้กดยกเลิก หรือไม่ได้เลือกอะไร
+        if (!choice) return;
+
+        // 3. ยืนยันครั้งสุดท้ายก่อนลบจริง
+        const mapText = {
+            'local': 'เฉพาะในเครื่องนี้ (ข้อมูลบน Cloud จะยังอยู่)',
+            'cloud': 'เฉพาะบน Cloud (ข้อมูลในเครื่องนี้จะยังอยู่)',
+            'both':  'ทั้งหมด (หายเกลี้ยงทั้งในเครื่องและ Cloud)'
+        };
+
+        const confirmResult = await Swal.fire({
+            title: 'ยืนยันครั้งสุดท้าย?',
+            text: `คุณกำลังจะลบข้อมูล: "${mapText[choice]}" ไม่สามารถกู้คืนได้!`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+
+        if (confirmResult.isConfirmed) {
+            // แสดงหน้าจอ Loading
+            Swal.fire({
+                title: 'กำลังดำเนินการ...',
+                html: 'กรุณารอสักครู่ ห้ามปิดหน้าจอ',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             try {
-                await dbClear(STORE_TRANSACTIONS);
-                await dbClear(STORE_CATEGORIES);
-                await dbClear(STORE_FREQUENT_ITEMS);
-                await dbClear(STORE_CONFIG);
-                await dbClear(STORE_ACCOUNTS);
-                await dbClear(STORE_AUTO_COMPLETE);
-				await dbClear(STORE_RECURRING); 
-                await dbClear(STORE_BUDGETS);				
-
-                const tx = db.transaction([STORE_CATEGORIES, STORE_FREQUENT_ITEMS, STORE_CONFIG, STORE_ACCOUNTS], 'readwrite');
-                
-                const catStore = tx.objectStore(STORE_CATEGORIES);
-                catStore.add({ type: 'income', items: DEFAULT_CATEGORIES.income });
-                catStore.add({ type: 'expense', items: DEFAULT_CATEGORIES.expense });
-
-                const itemStore = tx.objectStore(STORE_FREQUENT_ITEMS);
-                DEFAULT_FREQUENT_ITEMS.forEach(item => itemStore.add({ name: item }));
-
-                const configStore = tx.objectStore(STORE_CONFIG);
-                const hashedPassword = CryptoJS.SHA256(DEFAULT_PASSWORD).toString();
-                configStore.add({ key: 'password', value: hashedPassword });
-                configStore.add({ key: AUTOLOCK_CONFIG_KEY, value: 10 }); 
-                configStore.add({ key: DARK_MODE_CONFIG_KEY, value: false }); 
-                
-                const accStore = tx.objectStore(STORE_ACCOUNTS);
-                const defaultCash = { 
-                    id: 'acc-cash-' + Date.now(), 
-                    name: 'เงินสด', 
-                    type: 'cash', 
-                    initialBalance: 0, 
-                    icon: 'fa-wallet',
-                    iconName: 'fa-wallet', 
-                    displayOrder: Date.now() 
+                // --- ฟังก์ชันย่อย: ลบข้อมูลในเครื่อง (Local) ---
+                const performLocalClear = async () => {
+                    await dbClear(STORE_TRANSACTIONS);
+                    await dbClear(STORE_ACCOUNTS);
+                    await dbClear(STORE_CATEGORIES);
+                    await dbClear(STORE_FREQUENT_ITEMS);
+                    await dbClear(STORE_AUTO_COMPLETE);
+                    await dbClear(STORE_CONFIG);
+                    await dbClear(STORE_RECURRING); 
+                    await dbClear(STORE_BUDGETS);
+                    
+                    // เรียก Factory Reset เพื่อคืนค่าเริ่มต้น (ถ้ามีฟังก์ชันนี้)
+                    if (typeof window.clearLocalDataForLogout === 'function') {
+                         await window.clearLocalDataForLogout();
+                    }
                 };
-                accStore.add(defaultCash);
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = (e) => reject(e.target.error);
+                // --- ฟังก์ชันย่อย: ลบข้อมูลบน Cloud ---
+                const performCloudClear = async () => {
+                    if (window.auth && window.auth.currentUser && window.db) {
+                        const uid = window.auth.currentUser.uid;
+                        const collections = [
+                            STORE_TRANSACTIONS, STORE_ACCOUNTS, STORE_CATEGORIES, 
+                            STORE_FREQUENT_ITEMS, STORE_CONFIG, STORE_AUTO_COMPLETE,
+                            STORE_RECURRING, STORE_BUDGETS
+                        ];
+                        
+                        // วนลูปทุก Collection แล้วไล่ลบทีละ document
+                        for (const storeName of collections) {
+                            const colRef = window.dbCollection(window.db, 'users', uid, storeName);
+                            const snapshot = await window.dbGetDocs(colRef);
+                            if (!snapshot.empty) {
+                                const deletePromises = [];
+                                snapshot.forEach(doc => {
+                                    deletePromises.push(window.dbDelete(doc.ref));
+                                });
+                                await Promise.all(deletePromises);
+                            }
+                        }
+                    }
+                };
+
+                // --- เริ่มลบข้อมูลตามตัวเลือกที่กด ---
+                if (choice === 'local') {
+                    await performLocalClear();
+                } else if (choice === 'cloud') {
+                    await performCloudClear();
+                } else if (choice === 'both') {
+                    await Promise.all([performLocalClear(), performCloudClear()]);
+                }
+
+                // 4. แจ้งเตือนเสร็จสิ้น และบังคับ Logout ทันที
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'ล้างข้อมูลเรียบร้อย',
+                    text: 'ระบบกำลังออกจากระบบอัตโนมัติ...',
+                    timer: 2000,
+                    showConfirmButton: false
                 });
+
+                // สั่ง Logout Firebase
+                if (window.auth) {
+                    await window.auth.signOut();
+                }
                 
-                await loadStateFromDB();
-                resetAutoLockTimer(); 
-                applyDarkModePreference(); 
+                // ล้าง Storage ของ Browser เพื่อความชัวร์
+                localStorage.clear();
+                sessionStorage.clear();
                 
-                renderSettings();
-                showPage('page-home');
-                Swal.fire('ล้างข้อมูลสำเร็จ', 'ข้อมูลทั้งหมดถูกลบและรีเซ็ตเป็นค่าเริ่มต้นแล้ว', 'success');
+                // รีโหลดหน้าจอเพื่อกลับไปหน้า Login
+                window.location.reload();
+
             } catch (err) {
-                console.error("Failed to clear all data:", err);
-                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถล้างข้อมูลได้', 'error');
+                console.error("Clear Data Failed:", err);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้: ' + err.message, 'error');
             }
         }
     }
