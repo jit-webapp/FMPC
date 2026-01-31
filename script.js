@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
 	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.2.7';
+	const APP_VERSION = 'v8.3.3';
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -89,13 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'fa-person-running', 'fa-paw', 'fa-heart', 'fa-lightbulb'
     ];
 
-	// [1] ตั้งค่าระดับตัวอักษร
+	// [1] ตั้งค่าระดับตัวอักษร (ปรับปรุงใหม่ 6 ระดับ)
     const fontSettings = [
-        { label: 'เล็ก', size: '14px' },
-        { label: 'ปกติ', size: '16px' },
-        { label: 'ใหญ่', size: '18px' },
-        { label: 'ใหญ่มาก', size: '20px' },
-        { label: 'ใหญ่สุดๆ', size: '24px' }
+        { label: 'เล็กสุดๆ', size: '12px' }, // ระดับ 0
+        { label: 'เล็ก', size: '14px' },      // ระดับ 1
+        { label: 'ปกติ', size: '16px' },      // ระดับ 2 (ค่ามาตรฐาน)
+        { label: 'ใหญ่', size: '18px' },      // ระดับ 3
+        { label: 'ใหญ่มาก', size: '20px' },   // ระดับ 4
+        { label: 'ใหญ่สุดๆ', size: '24px' }   // ระดับ 5
     ];
 
     // ฟังก์ชันช่วย: เปลี่ยนขนาด Font และบันทึก
@@ -257,16 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ฟังก์ชันโหลดข้อมูลจาก Cloud ลงเครื่อง (เรียกตอน Login) - ฉบับปรับปรุง V.2
+    // ฟังก์ชันโหลดข้อมูลจาก Cloud ลงเครื่อง (เรียกตอน Login) - ฉบับปรับปรุง V.4 (Auto Merge & Remember Device)
     window.loadDataFromCloud = async (uid) => {
         if (!window.db) return;
         
-        const Toast = Swal.mixin({
-            toast: true, position: "top-end", showConfirmButton: false, timer: 3000,
-            customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-            background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-        });
-        Toast.fire({ icon: "info", title: "กำลังตรวจสอบและซิงค์ข้อมูล..." });
+        // แสดง Toast แจ้งเตือนเล็กๆ ว่ากำลังทำงาน (User จะได้รู้ว่าไม่ได้ค้าง)
+        // showToast("กำลังตรวจสอบข้อมูล...", "info"); 
 
         const collectionsToSync = [
             STORE_TRANSACTIONS, 
@@ -276,106 +273,146 @@ document.addEventListener('DOMContentLoaded', () => {
             STORE_CONFIG,
             STORE_AUTO_COMPLETE,
             STORE_RECURRING,
-			STORE_BUDGETS // [NEW]
+            STORE_BUDGETS
         ];
 
         try {
             let hasDownloaded = false;
             let hasUploaded = false;
+            let syncMode = 'overwrite'; // ค่าเริ่มต้น
+
+            // ---------------------------------------------------------
+            // [ส่วนที่เพิ่มใหม่] : ตรวจสอบว่าเคยซิงค์เครื่องนี้กับ User นี้ไปแล้วหรือยัง
+            // ---------------------------------------------------------
+            const lastSyncUid = localStorage.getItem('last_sync_uid');
+            const isSameUser = (lastSyncUid === uid);
+
+            // 1. เช็คข้อมูลในเครื่อง
+            const localTxs = await dbGetAll(STORE_TRANSACTIONS);
+            
+            // 2. เช็คข้อมูล Cloud
+            const cloudTxRef = window.dbCollection(window.db, 'users', uid, STORE_TRANSACTIONS);
+            const cloudTxSnapshot = await window.dbGetDocs(cloudTxRef);
+
+            // 3. ตรวจสอบเงื่อนไขการชนกัน
+            if (localTxs.length > 0 && !cloudTxSnapshot.empty) {
+                if (isSameUser) {
+                    // === กรณี A: คนเดิม เครื่องเดิม ===
+                    // ให้ผสานข้อมูลอัตโนมัติ (Silent Merge) ไม่ต้องถามซ้ำให้รำคาญ
+                    syncMode = 'merge';
+                    console.log("Auto-merging data for known user/device.");
+                } else {
+                    // === กรณี B: เปลี่ยน User หรือมีข้อมูลเก่าของคนอื่นค้างอยู่ ===
+                    // เด้งถามเพื่อความปลอดภัย
+                    await Swal.fire({
+                        title: '⚠️ พบข้อมูลเดิมในเครื่อง',
+                        html: `
+                            <div class="text-left text-sm">
+                                <p class="mb-2">พบรายการในเครื่อง <b>${localTxs.length} รายการ</b></p>
+                                <p>ดูเหมือนคุณจะเปลี่ยนบัญชีผู้ใช้ หรือไม่ได้ซิงค์นานแล้ว ต้องการจัดการอย่างไร?</p>
+                            </div>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'ทับข้อมูลในเครื่อง (ใช้ Cloud เป็นหลัก)', 
+                        cancelButtonText: 'ผสานข้อมูล (รวมกัน)',      
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        reverseButtons: true,
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.dismiss === Swal.DismissReason.cancel) {
+                            syncMode = 'merge';
+                        } else {
+                            syncMode = 'overwrite';
+                        }
+                    });
+                }
+            }
+            // ---------------------------------------------------------
 
             for (const storeName of collectionsToSync) {
-                const colRef = window.dbCollection(window.db, 'users', uid, storeName);
-                const snapshot = await window.dbGetDocs(colRef);
+                let snapshot;
+                if (storeName === STORE_TRANSACTIONS) {
+                    snapshot = cloudTxSnapshot;
+                } else {
+                    const colRef = window.dbCollection(window.db, 'users', uid, storeName);
+                    snapshot = await window.dbGetDocs(colRef);
+                }
                 
                 if (!snapshot.empty) {
-				// === กรณี A: บน Cloud มีข้อมูล (เครื่องใหม่) ===
-				await dbClear(storeName); 
-				
-				const tx = db.transaction([storeName], 'readwrite');
-				const store = tx.objectStore(storeName);
-				
-				snapshot.forEach(doc => {
-					let data = doc.data(); // ดึงข้อมูลดิบ
-					let isValid = true;    // ตัวแปรเช็คความถูกต้อง
+                    // บน Cloud มีข้อมูล -> ดาวน์โหลดลงเครื่อง
+                    
+                    // ถ้าเลือกโหมด overwrite ให้ล้างของเก่าก่อน
+                    if (syncMode === 'overwrite') {
+                        await dbClear(storeName); 
+                    }
+                    
+                    const tx = db.transaction([storeName], 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    
+                    snapshot.forEach(doc => {
+                        let data = doc.data(); 
+                        let isValid = true;    
 
-					// 1. ซ่อมแซมและตรวจสอบข้อมูลตามประเภทของ Store (Validation Logic)
-					if (storeName === STORE_BUDGETS) {
-						// ถ้าไม่มี category ให้ใช้ ID ของ document แทน
-						if (!data.category) data.category = doc.id;
-						// ถ้ายังไม่มีอีก (เป็นค่าว่าง/null) ให้ถือว่าข้อมูลเสีย
-						if (!data.category) isValid = false;
-					} 
-					else if (storeName === STORE_TRANSACTIONS) {
-						if (!data.id) data.id = doc.id;
-						if (!data.id) isValid = false;
-					} 
-					else if (storeName === STORE_ACCOUNTS) {
-						if (!data.id) data.id = doc.id;
-						if (!data.id) isValid = false;
-					} 
-					else if (storeName === STORE_CATEGORIES) {
-						if (!data.type) data.type = doc.id;
-						if (!data.type) isValid = false;
-					} 
-					else if (storeName === STORE_FREQUENT_ITEMS) {
-						if (!data.name) data.name = doc.id;
-						if (!data.name) isValid = false;
-					} 
-					else if (storeName === STORE_CONFIG) {
-						if (!data.key) data.key = doc.id;
-						if (!data.key) isValid = false;
-					}
-					else if (storeName === STORE_RECURRING) {
-						if (!data.id) data.id = doc.id;
-						if (!data.id) isValid = false;
-					}
+                        // Validation Logic
+                        if (storeName === STORE_BUDGETS) {
+                            if (!data.category) data.category = doc.id;
+                            if (!data.category) isValid = false;
+                        } else if (storeName === STORE_TRANSACTIONS || storeName === STORE_ACCOUNTS || storeName === STORE_RECURRING) {
+                            if (!data.id) data.id = doc.id;
+                            if (!data.id) isValid = false;
+                        } else if (storeName === STORE_CATEGORIES) {
+                            if (!data.type) data.type = doc.id;
+                            if (!data.type) isValid = false;
+                        } else if (storeName === STORE_FREQUENT_ITEMS) {
+                            if (!data.name) data.name = doc.id;
+                            if (!data.name) isValid = false;
+                        } else if (storeName === STORE_CONFIG) {
+                            if (!data.key) data.key = doc.id;
+                            if (!data.key) isValid = false;
+                        }
 
-					// 2. บันทึกลงเครื่อง (เฉพาะข้อมูลที่ Valid เท่านั้น)
-					if (isValid) {
-						try {
-							store.put(data);
-						} catch (err) {
-							console.error(`Skipping corrupt record in ${storeName}:`, doc.id, err);
-						}
-					} else {
-						console.warn(`iOS Fix: Skipped invalid record in ${storeName} (Missing Key):`, doc.id);
-					}
-				});
-				
-				await new Promise(resolve => tx.oncomplete = resolve);
-				hasDownloaded = true;
-			}
-				else {
-                    // === กรณี B: บน Cloud ว่างเปล่า แต่ในเครื่องมีข้อมูล (เครื่องเก่า) ===
-                    // ให้อัปโหลดข้อมูลในเครื่องขึ้น Cloud (Migration)
+                        if (isValid) {
+                            try {
+                                // ถ้าโหมด Merge: ข้อมูล ID เดียวกันจะอัปเดต / ID ใหม่จะเพิ่มเข้าไป
+                                store.put(data);
+                            } catch (err) {
+                                console.error(`Skipping corrupt record in ${storeName}:`, doc.id, err);
+                            }
+                        }
+                    });
+                    
+                    await new Promise(resolve => tx.oncomplete = resolve);
+                    hasDownloaded = true;
+                }
+                else {
+                    // Cloud ว่าง -> อัปโหลดขึ้นไป (เฉพาะครั้งแรก)
                     const localItems = await dbGetAll(storeName);
                     if (localItems.length > 0) {
-                        console.log(`Auto-Uploading ${localItems.length} items from ${storeName} to Cloud...`);
-                        
-                        // ใช้ Promise.all เพื่ออัปโหลดพร้อมกันให้ไวขึ้น
                         const uploadPromises = localItems.map(item => saveToCloud(storeName, item));
                         await Promise.all(uploadPromises);
-                        
                         hasUploaded = true;
                     }
                 }
             }
             
-            // โหลดข้อมูลเข้าตัวแปร state ใหม่ และรีเฟรชหน้าจอ
+            // [สำคัญ] บันทึกว่าเครื่องนี้ซิงค์กับ User นี้เรียบร้อยแล้ว ครั้งหน้าจะได้ไม่ถาม
+            localStorage.setItem('last_sync_uid', uid);
+
+            // โหลดข้อมูลเข้า State ใหม่ และรีเฟรชหน้าจอ
             await loadStateFromDB();
             refreshAllUI();
             
+            // แสดง Toast เฉพาะตอนมีการเปลี่ยนแปลงจริงๆ
             if (hasDownloaded) {
-                Toast.fire({ icon: "success", title: "ดึงข้อมูลจาก Cloud เรียบร้อย!" });
+                if (!isSameUser) showToast("ซิงค์ข้อมูลเรียบร้อย!", "success");
             } else if (hasUploaded) {
-                Toast.fire({ icon: "success", title: "อัปโหลดข้อมูลเก่าขึ้น Cloud แล้ว!" });
-            } else {
-                Toast.fire({ icon: "success", title: "ซิงค์ข้อมูลเรียบร้อยแล้ว" });
+                showToast("อัปโหลดข้อมูลเก่าขึ้น Cloud แล้ว!", "success");
             }
-            
         } catch (error) {
             console.error("Sync Error:", error);
-            Toast.fire({ icon: "error", title: "เกิดปัญหาในการซิงค์ข้อมูล: " + error.message });
+            showToast("Sync Error: " + error.message, "error");
         }
     };
 	
@@ -993,16 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					state.recurringRules = await dbGetAll(STORE_RECURRING);
 
 					// แจ้งเตือนผู้ใช้
-					const Toast = Swal.mixin({
-						toast: true, position: "top-end", showConfirmButton: false, timer: 5000,
-						customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-						background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-					});
-					Toast.fire({ 
-						icon: "info", 
-						title: `ระบบสร้างรายการอัตโนมัติ ${processedCount} รายการ`,
-						text: 'จากรายการประจำที่คุณตั้งไว้'
-					});
+					showToast(`ระบบสร้างรายการอัตโนมัติ ${processedCount} รายการ`, "info");
 
 					// รีเฟรชหน้าจอทันที
 					if (currentPage === 'home') renderAll();
@@ -1105,8 +1133,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			try {
 				// [2] โหลดขนาดตัวอักษรที่บันทึกไว้
 				let savedFontIndex = localStorage.getItem('appFontIndex');
-				if (savedFontIndex === null) savedFontIndex = 1;
+				if (savedFontIndex === null) savedFontIndex = 2; // *** แก้เป็น 2 (ปกติ) ***
 				updateAppFont(parseInt(savedFontIndex));
+				
+				// เพิ่มบรรทัดนี้: อัปเดต Slider ให้ตรงกับค่าที่โหลดมา
+				const sliderEl = document.getElementById('fontSizeSlider');
+				if(sliderEl) sliderEl.value = savedFontIndex;
+				updateFontLabel(parseInt(savedFontIndex));
 
 				// --- ลำดับการโหลดข้อมูลที่ถูกต้อง ---
 				await initDB();           // 1. เชื่อมต่อฐานข้อมูล
@@ -1228,13 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderDropdownList();
 				
 				// Toast Welcome
-				const Toast = Swal.mixin({
-					toast: true, position: "top-end", showConfirmButton: false, timer: 1000,
-					customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-					background: state.isDarkMode ? '#1a1a1a' : '#fff',
-					color: state.isDarkMode ? '#e5e7eb' : '#545454',
-				});
-				Toast.fire({ icon: "success", title: "ปลดล็อคสำเร็จ" });
+				showToast("ปลดล็อคสำเร็จ", "success");
 		
 			}, 100);
 		}
@@ -1375,20 +1402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						
 						resetAutoLockTimer();
 
-						const Toast = Swal.mixin({
-							toast: true,
-							position: "top-end",
-							showConfirmButton: false,
-							timer: 1000,
-							timerProgressBar: true,
-							customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-							background: state.isDarkMode ? '#1a1a1a' : '#fff',
-							color: state.isDarkMode ? '#e5e7eb' : '#545454',
-						});
-						Toast.fire({
-							icon: "success",
-							title: "ตั้งค่า Auto Lock สำเร็จ"
-						});
+						showToast("ตั้งค่า Auto Lock สำเร็จ", "success");
 
 					} catch (err) {
 						console.error("Failed to save auto lock config:", err);
@@ -1918,6 +1932,10 @@ document.addEventListener('DOMContentLoaded', () => {
         getEl('btn-import').addEventListener('click', () => getEl('import-file-input').click());
         getEl('import-file-input').addEventListener('change', handleImport);
         getEl('btn-clear-all').addEventListener('click', handleClearAll);
+		const btnHardReset = document.getElementById('btn-hard-reset');
+		if (btnHardReset) {
+			btnHardReset.addEventListener('click', handleHardReset);
+		}
         getEl('btn-manage-password').addEventListener('click', handleManagePassword);
         
         const toggleBalanceBtn = getEl('toggle-show-balance');
@@ -1951,14 +1969,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await dbPut(STORE_CONFIG, { key: AUTO_CONFIRM_CONFIG_KEY, value: isChecked });
                     
-                    // แจ้งเตือนเล็กน้อย
-                    const Toast = Swal.mixin({
-                        toast: true, position: "top-end", showConfirmButton: false, timer: 1500, timerProgressBar: true,
-                        customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-                        background: state.isDarkMode ? '#1a1a1a' : '#fff',
-                        color: state.isDarkMode ? '#e5e7eb' : '#545454',
-                    });
-                    Toast.fire({ icon: "success", title: isChecked ? "เปิดยืนยันอัตโนมัติ" : "ปิดยืนยันอัตโนมัติ" });
+                    /// แจ้งเตือนเล็กน้อย (แบบใหม่)
+                    const msg = isChecked ? "เปิดยืนยันอัตโนมัติ" : "ปิดยืนยันอัตโนมัติ";
+                    showToast(msg, "success");
 
                 } catch (err) {
                     console.error("Failed to save config:", err);
@@ -2099,15 +2112,30 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
         getEl('toggle-favorite-btn').addEventListener('click', handleToggleFavorite);
 		
-		// [3] ดักจับการเลื่อน Slider เปลี่ยนขนาดตัวอักษร
-        const fontSlider = document.getElementById('fontSizeSlider');
-        if (fontSlider) {
-            fontSlider.addEventListener('input', (e) => {
-                const index = parseInt(e.target.value);
-                updateAppFont(index);       // เปลี่ยนขนาดจริง
-                updateFontLabel(index);     // เปลี่ยนชื่อระดับ
-            });
-        }
+		// [3] ดักจับการเลื่อน Slider (แก้ใหม่: แค่เปลี่ยนชื่อป้ายกำกับ ยังไม่เปลี่ยนขนาดจริง)
+		const fontSlider = document.getElementById('fontSizeSlider');
+		if (fontSlider) {
+			fontSlider.addEventListener('input', (e) => {
+				const index = parseInt(e.target.value);
+				// updateAppFont(index);  <-- คอมเมนต์บรรทัดนี้ออก (ไม่ให้เปลี่ยนทันที)
+				updateFontLabel(index);   // เปลี่ยนแค่ข้อความโชว์ว่า "เล็ก", "ใหญ่" เฉยๆ
+			});
+		}
+
+		// [เพิ่มใหม่] ดักจับปุ่มบันทึก
+		const btnSaveFont = document.getElementById('btnSaveFontSize');
+		if (btnSaveFont && fontSlider) {
+			btnSaveFont.addEventListener('click', () => {
+				const index = parseInt(fontSlider.value);
+				
+				// 1. เปลี่ยนขนาดจริงและบันทึกลง LocalStorage
+				updateAppFont(index); 
+				
+				// 2. เรียกใช้ฟังก์ชัน showToast ที่มีอยู่แล้วในระบบ
+				// พารามิเตอร์: (ข้อความ, ไอคอน) -> ไอคอนมี 'success', 'error', 'info'
+				showToast('บันทึกขนาดตัวอักษรเรียบร้อย', 'success');
+			});
+		}
 		
 		// 1.6 [NEW] Recurring Transactions Listeners (ใส่ต่อท้ายสุดใน setupEventListeners)
         // +++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2405,13 +2433,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				(e.metaKey && e.key === 'r')
 			) {
 				e.preventDefault();
-				// อาจจะแสดง Toast แจ้งเตือนแทน
-				const Toast = Swal.mixin({
-					toast: true, position: "top-end", showConfirmButton: false, timer: 2000,
-					customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-					background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-				});
-				Toast.fire({ icon: "warning", title: "ระบบป้องกันการรีเฟรชหน้าจอ" });
+				// แสดง Toast แจ้งเตือน (แบบใหม่)
+				showToast("ระบบป้องกันการรีเฟรชหน้าจอ", "warning");
 			}
 		});
 		
@@ -2486,6 +2509,33 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		// เรียกใช้ฟังก์ชันปุ่ม Install
         setupInstallButton();
+		
+		// ============================================
+        // [เพิ่มใหม่] ระบบ Auto-Sync เมื่อกลับมาเปิดแอป / สลับหน้าจอ
+        // ============================================
+        document.addEventListener('visibilitychange', async () => {
+            // ทำงานเฉพาะตอนที่หน้าจอถูกเปิดขึ้นมา (Visible) และมีการ Login ค้างอยู่
+            if (document.visibilityState === 'visible') {
+                if (window.auth && window.auth.currentUser) {
+                    console.log('App resumed: Auto-syncing data...');
+                    // เรียกใช้ฟังก์ชัน loadDataFromCloud ที่เราปรับปรุงไปล่าสุด
+                    // ซึ่งมันจะทำการ "ผสาน (Merge)" ให้อัตโนมัติโดยไม่ถาม ถ้าเป็นเครื่องเดิม
+                    await window.loadDataFromCloud(window.auth.currentUser.uid);
+                }
+            }
+        });
+
+        // [เสริม] ตั้งเวลาให้ Sync อัตโนมัติทุกๆ 10 นาที (เผื่อเปิดจิค้างไว้)
+        setInterval(async () => {
+            if (document.visibilityState === 'visible' && window.auth && window.auth.currentUser) {
+                 console.log('Auto-sync interval trigger...');
+                 // เช็คว่าหน้าเว็บไม่ได้เปิด Modal อะไรค้างอยู่ (เพื่อไม่ให้รบกวนการพิมพ์)
+                 const isModalOpen = !document.getElementById('form-modal').classList.contains('hidden');
+                 if (!isModalOpen) {
+                     await window.loadDataFromCloud(window.auth.currentUser.uid);
+                 }
+            }
+        }, 600000); // 600,000 ms = 10 นาที
 		
     }
 	
@@ -5984,17 +6034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleFavBtn.classList.add('text-gray-400');
                 
                 renderSettings(); 
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: "top-end",
-                    showConfirmButton: false,
-                    timer: 1000,
-                    timerProgressBar: true,
-                    customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-                    background: state.isDarkMode ? '#1a1a1a' : '#fff',
-                    color: state.isDarkMode ? '#e5e7eb' : '#545454',
-                });
-                Toast.fire({ icon: "success", title: "ลบออกจากรายการโปรดแล้ว" });
+                showToast("ลบออกจากรายการโปรดแล้ว", "success");
             } catch (err) {
                 Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบรายการโปรดได้', 'error');
             }
@@ -6009,17 +6049,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleFavBtn.classList.remove('text-gray-400');
 
                 renderSettings(); 
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: "top-end",
-                    showConfirmButton: false,
-                    timer: 1000,
-                    timerProgressBar: true,
-                    customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-                    background: state.isDarkMode ? '#1a1a1a' : '#fff',
-                    color: state.isDarkMode ? '#e5e7eb' : '#545454',
-                });
-                Toast.fire({ icon: "success", title: "เพิ่มเป็นรายการโปรดแล้ว" });
+                showToast("เพิ่มเป็นรายการโปรดแล้ว", "success");
             } catch (err) {
                 Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเพิ่มรายการโปรดได้', 'error');
             }
@@ -6362,12 +6392,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 
 			if (result.isConfirmed) {
-				const Toast = Swal.mixin({
-					toast: true, position: "top-end", showConfirmButton: false, timer: 10000,
-					customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-					background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-				});
-				Toast.fire({ icon: "info", title: "กำลังทยอยส่งข้อมูล... ห้ามปิดหน้าจอ" });
+				// แจ้งเตือนแบบใหม่
+                showToast("กำลังทยอยส่งข้อมูล... ห้ามปิดหน้าจอ", "info");
 
 				try {
 					const collections = [
@@ -6851,14 +6877,8 @@ document.addEventListener('DOMContentLoaded', () => {
 					const success = await verifyBiometricIdentity();
 					
 					if (success) {
-						// ถ้าสแกนผ่าน ให้แจ้งเตือนเล็กน้อยแล้วคืนค่า true (ผ่าน) ทันที
-						const Toast = Swal.mixin({
-							toast: true, position: "top-end", showConfirmButton: false, timer: 1000,
-							customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-							background: state.isDarkMode ? '#1a1a1a' : '#fff', 
-							color: state.isDarkMode ? '#e5e7eb' : '#545454',
-						});
-						Toast.fire({ icon: "success", title: "ยืนยันตัวตนสำเร็จ" });
+						// ถ้าสแกนผ่าน ให้แจ้งเตือน (แบบใหม่)
+                        showToast("ยืนยันตัวตนสำเร็จ", "success");
 						
 						return true; // *** จบฟังก์ชันตรงนี้เลย ไม่ต้องโชว์ Popup ใส่รหัส ***
 					}
@@ -7294,12 +7314,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 
 				if (result.isConfirmed) {
-					const Toast = Swal.mixin({
-						toast: true, position: "top-end", showConfirmButton: false, timer: 10000,
-						customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-						background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-					});
-					Toast.fire({ icon: "info", title: "กำลังทยอยส่งข้อมูล... ห้ามปิดหน้าจอ" });
+					// แจ้งเตือนแบบใหม่
+                showToast("กำลังทยอยส่งข้อมูล... ห้ามปิดหน้าจอ", "info");
 
 					try {
 						const collections = [
@@ -7678,13 +7694,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 						const parsed = parseVoiceInput(transcript);
 						if (!parsed) {
-							// แจ้งเตือนแบบ Toast เล็กๆ
-							const Toast = Swal.mixin({
-								toast: true, position: "top-end", showConfirmButton: false, timer: 2000,
-								customClass: { popup: state.isDarkMode ? 'swal2-toast' : '' },
-								background: state.isDarkMode ? '#1a1a1a' : '#fff', color: state.isDarkMode ? '#e5e7eb' : '#545454',
-							});
-							Toast.fire({ icon: "warning", title: "ไม่เข้าใจคำสั่งเสียง" });
+							// แจ้งเตือน (แบบใหม่)
+                            showToast("ไม่เข้าใจคำสั่งเสียง", "warning");
 							resetBtn();
 							return;
 						}
@@ -8296,7 +8307,144 @@ document.addEventListener('DOMContentLoaded', () => {
 						console.error('ส่ง LINE ไม่ผ่าน:', error);
 					}
 				}
+				
+				// ============================================
+				// ฟังก์ชันแจ้งเตือนแบบใหม่ (ซ้ายบน + ดีไซน์สวย)
+				// ============================================
+				function showToast(title, icon = 'success') {
+					// เช็ค Dark Mode จากตัวแปร state ที่มีอยู่แล้วในไฟล์
+					const isDark = state.isDarkMode; 
+
+					const Toast = Swal.mixin({
+						toast: true,
+						// กำหนดตำแหน่งเป็น 'ซ้ายบน'
+						position: 'top-start', 
+						
+						showConfirmButton: false,
+						timer: 1500,
+						timerProgressBar: true,
+						
+						// ปรับธีมสีให้เข้ากับแอป
+						background: isDark ? '#1a1a1a' : '#ffffff',
+						color: isDark ? '#e5e7eb' : '#1f2937',
+						iconColor: icon === 'success' ? '#10b981' : (icon === 'error' ? '#ef4444' : '#3b82f6'),
+						
+						// ใช้ Tailwind Class ตกแต่ง (มุมโค้ง, เงา, ฟอนต์)
+						customClass: {
+							popup: 'rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 font-prompt mt-16 ml-2', // mt-16 เพื่อหลบ Header ด้านบนนิดนึง
+							title: 'text-sm font-medium'
+						},
+						
+						didOpen: (toast) => {
+							toast.addEventListener('mouseenter', Swal.stopTimer)
+							toast.addEventListener('mouseleave', Swal.resumeTimer)
+						}
+					});
+
+					Toast.fire({
+						icon: icon,
+						title: title
+					});
+				}
 
             // Start the application
             initApp();
+			
+			// ============================================
+			// ฟังก์ชัน: ล้างระบบแบบถอนรากถอนโคน (Hard Reset)
+			// ============================================
+			async function handleHardReset() {
+				// [ใหม่] 1. ตรวจสอบสิทธิ์ก่อน (รหัสผ่าน หรือ สแกนนิ้ว)
+				const hasPermission = await promptForPassword('ยืนยันรหัสผ่านเพื่อล้างระบบ');
+				if (!hasPermission) return; // ถ้าใส่ผิด หรือกดยกเลิก ให้จบการทำงานทันที
+
+				// 2. แจ้งเตือนยืนยันอีกครั้ง (Double Check)
+				const result = await Swal.fire({
+					title: '⚠️ ยืนยันการล้างระบบ?',
+					html: `
+						<div class="text-left text-sm">
+							<p class="text-red-600 font-bold mb-2">ข้อมูลในเครื่องจะหายถาวร!</p>
+							<p>ระบบจะทำการ:</p>
+							<ul class="list-disc pl-5 space-y-1 text-gray-600">
+								<li>ลบ Service Worker (ตัวจัดการออฟไลน์)</li>
+								<li>ลบ Cache ไฟล์ระบบทั้งหมด</li>
+								<li><b>ลบฐานข้อมูลในเครื่องทั้งหมด (Database)</b></li>
+								<li>รีเซ็ตการตั้งค่าทุกอย่าง</li>
+							</ul>
+							<p class="mt-3 font-bold text-gray-500">ข้อมูลที่ไม่ได้ Sync ขึ้น Cloud จะกู้คืนไม่ได้</p>
+						</div>
+					`,
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonColor: '#374151', // สีเทาเข้ม
+					cancelButtonColor: '#d33',
+					confirmButtonText: 'ยอมรับและล้างระบบ',
+					cancelButtonText: 'ยกเลิก'
+				});
+
+				if (result.isConfirmed) {
+					Swal.fire({
+						title: 'กำลังล้างระบบ...',
+						html: 'กรุณารอสักครู่ ระบบกำลังรีเซ็ตตัวเอง<br>ห้ามปิดหน้าจอนี้',
+						allowOutsideClick: false,
+						didOpen: async () => {
+							Swal.showLoading();
+							
+							try {
+								// 1. ถอนการติดตั้ง Service Worker
+								if ('serviceWorker' in navigator) {
+									const registrations = await navigator.serviceWorker.getRegistrations();
+									for (const registration of registrations) {
+										await registration.unregister();
+										console.log('Service Worker Unregistered');
+									}
+								}
+
+								// 2. ลบ Cache Storage
+								if ('caches' in window) {
+									const keys = await caches.keys();
+									await Promise.all(keys.map(key => caches.delete(key)));
+									console.log('Caches Cleared');
+								}
+
+								// 3. ลบ LocalStorage
+								localStorage.clear();
+								sessionStorage.clear();
+
+								// 4. ลบ IndexedDB
+								if (db) {
+									db.close();
+								}
+								
+								const DB_NAME_TO_DELETE = 'expenseTrackerDB_JamesIT'; 
+								const deleteDbRequest = indexedDB.deleteDatabase(DB_NAME_TO_DELETE);
+								
+								deleteDbRequest.onsuccess = () => {
+									console.log('Database Deleted Successfully');
+									window.location.reload(true);
+								};
+
+								deleteDbRequest.onerror = (e) => {
+									console.error('Could not delete DB:', e);
+									window.location.reload(true);
+								};
+
+								deleteDbRequest.onblocked = () => {
+									console.warn('DB Delete Blocked - Forcing Reload');
+									window.location.reload(true);
+								};
+
+								setTimeout(() => {
+									 window.location.reload(true);
+								}, 3000);
+
+							} catch (error) {
+								console.error("Hard Reset Error:", error);
+								window.location.reload(true);
+							}
+						}
+					});
+				}
+			}
+			
         });

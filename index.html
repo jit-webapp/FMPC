@@ -630,28 +630,34 @@
                         </div>
 
                         <div class="mb-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-								<div class="flex items-center justify-between mb-6">
-									<div class="flex items-center gap-3">
-										<div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600">
-											<i class="fa-solid fa-font"></i>
-										</div>
-										<span class="text-lg text-gray-700 font-medium">ขนาดตัวอักษร</span>
+							<div class="flex items-center justify-between mb-4">
+								<div class="flex items-center gap-3">
+									<div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600">
+										<i class="fa-solid fa-font"></i>
 									</div>
-									<span id="fontLabelDisplay" class="text-blue-600 bg-blue-100 px-3 py-1 rounded-full text-sm">ปกติ</span>
+									<span class="text-lg text-gray-700 font-medium">ขนาดตัวอักษร</span>
 								</div>
+								<span id="fontLabelDisplay" class="text-blue-600 bg-blue-100 px-3 py-1 rounded-full text-sm">ปกติ</span>
+							</div>
+							
+							<div class="relative w-full px-1 mb-4">
+								<input type="range" id="fontSizeSlider" min="0" max="5" step="1" value="2" 
+									   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 block">
 								
-								<div class="relative w-full px-1">
-									<input type="range" id="fontSizeSlider" min="0" max="4" step="1" value="1" 
-										   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 block">
-									
-									<div class="relative w-full h-6 mt-2 text-xs text-gray-400 font-medium">
-										<span class="absolute left-0 top-0">เล็ก</span>
-										<span class="absolute left-1/4 top-0 -translate-x-1/2">ปกติ</span>
-										<span class="absolute left-1/2 top-0 -translate-x-1/2">ใหญ่</span>
-										<span class="absolute left-3/4 top-0 -translate-x-1/2">ใหญ่มาก</span>
-										<span class="absolute right-0 top-0">ใหญ่สุดๆ</span>
-									</div>
+								<div class="relative w-full h-6 mt-2 text-xs text-gray-400 font-medium">
+									<span class="absolute left-0 top-0" style="left: 0%;">เล็กสุดๆ</span>
+									<span class="absolute top-0 -translate-x-1/2" style="left: 20%;">เล็ก</span>
+									<span class="absolute top-0 -translate-x-1/2" style="left: 40%;">ปกติ</span>
+									<span class="absolute top-0 -translate-x-1/2" style="left: 60%;">ใหญ่</span>
+									<span class="absolute top-0 -translate-x-1/2" style="left: 80%;">ใหญ่มาก</span>
+									<span class="absolute right-0 top-0" style="left: 100%; transform: translateX(-100%);">ใหญ่สุดๆ</span>
 								</div>
+							</div>
+
+							<button id="btnSaveFontSize" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow transition duration-300">
+								<i class="fa-solid fa-save mr-2"></i> บันทึกขนาดตัวอักษร
+							</button>
+							<p class="text-xs text-gray-400 text-center mt-2">* กดปุ่มบันทึกเพื่อให้การเปลี่ยนแปลงมีผล</p>
 						</div>
                     </div>
 
@@ -685,6 +691,12 @@
 								<button id="btn-system-update" class="col-span-2 bg-gradient-to-r from-orange-400 to-pink-500 hover:from-orange-500 hover:to-pink-600 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg mb-2">
 									<i class="fa-solid fa-rotate mr-2 animate-spin-slow"></i> ตรวจสอบและอัปเดตเวอร์ชันล่าสุด / ล้างแคช
 								</button>
+								
+								<div class="col-span-2 mt-4 pt-4 border-t border-gray-200">
+									<button id="btn-hard-reset" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg">
+										<i class="fa-solid fa-power-off text-red-400 mr-2"></i> ล้างระบบแก้แอปค้าง แอปพัง อัพเดทไม่ได้ (Hard Reset)
+									</button>
+								</div>
 
                                 <button id="btn-clear-all" class="col-span-2 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition duration-300 text-lg"> <i class="fa-solid fa-trash-alt mr-2"></i> รีเซ็ตและล้างข้อมูลทั้งหมด
                                 </button>
@@ -997,7 +1009,7 @@
     </div> 
     
     <footer class="text-center p-6 text-gray-600 text-base">
-        © 2025 Finance Manager Pro v8.2.7 Cloud | Developed by James IT
+        © 2025 Finance Manager Pro v8.3.3 Cloud | Developed by James IT
     </footer>
 
     <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
@@ -1823,48 +1835,70 @@
     <script src="script.js"></script>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // *** แก้ไขชื่อไฟล์ตรงนี้ให้เป็น ./sw.js ให้ตรงกับไฟล์จริง ***
-                navigator.serviceWorker.register('./sw.js')
-                    .then((registration) => {
-                        console.log('Service Worker Registered with scope:', registration.scope);
-                        
-                        // เช็คการอัปเดต
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // แจ้งเตือนผู้ใช้เมื่อมีเวอร์ชันใหม่
-                                    Swal.fire({
-                                        title: 'มีการอัปเดต!',
-                                        text: 'ระบบเวอร์ชันใหม่พร้อมใช้งานแล้ว',
-                                        icon: 'info',
-                                        confirmButtonText: 'อัปเดตทันที',
-                                        allowOutsideClick: false
-                                    }).then((result) => {
-                                        if (result.isConfirmed) {
-                                            window.location.reload();
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                    })
-                    .catch((err) => {
-                        console.log('Service Worker Registration Failed:', err);
-                    });
-            });
+		// ตรวจสอบว่า Browser รองรับ Service Worker ไหม
+		if ('serviceWorker' in navigator) {
+			window.addEventListener('load', () => {
+				navigator.serviceWorker.register('./sw.js')
+					.then((registration) => {
+						console.log('Service Worker Registered');
 
-            // บังคับรีโหลดเมื่อมีการเปลี่ยน Controller
-            let refreshing;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (refreshing) return;
-                window.location.reload();
-                refreshing = true;
-            });
-        }
-    </script>
+						// ฟังก์ชันสำหรับจัดการ New Worker ไม่ว่าจะมาท่าไหน
+						const handleNewWorker = (newWorker) => {
+							// ดักจับการเปลี่ยนสถานะ
+							newWorker.addEventListener('statechange', () => {
+								console.log('[Service Worker] State change:', newWorker.state); // Debug log
+								// เงื่อนไข: ติดตั้งเสร็จแล้ว + ไม่ใช่การรันครั้งแรก (มี controller เดิมคุมอยู่)
+								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+									showUpdatePopup(newWorker);
+								}
+							});
+						};
+
+						// 1. กรณีเจอ Worker รออยู่แล้ว (Waiting)
+						if (registration.waiting) {
+							console.log('[Service Worker] Found waiting worker');
+							showUpdatePopup(registration.waiting);
+							return;
+						}
+
+						// 2. กรณีเจอการอัปเดตใหม่ (Installing)
+						registration.addEventListener('updatefound', () => {
+							console.log('[Service Worker] Update found');
+							handleNewWorker(registration.installing);
+						});
+					})
+					.catch((err) => {
+						console.log('Service Worker Registration Failed:', err);
+					});
+			});
+
+			// ฟังก์ชันแสดง Popup แจ้งเตือน
+			function showUpdatePopup(worker) {
+				Swal.fire({
+					title: 'มีการอัปเดต!',
+					text: 'ระบบเวอร์ชันใหม่พร้อมใช้งานแล้ว',
+					icon: 'info',
+					showCancelButton: true,
+					confirmButtonText: 'อัปเดตทันที',
+					cancelButtonText: 'ไว้ทีหลัง',
+					allowOutsideClick: false
+				}).then((result) => {
+					if (result.isConfirmed) {
+						// ส่งคำสั่ง skipWaiting ไปที่ sw.js
+						worker.postMessage({ action: 'skipWaiting' });
+					}
+				});
+			}
+
+			// เมื่อ Service Worker เปลี่ยนตัวจริง (จากการสั่ง skipWaiting) ให้รีโหลดหน้าจอ
+			let refreshing;
+			navigator.serviceWorker.addEventListener('controllerchange', () => {
+				if (refreshing) return;
+				window.location.reload();
+				refreshing = true;
+			});
+		}
+	</script>
 	
 </body>
 </html>

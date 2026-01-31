@@ -1,12 +1,13 @@
-// 1. กำหนดชื่อ Cache (***สำคัญ: เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการแก้โค้ด เพื่อให้เครื่องลูกค้าอัปเดต***)
-const CACHE_NAME = 'finance-manager-v8.2.7';
+// 1. กำหนดชื่อ Cache (***สำคัญ: เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการแก้โค้ด เพื่อให้เครื่องลูกค้าแจ้งเตือนอัปเดต***)
+const VERSION = 'finance-manager-v8.3.3'; 
+const CACHE_NAME = VERSION;
 
 // รายการไฟล์ที่ต้องการให้จำไว้ในเครื่อง (เพื่อให้โหลดเร็วและใช้ Offline ได้)
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './styles.css',
-  './script.js',
+  `./?v=${VERSION}`,
+  `./index.html?v=${VERSION}`,
+  `./styles.css?v=${VERSION}`,
+  `./script.js?v=${VERSION}`,
   './manifest.json',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
@@ -23,14 +24,11 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js'
 ];
 
-// 2. Event: Install (ทำงานเมื่อติดตั้ง Service Worker ครั้งแรก หรือเมื่อเจอเวอร์ชันใหม่)
+// 2. Event Install: ติดตั้งไฟล์ลงเครื่อง (แต่ยังไม่แย่งการทำงานทันที)
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing new version:', CACHE_NAME);
 
-  // *** หัวใจสำคัญของ Auto Update ***
-  // สั่งให้ Service Worker ตัวใหม่ทำงานทันที ไม่ต้องรอให้ปิดแอป
-  self.skipWaiting();
-
+  // *** จุดสำคัญ: ตรงนี้ต้อง "ไม่มี" self.skipWaiting() เด็ดขาด ***
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Caching app shell');
@@ -39,11 +37,18 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 3. Event: Activate (ทำงานเมื่อ Service Worker ตัวใหม่เริ่มทำงานจริง)
+// +++ ส่วนสำคัญ: รอรับคำสั่ง "skipWaiting" จากปุ่มกดหน้าเว็บ +++
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting(); // ทำงานเมื่อ user กดปุ่มเท่านั้น
+  }
+});
+
+// 3. Event Activate: ทำงานเมื่อได้รับอนุญาตให้เป็น Active Worker แล้ว
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activated');
 
-  // ลบ Cache ของเวอร์ชันเก่าทิ้ง (เช่น ลบ v1 ออกเมื่อ v2 มา)
+  // ลบ Cache ของเวอร์ชันเก่าทิ้ง
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
@@ -55,28 +60,29 @@ self.addEventListener('activate', (event) => {
     })
   );
 
-  // สั่งให้ Service Worker เข้าควบคุมหน้าเว็บทันที
+  // สั่งให้ Service Worker เข้าควบคุมหน้าเว็บทันทีหลังจาก Activate แล้ว
   return self.clients.claim();
 });
 
-// 4. Event: Fetch (ดักจับการโหลดไฟล์ต่างๆ)
+// 4. Event Fetch: ดักจับการโหลดไฟล์
 self.addEventListener('fetch', (event) => {
-  // ข้ามการ Cache ข้อมูลจาก Firebase/Firestore (เพราะข้อมูลต้องสดใหม่เสมอ)
+  // ข้ามการ Cache ข้อมูลจาก Firebase/Firestore
   if (event.request.url.includes('firestore.googleapis.com') || 
       event.request.url.includes('googleapis.com/auth')) {
-    return;
+    return; // ให้โหลดสดจากเน็ตเสมอ
   }
 
-  // ระบบ Cache First: ดูในเครื่องก่อน ถ้าไม่มีค่อยโหลดจากเน็ต
+  // Cache First Strategy
   event.respondWith(
-    caches.match(event.request).then((response) => {
+    // *** แก้ตรงนี้: ใส่ { ignoreSearch: true } เพื่อให้หาไฟล์เจอแม้จะมี ?v=... ***
+    caches.match(event.request, { ignoreSearch: true }).then((response) => {
       if (response) {
         return response; // เจอใน Cache ใช้เลย
       }
       // ถ้าไม่เจอ ให้ไปโหลดจากเน็ต
       return fetch(event.request).catch((error) => {
-         // กรณีไม่มีเน็ตและไม่เจอใน Cache อาจจะ return หน้า Offline page ได้ (ถ้ามี)
          console.error('[Service Worker] Fetch failed:', error);
+         // ตรงนี้ถ้าอยากให้ return หน้า offline page สามารถเพิ่ม logic ได้
       });
     })
   );
