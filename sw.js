@@ -1,13 +1,17 @@
-// 1. กำหนดชื่อ Cache (***สำคัญ: เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการแก้โค้ด เพื่อให้เครื่องลูกค้าแจ้งเตือนอัปเดต***)
-const VERSION = 'finance-manager-v8.3.3'; 
-const CACHE_NAME = VERSION;
+// 0. นำเข้าตัวแปร APP_VERSION จากไฟล์ version.js
+importScripts('version.js');
+
+// 1. กำหนดชื่อ Cache โดยอิงจาก APP_VERSION ที่ import มา
+// (เมื่อแก้เลขใน version.js ชื่อ Cache จะเปลี่ยน และ Trigger การอัปเดตทันที)
+const CACHE_NAME = 'finance-manager-' + APP_VERSION;
 
 // รายการไฟล์ที่ต้องการให้จำไว้ในเครื่อง (เพื่อให้โหลดเร็วและใช้ Offline ได้)
 const ASSETS_TO_CACHE = [
-  `./?v=${VERSION}`,
-  `./index.html?v=${VERSION}`,
-  `./styles.css?v=${VERSION}`,
-  `./script.js?v=${VERSION}`,
+  `./?v=${APP_VERSION}`,
+  `./index.html?v=${APP_VERSION}`,
+  `./script.js?v=${APP_VERSION}`,
+  `./version.js?v=${APP_VERSION}`, // *** เพิ่มไฟล์นี้เพื่อให้ SW เช็คเวอร์ชันได้ ***
+  `./styles.css?v=${APP_VERSION}`, // (เปิดบรรทัดนี้ถ้าคุณมีไฟล์ styles.css แยก)
   './manifest.json',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
@@ -29,6 +33,7 @@ self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing new version:', CACHE_NAME);
 
   // *** จุดสำคัญ: ตรงนี้ต้อง "ไม่มี" self.skipWaiting() เด็ดขาด ***
+  // เพื่อรอให้ User กดปุ่มอัปเดตหน้าเว็บก่อน ถึงจะยอมเปลี่ยนเวอร์ชัน
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Caching app shell');
@@ -46,12 +51,13 @@ self.addEventListener('message', (event) => {
 
 // 3. Event Activate: ทำงานเมื่อได้รับอนุญาตให้เป็น Active Worker แล้ว
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activated');
+  console.log('[Service Worker] Activated version:', APP_VERSION);
 
   // ลบ Cache ของเวอร์ชันเก่าทิ้ง
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
+        // ลบ Cache ที่ชื่อไม่ตรงกับเวอร์ชันปัจจุบัน
         if (key !== CACHE_NAME) {
           console.log('[Service Worker] Removing old cache', key);
           return caches.delete(key);
@@ -66,7 +72,7 @@ self.addEventListener('activate', (event) => {
 
 // 4. Event Fetch: ดักจับการโหลดไฟล์
 self.addEventListener('fetch', (event) => {
-  // ข้ามการ Cache ข้อมูลจาก Firebase/Firestore
+  // ข้ามการ Cache ข้อมูลจาก Firebase/Firestore หรือ Google Auth
   if (event.request.url.includes('firestore.googleapis.com') || 
       event.request.url.includes('googleapis.com/auth')) {
     return; // ให้โหลดสดจากเน็ตเสมอ
@@ -74,15 +80,17 @@ self.addEventListener('fetch', (event) => {
 
   // Cache First Strategy
   event.respondWith(
-    // *** แก้ตรงนี้: ใส่ { ignoreSearch: true } เพื่อให้หาไฟล์เจอแม้จะมี ?v=... ***
+    // ใส่ { ignoreSearch: true } เพื่อให้หาไฟล์เจอแม้ request จะมีหรือไม่มี ?v=...
     caches.match(event.request, { ignoreSearch: true }).then((response) => {
       if (response) {
         return response; // เจอใน Cache ใช้เลย
       }
+      
       // ถ้าไม่เจอ ให้ไปโหลดจากเน็ต
       return fetch(event.request).catch((error) => {
+         // กรณี Offline และหาไฟล์ไม่เจอ (อาจจะ Error หรือไม่มีเน็ต)
          console.error('[Service Worker] Fetch failed:', error);
-         // ตรงนี้ถ้าอยากให้ return หน้า offline page สามารถเพิ่ม logic ได้
+         // ตรงนี้สามารถเพิ่ม logic return file offline.html ได้ถ้าต้องการ
       });
     })
   );

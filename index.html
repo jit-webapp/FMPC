@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการรายรับ-รายจ่าย</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
 	<script>
         tailwind.config = {
@@ -21,9 +21,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 	<link rel="manifest" href="manifest.json">
+	<script src="version.js"></script> 
     
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -339,27 +341,6 @@
                                                 <button type="button" id="toggle-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-600 hover:text-purple-800 p-1 rounded-lg">
                                                     <i class="fa-solid fa-calculator text-xl"></i>
                                                 </button>
-                                                <div id="account-calculator-popover" class="absolute z-20 w-full max-w-xs bg-gray-50 shadow-lg rounded-xl p-3 mt-1 right-0 hidden border border-gray-200">
-                                                    <div id="acc-calc-preview" class="text-right text-purple-600 font-bold text-xl h-6 mb-2 pr-1"> </div>
-                                                    <div id="account-calculator-grid" class="grid grid-cols-4 gap-1">
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="7">7</button> <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="8">8</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="9">9</button>
-                                                        <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="/">/</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="4">4</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="5">5</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="6">6</button>
-                                                        <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="*">*</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="1">1</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="2">2</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="3">3</button>
-                                                        <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="-">-</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="0">0</button>
-                                                        <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value=".">.</button>
-                                                        <button type="button" class="calc-btn bg-red-200 hover:bg-red-300 text-red-800 py-1 rounded-lg font-semibold text-base" data-value="C">C</button>
-                                                        <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="+">+</button>
-                                                        <button type="button" class="calc-btn col-span-4 bg-purple-600 hover:bg-purple-700 text-white py-1 rounded-lg font-semibold text-base" data-value="=">=</button>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1009,8 +990,8 @@
     </div> 
     
     <footer class="text-center p-6 text-gray-600 text-base">
-        © 2025 Finance Manager Pro v8.3.3 Cloud | Developed by James IT
-    </footer>
+    © 2025 Finance Manager Pro <span id="version-display"></span> Cloud | Developed by James IT
+	</footer>
 
     <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
@@ -1098,27 +1079,6 @@
                     </div>
                     <input type="text" id="tx-amount" inputmode="decimal" placeholder="0.00 หรือ 50+20" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
                     
-                    <div id="calculator-popover" class="absolute z-20 w-full max-w-xs bg-gray-50 shadow-lg rounded-xl p-3 mt-1 right-0 hidden border border-gray-200">
-                        <div id="calc-preview" class="text-right text-purple-600 font-bold text-xl h-6 mb-2 pr-1"> </div>
-                        <div id="calculator-grid" class="grid grid-cols-4 gap-1">
-                             <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="7">7</button> <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="8">8</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="9">9</button>
-                             <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="/">/</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="4">4</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="5">5</button>
-                             <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="6">6</button>
-                            <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="*">*</button>
-                         <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="1">1</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="2">2</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="3">3</button>
-                             <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="-">-</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="0">0</button>
-                            <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value=".">.</button>
-                            <button type="button" class="calc-btn bg-red-200 hover:bg-red-300 text-red-800 py-1 rounded-lg font-semibold text-base" data-value="C">C</button>
-                            <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="+">+</button>
-                         <button type="button" class="calc-btn col-span-4 bg-purple-600 hover:bg-purple-700 text-white py-1 rounded-lg font-semibold text-base" data-value="=">=</button>
-                        </div>
-                    </div>
                 </div>
 
                 <div>
@@ -1217,27 +1177,6 @@
                         <button type="button" id="toggle-edit-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-600 hover:text-purple-800 p-1 rounded-lg">
                             <i class="fa-solid fa-calculator text-xl"></i>
                         </button>
-                        <div id="edit-account-calculator-popover" class="absolute z-20 w-full max-w-xs bg-gray-50 shadow-lg rounded-xl p-3 mt-1 right-0 hidden border border-gray-200">
-                             <div id="edit-acc-calc-preview" class="text-right text-purple-600 font-bold text-xl h-6 mb-2 pr-1"> </div>
-                             <div id="edit-account-calculator-grid" class="grid grid-cols-4 gap-1">
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="7">7</button> <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="8">8</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="9">9</button>
-                                <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="/">/</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="4">4</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="5">5</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="6">6</button>
-                                <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="*">*</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="1">1</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="2">2</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="3">3</button>
-                                <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="-">-</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value="0">0</button>
-                                <button type="button" class="calc-btn bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 rounded-lg font-semibold text-base" data-value=".">.</button>
-                                <button type="button" class="calc-btn bg-red-200 hover:bg-red-300 text-red-800 py-1 rounded-lg font-semibold text-base" data-value="C">C</button>
-                                <button type="button" class="calc-btn bg-purple-200 hover:bg-purple-300 text-purple-800 py-1 rounded-lg font-semibold text-base" data-value="+">+</button>
-                                <button type="button" class="calc-btn col-span-4 bg-purple-600 hover:bg-purple-700 text-white py-1 rounded-lg font-semibold text-base" data-value="=">=</button>
-                            </div>
-                        </div>
                     </div>
                     
                     <p class="text-sm text-gray-500 mt-1">หมายเหตุ: การเปลี่ยนยอดเริ่มต้นจะส่งผลต่อยอดคงเหลือปัจจุบัน</p>
@@ -1899,6 +1838,118 @@
 			});
 		}
 	</script>
-	
+	<div id="calculator-popover" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden transition-opacity duration-300" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-[360px] mx-4 overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
+            <div class="bg-purple-600 p-4 flex justify-between items-center">
+                <h3 class="text-white text-xl font-bold"><i class="fa-solid fa-calculator mr-2"></i>เครื่องคิดเลข</h3>
+                <button type="button" onclick="document.getElementById('calculator-popover').classList.add('hidden')" class="text-white hover:text-purple-200 transition p-1">
+                    <i class="fa-solid fa-xmark text-3xl"></i>
+                </button>
+            </div>
+            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <div id="calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            </div>
+            <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="calculator-grid">
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="/">÷</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="*">×</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="-">-</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="+">+</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                
+                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-purple-600 text-white text-4xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+
+                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="account-calculator-popover" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden transition-opacity duration-300" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-[360px] mx-4 overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
+            <div class="bg-green-600 p-4 flex justify-between items-center">
+                <h3 class="text-white text-xl font-bold"><i class="fa-solid fa-wallet mr-2"></i>คำนวณยอดเงิน</h3>
+                <button type="button" onclick="document.getElementById('account-calculator-popover').classList.add('hidden')" class="text-white hover:text-green-200 transition p-1">
+                    <i class="fa-solid fa-xmark text-3xl"></i>
+                </button>
+            </div>
+            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <div id="acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            </div>
+            <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="account-calculator-grid">
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="/">÷</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="*">×</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="-">-</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="+">+</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                
+                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-green-600 text-white text-4xl font-bold hover:bg-green-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+
+                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-account-calculator-popover" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden transition-opacity duration-300" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-[360px] mx-4 overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
+            <div class="bg-blue-600 p-4 flex justify-between items-center">
+                <h3 class="text-white text-xl font-bold"><i class="fa-solid fa-pen-to-square mr-2"></i>แก้ไขยอดเงิน</h3>
+                <button type="button" onclick="document.getElementById('edit-account-calculator-popover').classList.add('hidden')" class="text-white hover:text-blue-200 transition p-1">
+                    <i class="fa-solid fa-xmark text-3xl"></i>
+                </button>
+            </div>
+            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <div id="edit-acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            </div>
+            <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="edit-account-calculator-grid">
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="/">÷</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="*">×</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="-">-</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="+">+</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                
+                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-blue-600 text-white text-4xl font-bold hover:bg-blue-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
+
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+
+                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

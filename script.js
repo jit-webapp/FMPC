@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-	// กำหนดเลขเวอร์ชันแอปตรงนี้
-	const APP_VERSION = 'v8.3.3';
+	// 2. เพิ่มโค้ดนี้เพื่อนำเลขเวอร์ชันไปแสดงที่ Footer
+    const versionEl = document.getElementById('version-display');
+    if (versionEl) {
+        versionEl.textContent = APP_VERSION;
+    }
 	
 	// --- WebAuthn Helpers ---
 	// แปลง ArrayBuffer เป็น Base64URL string
@@ -113,6 +116,95 @@ document.addEventListener('DOMContentLoaded', () => {
         if (labelDisplay && fontSettings[index]) {
             labelDisplay.innerText = fontSettings[index].label;
         }
+    }
+	
+    // ฟังก์ชัน Export Excel แท้ (.xlsx) รองรับ Office 365
+    function exportAccountExcel(accountId) {
+        // ตรวจสอบว่าโหลด Library มาหรือยัง
+        if (typeof XLSX === 'undefined') {
+            Swal.fire('Error', 'ไม่พบ Library สำหรับสร้าง Excel (กรุณาตรวจสอบ index.html)', 'error');
+            return;
+        }
+
+        const account = state.accounts.find(a => a.id === accountId);
+        if (!account) return;
+
+        const txs = state.transactions.filter(t => t.accountId === accountId || t.toAccountId === accountId);
+        
+        if (txs.length === 0) {
+            Swal.fire('ไม่มีข้อมูล', 'บัญชีนี้ยังไม่มีรายการธุรกรรมให้ดาวน์โหลด', 'info');
+            return;
+        }
+
+        // เรียงวันที่เก่า -> ใหม่
+        txs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // เตรียมข้อมูลสำหรับ Excel
+        const dataForExcel = txs.map(tx => {
+            const d = new Date(tx.date);
+            const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            
+            let typeStr = tx.type;
+            let amount = tx.amount;
+            let category = tx.category;
+
+            // จัดการประเภทและยอดเงิน
+            if (tx.type === 'transfer') {
+                if (tx.accountId === accountId) {
+                    typeStr = 'โอนออก';
+                    amount = -Math.abs(amount);
+                    category = 'โอนไปยัง ' + (state.accounts.find(a => a.id === tx.toAccountId)?.name || 'N/A');
+                } else {
+                    typeStr = 'รับโอน';
+                    amount = Math.abs(amount);
+                    category = 'รับโอนจาก ' + (state.accounts.find(a => a.id === tx.accountId)?.name || 'N/A');
+                }
+            } else if (tx.type === 'expense') {
+                typeStr = 'รายจ่าย';
+                amount = -Math.abs(amount);
+            } else if (tx.type === 'income') {
+                typeStr = 'รายรับ';
+                amount = Math.abs(amount);
+            }
+
+            // ส่งค่ากลับเป็น Object (ชื่อ Key จะเป็นหัวคอลัมน์)
+            return {
+                "วันที่": dateStr,
+                "เวลา": timeStr,
+                "ประเภท": typeStr,
+                "รายการ": tx.name || '',
+                "หมวดหมู่": category || '',
+                "จำนวนเงิน": amount, 
+                "หมายเหตุ": tx.desc || ''
+            };
+        });
+
+        // สร้าง Worksheet จากข้อมูล
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+
+        // กำหนดความกว้างคอลัมน์ (หน่วยเป็นตัวอักษร)
+        const wscols = [
+            {wch: 12}, // วันที่
+            {wch: 8},  // เวลา
+            {wch: 10}, // ประเภท
+            {wch: 25}, // รายการ (กว้างหน่อย)
+            {wch: 25}, // หมวดหมู่ (กว้างหน่อย)
+            {wch: 15}, // จำนวนเงิน
+            {wch: 40}  // หมายเหตุ (กว้างมาก)
+        ];
+        ws['!cols'] = wscols;
+
+        // สร้าง Workbook และเพิ่ม Sheet
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Statement");
+
+        // ตั้งชื่อไฟล์
+        const today = new Date();
+        const dateFile = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        
+        // สั่งดาวน์โหลดไฟล์ .xlsx
+        XLSX.writeFile(wb, `Statement_${account.name}_${dateFile}.xlsx`);
     }
 
     function initDB() {
@@ -239,6 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // ใช้ setDoc เพื่อระบุ ID เอง (จะได้ตรงกับ Local DB) และ merge: true เพื่ออัปเดตบางฟิลด์ได้
                 await window.dbSetDoc(docRef, item, { merge: true });
                 console.log(`Cloud Saved: ${storeName}/${docId}`);
+				// +++ แสดงแจ้งเตือนเมื่อบันทึกสำเร็จ +++
+				showToast(`☁️ บันทึกข้อมูลขึ้น Cloud แล้ว`, 'success');
             } catch (err) {
                 console.error("Cloud Save Error:", err);
             }
@@ -252,19 +346,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const uid = window.auth.currentUser.uid;
                 await window.dbDelete(window.dbDoc(window.db, 'users', uid, storeName, key));
                 console.log(`Cloud Deleted: ${storeName}/${key}`);
+				// +++ แสดงแจ้งเตือนเมื่อลบสำเร็จ +++
+                showToast(`☁️ ลบข้อมูลจาก Cloud แล้ว`, 'success');
+                // ++++++++++++++++++++++++++++++++++++++++++++
             } catch (err) {
                 console.error("Cloud Delete Error:", err);
             }
         }
     }
 
-    // ฟังก์ชันโหลดข้อมูลจาก Cloud ลงเครื่อง (เรียกตอน Login) - ฉบับปรับปรุง V.4 (Auto Merge & Remember Device)
+    // ฟังก์ชันโหลดข้อมูลจาก Cloud ลงเครื่อง (เรียกตอน Login)
+    // แก้ไขล่าสุด: บังคับ Overwrite (ล้างเครื่องแล้วโหลดใหม่) เสมอ โดยไม่ถาม
     window.loadDataFromCloud = async (uid) => {
         if (!window.db) return;
         
-        // แสดง Toast แจ้งเตือนเล็กๆ ว่ากำลังทำงาน (User จะได้รู้ว่าไม่ได้ค้าง)
-        // showToast("กำลังตรวจสอบข้อมูล...", "info"); 
-
         const collectionsToSync = [
             STORE_TRANSACTIONS, 
             STORE_ACCOUNTS, 
@@ -279,57 +374,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let hasDownloaded = false;
             let hasUploaded = false;
-            let syncMode = 'overwrite'; // ค่าเริ่มต้น
-
-            // ---------------------------------------------------------
-            // [ส่วนที่เพิ่มใหม่] : ตรวจสอบว่าเคยซิงค์เครื่องนี้กับ User นี้ไปแล้วหรือยัง
-            // ---------------------------------------------------------
-            const lastSyncUid = localStorage.getItem('last_sync_uid');
-            const isSameUser = (lastSyncUid === uid);
-
-            // 1. เช็คข้อมูลในเครื่อง
-            const localTxs = await dbGetAll(STORE_TRANSACTIONS);
             
-            // 2. เช็คข้อมูล Cloud
+            // --- กำหนดโหมดเป็น 'overwrite' (ทับข้อมูล) เสมอ ---
+            // ผลลัพธ์: ข้อมูลเก่าในเครื่องจะถูกลบก่อน แล้วโหลดจาก Cloud มาใส่
+            let syncMode = 'overwrite'; 
+
+            // ตรวจสอบข้อมูล Cloud (เพื่อดูว่ามีอะไรต้องโหลดไหม)
             const cloudTxRef = window.dbCollection(window.db, 'users', uid, STORE_TRANSACTIONS);
             const cloudTxSnapshot = await window.dbGetDocs(cloudTxRef);
-
-            // 3. ตรวจสอบเงื่อนไขการชนกัน
-            if (localTxs.length > 0 && !cloudTxSnapshot.empty) {
-                if (isSameUser) {
-                    // === กรณี A: คนเดิม เครื่องเดิม ===
-                    // ให้ผสานข้อมูลอัตโนมัติ (Silent Merge) ไม่ต้องถามซ้ำให้รำคาญ
-                    syncMode = 'merge';
-                    console.log("Auto-merging data for known user/device.");
-                } else {
-                    // === กรณี B: เปลี่ยน User หรือมีข้อมูลเก่าของคนอื่นค้างอยู่ ===
-                    // เด้งถามเพื่อความปลอดภัย
-                    await Swal.fire({
-                        title: '⚠️ พบข้อมูลเดิมในเครื่อง',
-                        html: `
-                            <div class="text-left text-sm">
-                                <p class="mb-2">พบรายการในเครื่อง <b>${localTxs.length} รายการ</b></p>
-                                <p>ดูเหมือนคุณจะเปลี่ยนบัญชีผู้ใช้ หรือไม่ได้ซิงค์นานแล้ว ต้องการจัดการอย่างไร?</p>
-                            </div>
-                        `,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'ทับข้อมูลในเครื่อง (ใช้ Cloud เป็นหลัก)', 
-                        cancelButtonText: 'ผสานข้อมูล (รวมกัน)',      
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        reverseButtons: true,
-                        allowOutsideClick: false
-                    }).then((result) => {
-                        if (result.dismiss === Swal.DismissReason.cancel) {
-                            syncMode = 'merge';
-                        } else {
-                            syncMode = 'overwrite';
-                        }
-                    });
-                }
-            }
-            // ---------------------------------------------------------
 
             for (const storeName of collectionsToSync) {
                 let snapshot;
@@ -341,9 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (!snapshot.empty) {
-                    // บน Cloud มีข้อมูล -> ดาวน์โหลดลงเครื่อง
-                    
-                    // ถ้าเลือกโหมด overwrite ให้ล้างของเก่าก่อน
+                    // --- กรณี A: บน Cloud มีข้อมูล ---
+                    // ให้ล้างข้อมูลในเครื่องทิ้งก่อน (เฉพาะ Store นั้นๆ)
                     if (syncMode === 'overwrite') {
                         await dbClear(storeName); 
                     }
@@ -355,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         let data = doc.data(); 
                         let isValid = true;    
 
-                        // Validation Logic
+                        // Validation Logic (ตรวจสอบความถูกต้องของข้อมูล)
                         if (storeName === STORE_BUDGETS) {
                             if (!data.category) data.category = doc.id;
                             if (!data.category) isValid = false;
@@ -375,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (isValid) {
                             try {
-                                // ถ้าโหมด Merge: ข้อมูล ID เดียวกันจะอัปเดต / ID ใหม่จะเพิ่มเข้าไป
                                 store.put(data);
                             } catch (err) {
                                 console.error(`Skipping corrupt record in ${storeName}:`, doc.id, err);
@@ -387,7 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     hasDownloaded = true;
                 }
                 else {
-                    // Cloud ว่าง -> อัปโหลดขึ้นไป (เฉพาะครั้งแรก)
+                    // --- กรณี B: บน Cloud ว่างเปล่า (ผู้ใช้ใหม่ หรือเพิ่งเคลียร์ Cloud) ---
+                    // ให้อัปโหลดข้อมูลจากเครื่องขึ้นไปแทน (Backup ครั้งแรก)
                     const localItems = await dbGetAll(storeName);
                     if (localItems.length > 0) {
                         const uploadPromises = localItems.map(item => saveToCloud(storeName, item));
@@ -397,18 +448,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // [สำคัญ] บันทึกว่าเครื่องนี้ซิงค์กับ User นี้เรียบร้อยแล้ว ครั้งหน้าจะได้ไม่ถาม
+            // บันทึกว่าเครื่องนี้ซิงค์กับ User นี้เรียบร้อยแล้ว
             localStorage.setItem('last_sync_uid', uid);
 
             // โหลดข้อมูลเข้า State ใหม่ และรีเฟรชหน้าจอ
             await loadStateFromDB();
             refreshAllUI();
             
-            // แสดง Toast เฉพาะตอนมีการเปลี่ยนแปลงจริงๆ
+            // แสดง Toast แจ้งเตือน
             if (hasDownloaded) {
-                if (!isSameUser) showToast("ซิงค์ข้อมูลเรียบร้อย!", "success");
+                showToast("ดาวน์โหลดข้อมูลจาก Cloud เรียบร้อย!", "success");
             } else if (hasUploaded) {
-                showToast("อัปโหลดข้อมูลเก่าขึ้น Cloud แล้ว!", "success");
+                showToast("อัปโหลดข้อมูลเริ่มต้นขึ้น Cloud แล้ว!", "success");
             }
         } catch (error) {
             console.error("Sync Error:", error);
@@ -1997,7 +2048,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        getEl('all-accounts-summary').addEventListener('click', (e) => {
+		// --- [โค้ดใหม่: รองรับทั้งคลิกปกติ และ จิ้มแช่ (Long Press)] ---
+        const accContainer = getEl('all-accounts-summary');
+        let pressTimer;
+        let isLongPress = false; // ตัวแปรเช็คสถานะ
+
+        // เมื่อเริ่มกด (ทั้งเมาส์และนิ้ว)
+        const handlePressStart = (e) => {
+            const card = e.target.closest('.compact-account-card');
+            if (!card) return;
+
+            isLongPress = false;
+            // ตั้งเวลา 800ms (0.8 วินาที) ถ้ากดค้างเกินนี้จะถือเป็น Long Press
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                const accountId = card.dataset.id;
+                const accountName = state.accounts.find(a => a.id === accountId)?.name || '';
+
+                // สั่นเตือนเล็กน้อย (ถ้ามือถือรองรับ)
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                // แสดง Popup ยืนยันการ Backup
+                Swal.fire({
+                    title: `Backup: ${accountName}`,
+                    text: 'ต้องการดาวน์โหลดประวัติธุรกรรม (Excel) ของบัญชีนี้ใช่ไหม?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa-solid fa-file-Excel"></i> ดาวน์โหลด Excel',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#10b981' // สีเขียว
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        exportAccountExcel(accountId);
+                    }
+                });
+            }, 800); 
+        };
+
+        // เมื่อปล่อยมือ หรือ ขยับนิ้ว (ถือว่ายกเลิกการจิ้มแช่)
+        const handlePressEnd = () => {
+            clearTimeout(pressTimer);
+        };
+
+        accContainer.addEventListener('mousedown', handlePressStart);
+        accContainer.addEventListener('touchstart', handlePressStart, { passive: true });
+
+        ['mouseup', 'mouseleave', 'touchend', 'touchmove'].forEach(evt => {
+            accContainer.addEventListener(evt, handlePressEnd);
+        });
+
+        // จัดการเหตุการณ์ Click (จะทำงานเฉพาะตอนที่ "ไม่ใช่" การจิ้มแช่)
+        accContainer.addEventListener('click', (e) => {
+            if (isLongPress) {
+                // ถ้าเป็นการจิ้มแช่ -> หยุดการทำงาน (ไม่เปิดหน้ารายละเอียด)
+                isLongPress = false; 
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            
             const card = e.target.closest('.compact-account-card');
             if (card) {
                 const accountId = card.dataset.id;
@@ -2509,34 +2618,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		// เรียกใช้ฟังก์ชันปุ่ม Install
         setupInstallButton();
-		
-		// ============================================
-        // [เพิ่มใหม่] ระบบ Auto-Sync เมื่อกลับมาเปิดแอป / สลับหน้าจอ
-        // ============================================
-        document.addEventListener('visibilitychange', async () => {
-            // ทำงานเฉพาะตอนที่หน้าจอถูกเปิดขึ้นมา (Visible) และมีการ Login ค้างอยู่
-            if (document.visibilityState === 'visible') {
-                if (window.auth && window.auth.currentUser) {
-                    console.log('App resumed: Auto-syncing data...');
-                    // เรียกใช้ฟังก์ชัน loadDataFromCloud ที่เราปรับปรุงไปล่าสุด
-                    // ซึ่งมันจะทำการ "ผสาน (Merge)" ให้อัตโนมัติโดยไม่ถาม ถ้าเป็นเครื่องเดิม
-                    await window.loadDataFromCloud(window.auth.currentUser.uid);
-                }
-            }
-        });
-
-        // [เสริม] ตั้งเวลาให้ Sync อัตโนมัติทุกๆ 10 นาที (เผื่อเปิดจิค้างไว้)
-        setInterval(async () => {
-            if (document.visibilityState === 'visible' && window.auth && window.auth.currentUser) {
-                 console.log('Auto-sync interval trigger...');
-                 // เช็คว่าหน้าเว็บไม่ได้เปิด Modal อะไรค้างอยู่ (เพื่อไม่ให้รบกวนการพิมพ์)
-                 const isModalOpen = !document.getElementById('form-modal').classList.contains('hidden');
-                 if (!isModalOpen) {
-                     await window.loadDataFromCloud(window.auth.currentUser.uid);
-                 }
-            }
-        }, 600000); // 600,000 ms = 10 นาที
-		
+	
     }
 	
 	// ============================================
@@ -2893,46 +2975,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 	function getAccountBalances(allTransactions) {
-			const balances = {};
-			for (const acc of state.accounts) {
-				balances[acc.id] = acc.initialBalance || 0;
-			}
-
-			const sortedTxs = [...allTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-			
-			const now = new Date(); 
-
-			for (const tx of sortedTxs) {
-				if (new Date(tx.date) > now) {
-					continue;
-				}
-
-				const amount = tx.amount;
-				if (tx.type === 'income') {
-					if (balances[tx.accountId] !== undefined) {
-						balances[tx.accountId] += amount;
-					}
-				} else if (tx.type === 'expense') {
-					 if (balances[tx.accountId] !== undefined) {
-						balances[tx.accountId] -= amount;
-					}
-				} else if (tx.type === 'transfer') {
-					if (balances[tx.accountId] !== undefined) { 
-						balances[tx.accountId] -= amount;
-					}
-					if (balances[tx.toAccountId] !== undefined) { 
-						balances[tx.toAccountId] += amount;
-					}
-				}
-			}
-			return balances;
+		const balances = {};
+		for (const acc of state.accounts) {
+			balances[acc.id] = acc.initialBalance || 0;
 		}
 
+		const sortedTxs = [...allTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+		
+		// [แก้ไข] กำหนดให้เป็น 00:00:00 ของวันนี้ เพื่อให้นับรายการของวันนี้ทั้งหมด
+		const today = new Date();
+		today.setHours(23, 59, 59, 999); // ตั้งเป็นสิ้นสุดของวันนี้ เพื่อให้ครอบคลุมทุกรายการที่ลงวันที่เป็น "วันนี้"
+
+		for (const tx of sortedTxs) {
+			const txDate = new Date(tx.date);
+			
+			// ถ้าวันที่ของรายการ มากกว่า วันนี้ (คือเป็นวันพรุ่งนี้หรืออนาคต) ให้ข้าม
+			if (txDate > today) {
+				continue;
+			}
+
+			const amount = tx.amount;
+			// ... (ส่วนการบวกลบยอดเงินด้านล่างเหมือนเดิม) ...
+			if (tx.type === 'income') {
+				if (balances[tx.accountId] !== undefined) {
+					balances[tx.accountId] += amount;
+				}
+			} else if (tx.type === 'expense') {
+				 if (balances[tx.accountId] !== undefined) {
+					balances[tx.accountId] -= amount;
+				}
+			} else if (tx.type === 'transfer') {
+				if (balances[tx.accountId] !== undefined) { 
+					balances[tx.accountId] -= amount;
+				}
+				if (balances[tx.toAccountId] !== undefined) { 
+					balances[tx.toAccountId] += amount;
+				}
+			}
+		}
+		return balances;
+	}
+
 		function renderSummary(transactionsForPeriod, allAccountBalances) {
-			const now = new Date();
+			// [แก้ไข] กำหนดเวลาเป็นสิ้นสุดของวันนี้ เพื่อให้นับรายการวันนี้ทั้งหมด
+			const today = new Date();
+			today.setHours(23, 59, 59, 999);
 
 			const periodTotals = transactionsForPeriod.reduce((acc, tx) => {
-				if (new Date(tx.date) > now) {
+				const txDate = new Date(tx.date);
+				
+				// ถ้าวันที่รายการ > วันนี้ (คือเป็นอนาคต) ไม่ต้องนำมานับรวม
+				if (txDate > today) {
 					return acc;
 				}
 
@@ -2944,6 +3037,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				return acc;
 			}, { income: 0, expense: 0 });
 
+			// ... (ส่วนแสดงผลด้านล่างเหมือนเดิม) ...
 			let totalCashBalance = 0;
 			const sortedAccounts = getSortedAccounts();
 			for (const acc of sortedAccounts) { 
@@ -3229,14 +3323,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function renderPieChart(transactions) {
-        const summary = transactions.reduce((acc, tx) => {
-            if (tx.type === 'income') {
-                acc.income += tx.amount;
-           } else if (tx.type === 'expense') { 
-                acc.expense += tx.amount;
-            }
-            return acc;
-        }, { income: 0, expense: 0 });
+        // [แก้ไข] กำหนดวันปัจจุบัน (สิ้นสุดวัน)
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
+
+		const summary = transactions.reduce((acc, tx) => {
+			// [แก้ไข] กรองรายการอนาคตออก
+			if (new Date(tx.date) > today) {
+				return acc;
+			}
+
+			if (tx.type === 'income') {
+				acc.income += tx.amount;
+			} else if (tx.type === 'expense') {
+				acc.expense += tx.amount;
+			}
+			return acc;
+		}, { income: 0, expense: 0 });
 
         const labels = [
             `รายรับ (${formatCurrency(summary.income)})`, 
@@ -3318,362 +3421,335 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderExpenseByNameChart(transactions) {
-    const expenseTransactions = transactions.filter(tx => tx.type === 'expense');
-    const itemData = expenseTransactions.reduce((acc, tx) => {
-        const name = tx.name || 'ไม่ระบุรายการ';
-        if (!acc[name]) {
-            acc[name] = 0;
-        }
-        acc[name] += tx.amount;
-        return acc;
-    }, {});
-    let sortedItems = Object.entries(itemData).map(([name, amount]) => ({ name, amount }));
-    sortedItems.sort((a, b) => b.amount - a.amount);
+		
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
 
-    const TOP_N = 9;
-    let labels = [];
-    let data = [];
-    
-    if (sortedItems.length > (TOP_N + 1)) { 
-        const topItems = sortedItems.slice(0, TOP_N);
-        const otherItems = sortedItems.slice(TOP_N);
-        
-        topItems.forEach(item => {
-            labels.push(`${item.name} (${formatCurrency(item.amount)})`);
-            data.push(item.amount);
-        });
-        const otherAmount = otherItems.reduce((sum, item) => sum + item.amount, 0);
-        labels.push(`อื่นๆ (${formatCurrency(otherAmount)})`);
-        data.push(otherAmount);
-    } else {
-        sortedItems.forEach(item => {
-            labels.push(`${item.name} (${formatCurrency(item.amount)})`);
-            data.push(item.amount);
-        });
-    }
+		// [แก้ไข] กรองเอาเฉพาะ 'expense' และ วันที่ต้องไม่เกินวันนี้
+		const expenseTransactions = transactions.filter(tx => {
+			return tx.type === 'expense' && new Date(tx.date) <= today;
+		});
+		
+		const itemData = expenseTransactions.reduce((acc, tx) => {
+			const name = tx.name || 'ไม่ระบุรายการ';
+			if (!acc[name]) {
+				acc[name] = 0;
+			}
+			acc[name] += tx.amount;
+			return acc;
+		}, {});
+		let sortedItems = Object.entries(itemData).map(([name, amount]) => ({ name, amount }));
+		sortedItems.sort((a, b) => b.amount - a.amount);
 
-    if (myExpenseByNameChart) { 
-        myExpenseByNameChart.destroy();
-    }
-    
-    const noDataEl = document.getElementById('expense-chart-no-data');
-    if (data.length === 0) {
-        noDataEl.classList.remove('hidden');
-        return;
-    } else {
-        noDataEl.classList.add('hidden');
-    }
+		const TOP_N = 9;
+		let labels = [];
+		let data = [];
+		
+		if (sortedItems.length > (TOP_N + 1)) { 
+			const topItems = sortedItems.slice(0, TOP_N);
+			const otherItems = sortedItems.slice(TOP_N);
+			
+			topItems.forEach(item => {
+				labels.push(`${item.name} (${formatCurrency(item.amount)})`);
+				data.push(item.amount);
+			});
+			const otherAmount = otherItems.reduce((sum, item) => sum + item.amount, 0);
+			labels.push(`อื่นๆ (${formatCurrency(otherAmount)})`);
+			data.push(otherAmount);
+		} else {
+			sortedItems.forEach(item => {
+				labels.push(`${item.name} (${formatCurrency(item.amount)})`);
+				data.push(item.amount);
+			});
+		}
 
-    const generateColors = (numColors) => {
-        let colors = [];
-        const colorPalette = ['#e11d48', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#3b82f6', '#059669', '#0e7490', '#db2777', '#ca8a04', '#6d28d9', '#64748b'];
-        for (let i = 0; i < numColors; i++) {
-            colors.push(colorPalette[i % colorPalette.length]);
-        }
-        return colors;
-    };
+		if (myExpenseByNameChart) { 
+			myExpenseByNameChart.destroy();
+		}
+		
+		const noDataEl = document.getElementById('expense-chart-no-data');
+		if (data.length === 0) {
+			noDataEl.classList.remove('hidden');
+			return;
+		} else {
+			noDataEl.classList.add('hidden');
+		}
 
-    const ctx = document.getElementById('expense-category-chart').getContext('2d');
-    
-    const isMobile = window.innerWidth < 768; 
-    const textColor = state.isDarkMode ? '#e5e7eb' : '#4b5563'; 
+		const generateColors = (numColors) => {
+			let colors = [];
+			const colorPalette = ['#e11d48', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#3b82f6', '#059669', '#0e7490', '#db2777', '#ca8a04', '#6d28d9', '#64748b'];
+			for (let i = 0; i < numColors; i++) {
+				colors.push(colorPalette[i % colorPalette.length]);
+			}
+			return colors;
+		};
 
-    myExpenseByNameChart = new Chart(ctx, { 
-        type: 'pie', 
-        plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}],
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: generateColors(labels.length),
-                borderWidth: 1
-            }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        left: isMobile ? 0 : 0,
-                        right: isMobile ? 0 : 0,
-                        top: isMobile ? 0 : 0,
-                        bottom: isMobile ? 0 : 0
-                    }
-                },
-                plugins: {
-                    datalabels: {
-                        display: false, 
-                    },
-                    legend: {
-                        position: 'right',
-                        align: 'center', 
-                        labels: {
-                            usePointStyle: true, 
-                            boxWidth: isMobile ? 8 : 10, 
-                            padding: isMobile ? 6 : 10,  
-                            font: {
-                                family: 'Prompt, sans-serif',
-                                size: isMobile ? 10 : 12, 
-                                color: textColor 
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                 return ''; 
-                            },
-                            title: function(context) {
-                                return context[0].label;
-                            }
-                        }
-                    }
-                }
-            }
-        });
+		const ctx = document.getElementById('expense-category-chart').getContext('2d');
+		
+		const isMobile = window.innerWidth < 768; 
+		const textColor = state.isDarkMode ? '#e5e7eb' : '#4b5563'; 
+
+		myExpenseByNameChart = new Chart(ctx, { 
+			type: 'pie', 
+			plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}],
+			data: {
+				labels: labels,
+				datasets: [{
+					data: data,
+					backgroundColor: generateColors(labels.length),
+					borderWidth: 1
+				}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					layout: {
+						padding: {
+							left: isMobile ? 0 : 0,
+							right: isMobile ? 0 : 0,
+							top: isMobile ? 0 : 0,
+							bottom: isMobile ? 0 : 0
+						}
+					},
+					plugins: {
+						datalabels: {
+							display: false, 
+						},
+						legend: {
+							position: 'right',
+							align: 'center', 
+							labels: {
+								usePointStyle: true, 
+								boxWidth: isMobile ? 8 : 10, 
+								padding: isMobile ? 6 : 10,  
+								font: {
+									family: 'Prompt, sans-serif',
+									size: isMobile ? 10 : 12, 
+									color: textColor 
+								}
+							}
+						},
+						tooltip: {
+							callbacks: {
+								label: function(context) {
+									 return ''; 
+								},
+								title: function(context) {
+									return context[0].label;
+								}
+							}
+						}
+					}
+				}
+			});
     }
 
     function renderListPageBarChart(transactions) {
-        const ctx = document.getElementById('list-page-bar-chart').getContext('2d');
-        const noDataEl = document.getElementById('list-chart-no-data');
-        const titleEl = document.getElementById('list-chart-title');
-        
-        if (myListPageBarChart) {
-            myListPageBarChart.destroy();
-        }
+		const ctx = document.getElementById('list-page-bar-chart').getContext('2d');
+		const noDataEl = document.getElementById('list-chart-no-data');
+		const titleEl = document.getElementById('list-chart-title');
+		
+		// [แก้ไข] กำหนดวันปัจจุบัน (สิ้นสุดวัน 23:59:59)
+		// เพื่อให้ครอบคลุมรายการที่ลงเวลาเป็นวันนี้ทั้งหมด แต่ไม่รวมพรุ่งนี้
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
 
-        let labels = [];
-        let datasets = [];
-        let hasData = false;
-        let chartType = 'bar'; 
+		if (myListPageBarChart) {
+			myListPageBarChart.destroy();
+		}
 
-        if (state.listChartMode === 'trend_month' || state.listChartMode === 'trend_year') {
-            chartType = 'line';
-            const granularity = state.listChartMode === 'trend_month' ? 'month' : 'year';
-            titleEl.textContent = granularity === 'month' ? 'แนวโน้ม รายรับ-รายจ่าย รายเดือน' : 'แนวโน้ม รายรับ-รายจ่าย รายปี';
-            
-            const trendData = transactions.reduce((acc, tx) => {
-                const dateObj = new Date(tx.date);
-                let key;
-                if (granularity === 'month') {
-                    key = dateObj.getFullYear() + '-' + (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                } else { // year
-                    key = dateObj.getFullYear().toString();
-                }
+		let labels = [];
+		let datasets = [];
+		let hasData = false;
+		let chartType = 'bar'; 
 
-                if (!acc[key]) acc[key] = { income: 0, expense: 0 };
-                
-                if (tx.type === 'income') acc[key].income += tx.amount;
-                else if (tx.type === 'expense') acc[key].expense += tx.amount;
-                
-                return acc;
-            }, {});
-            
-            const sortedKeys = Object.keys(trendData).sort();
-            if (sortedKeys.length > 0) {
-                hasData = true;
-                labels = sortedKeys.map(key => {
-                    if (granularity === 'month') {
-                        const [y, m] = key.split('-');
-                        return new Date(y, m - 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' });
-                    }
-                    return key; 
-                });
+		if (state.listChartMode === 'trend_month' || state.listChartMode === 'trend_year') {
+			chartType = 'line';
+			const granularity = state.listChartMode === 'trend_month' ? 'month' : 'year';
+			titleEl.textContent = granularity === 'month' ? 'แนวโน้ม รายรับ-รายจ่าย รายเดือน' : 'แนวโน้ม รายรับ-รายจ่าย รายปี';
+			
+			const trendData = transactions.reduce((acc, tx) => {
+				// [แก้ไข] กรองรายการอนาคตออก
+				if (new Date(tx.date) > today) {
+					return acc;
+				}
 
-                datasets = [
-                    {
-                        label: 'รายรับ',
-                        data: sortedKeys.map(key => trendData[key].income),
-                        borderColor: '#22c55e', // Green
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 5
-                    },
-                    {
-                        label: 'รายจ่าย',
-                        data: sortedKeys.map(key => trendData[key].expense),
-                        borderColor: '#ef4444', // Red
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 5
-                    }
-                ];
-                
-                if (granularity === 'month' && sortedKeys.length > 12) {
-                    titleEl.textContent += ' (ข้อมูลย้อนหลัง 12 เดือน)';
-                    const recentKeys = sortedKeys.slice(-12);
-                    labels = recentKeys.map(key => {
-                        const [y, m] = key.split('-');
-                        return new Date(y, m - 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' });
-                    });
-                    datasets[0].data = recentKeys.map(key => trendData[key].income);
-                    datasets[1].data = recentKeys.map(key => trendData[key].expense);
-                }
-            }
-        } 
-        
-        else if (state.listChartMode === 'items') {
-            titleEl.textContent = 'สรุปแยกตามชื่อรายการ';
-            const itemData = transactions.reduce((acc, tx) => {
-                if (tx.type === 'transfer') return acc;
-                const name = tx.name;
-                if (!acc[name]) acc[name] = { income: 0, expense: 0 };
-                if (tx.type === 'income') acc[name].income += tx.amount;
-                else acc[name].expense += tx.amount;
-                return acc;
-            }, {});
-            const processedData = Object.keys(itemData).map(name => ({
-                name: name,
-                income: itemData[name].income,
-                expense: itemData[name].expense,
-                total: itemData[name].income + itemData[name].expense
-            }));
-            processedData.sort((a, b) => b.total - a.total);
-            const topData = processedData.slice(0, 15);
-            if (topData.length > 0) {
-                hasData = true;
-                labels = topData.map(d => d.name);
-                datasets = [
-                    {
-                        label: 'รายรับ',
-                        data: topData.map(d => d.income),
-                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                        borderColor: 'rgba(34, 197, 94, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'รายจ่าย',
-                        data: topData.map(d => d.expense),
-                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderWidth: 1
-                    }
-                ];
-            }
-        } 
-        else if (state.listChartMode === 'summary') {
-            titleEl.textContent = 'เปรียบเทียบ รายรับ vs รายจ่าย';
-            let totalIncome = 0;
-            let totalExpense = 0;
-            transactions.forEach(tx => {
-                if (tx.type === 'income') totalIncome += tx.amount;
-                if (tx.type === 'expense') totalExpense += tx.amount;
-            });
-            if (totalIncome > 0 || totalExpense > 0) {
-                hasData = true;
-                labels = ['สรุปยอดรวม'];
-                datasets = [
-                    {
-                        label: 'รายรับ',
-                        data: [totalIncome],
-                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                        borderColor: 'rgba(34, 197, 94, 1)',
-                        borderWidth: 1,
-                        barPercentage: 0.5
-                    },
-                    {
-                        label: 'รายจ่าย',
-                        data: [totalExpense],
-                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderWidth: 1,
-                        barPercentage: 0.5
-                    }
-                ];
-            }
-        }
-        else if (state.listChartMode === 'accounts') {
-            titleEl.textContent = 'ยอดเงินคงเหลือแต่ละบัญชี (ปัจจุบัน)';
-            const allBalances = getAccountBalances(state.transactions);
-            const sortedAccounts = getSortedAccounts();
+				const dateObj = new Date(tx.date);
+				let key;
+				if (granularity === 'month') {
+					key = dateObj.getFullYear() + '-' + (dateObj.getMonth() + 1).toString().padStart(2, '0');
+				} else { // year
+					key = dateObj.getFullYear().toString();
+				}
 
-            if (sortedAccounts.length > 0) {
-                hasData = true;
-                labels = sortedAccounts.map(acc => acc.name);
-                const balanceData = sortedAccounts.map(acc => allBalances[acc.id] || 0);
-                const bgColors = balanceData.map(val => val >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(239, 68, 68, 0.7)');
-                const borderColors = balanceData.map(val => val >= 0 ? 'rgba(59, 130, 246, 1)' : 'rgba(239, 68, 68, 1)');
-                datasets = [{
-                    label: 'ยอดคงเหลือ',
-                    data: balanceData,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: 1
-                }];
-            }
-        }
+				if (!acc[key]) acc[key] = { income: 0, expense: 0 };
+				
+				if (tx.type === 'income') acc[key].income += tx.amount;
+				else if (tx.type === 'expense') acc[key].expense += tx.amount;
+				
+				return acc;
+			}, {});
+			
+			const sortedKeys = Object.keys(trendData).sort();
+			if (sortedKeys.length > 0) {
+				hasData = true;
+				labels = sortedKeys.map(key => {
+					if (granularity === 'month') {
+						const [y, m] = key.split('-');
+						return new Date(y, m - 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' });
+					}
+					return key; // year
+				});
+				
+				datasets = [
+					{
+						label: 'รายรับ',
+						data: sortedKeys.map(k => trendData[k].income),
+						borderColor: '#22c55e',
+						backgroundColor: '#22c55e',
+						tension: 0.1
+					},
+					{
+						label: 'รายจ่าย',
+						data: sortedKeys.map(k => trendData[k].expense),
+						borderColor: '#ef4444',
+						backgroundColor: '#ef4444',
+						tension: 0.1
+					}
+				];
+			}
 
-        if (!hasData) {
-            noDataEl.classList.remove('hidden');
-            return;
-        } else {
-            noDataEl.classList.add('hidden');
-        }
-        
-        const tickColor = state.isDarkMode ? '#9ca3af' : '#6b7280';
-        const gridColor = state.isDarkMode ? '#374151' : '#e5e7eb';
-        const labelColor = state.isDarkMode ? '#e5e7eb' : '#4b5563';
+		} else {
+			// Daily (Default)
+			titleEl.textContent = 'รายรับ-รายจ่าย 7 วันล่าสุด';
+			const last7Days = {};
+			
+			for (let i = 6; i >= 0; i--) {
+				const d = new Date();
+				d.setDate(d.getDate() - i);
+				const key = d.toISOString().split('T')[0];
+				last7Days[key] = { income: 0, expense: 0, dateObj: d };
+			}
 
-        myListPageBarChart = new Chart(ctx, {
-            type: chartType,
-            data: {
-                labels: labels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: state.listChartMode === 'accounts' ? 'y' : 'x',
-                plugins: {
-                    legend: {
-                        display: state.listChartMode !== 'accounts',
-                        labels: { 
-                            font: { family: 'Prompt, sans-serif', color: labelColor }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                const value = chartType === 'line' ? context.parsed.y : (state.listChartMode === 'accounts' ? context.parsed.x : context.parsed.y);
-                                if (value !== null) {
-                                    label += formatCurrency(value);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { font: { family: 'Prompt, sans-serif', color: tickColor } },
-                        grid: { color: gridColor },
-                         ...(state.listChartMode === 'accounts' && {
-                            ticks: {
-                                callback: function(value) { return formatCurrency(value); },
-                                font: { family: 'Prompt, sans-serif', color: tickColor }
-                            }
-                        })
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { font: { family: 'Prompt, sans-serif', color: tickColor } },
-                        grid: { color: gridColor },
-                        ...(state.listChartMode !== 'accounts' && {
-                            ticks: {
-                                callback: function(value) { return formatCurrency(value);
-},
-                                font: { family: 'Prompt, sans-serif', color: tickColor }
-                            }
-                        })
-                    }
-                }
-            }
-        });
-    }
+			transactions.forEach(tx => {
+				// [แก้ไข] กรองรายการอนาคตออก
+				if (new Date(tx.date) > today) {
+					return;
+				}
+
+				const key = tx.date.split('T')[0];
+				if (last7Days[key]) {
+					if (tx.type === 'income') last7Days[key].income += tx.amount;
+					else if (tx.type === 'expense') last7Days[key].expense += tx.amount;
+				}
+			});
+
+			labels = Object.values(last7Days).map(val => val.dateObj.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric' }));
+			const incomeData = Object.values(last7Days).map(val => val.income);
+			const expenseData = Object.values(last7Days).map(val => val.expense);
+			
+			if (incomeData.some(v => v > 0) || expenseData.some(v => v > 0)) {
+				hasData = true;
+			}
+
+			datasets = [
+				{
+					label: 'รายรับ',
+					data: incomeData,
+					backgroundColor: '#22c55e'
+				},
+				{
+					label: 'รายจ่าย',
+					data: expenseData,
+					backgroundColor: '#ef4444'
+				}
+			];
+		}
+		
+		if (!hasData) {
+			noDataEl.classList.remove('hidden');
+			return; 
+		} else {
+			noDataEl.classList.add('hidden');
+		}
+
+		const isMobile = window.innerWidth < 768;
+		const textColor = state.isDarkMode ? '#e5e7eb' : '#4b5563'; 
+
+		myListPageBarChart = new Chart(ctx, {
+			type: chartType,
+			plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}],
+			data: {
+				labels: labels,
+				datasets: datasets
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				layout: {
+					padding: {
+						left: 0,
+						right: 0,
+						top: 20,
+						bottom: 0
+					}
+				},
+				scales: {
+					y: {
+						beginAtZero: true,
+						ticks: {
+							font: { family: 'Prompt, sans-serif' },
+							color: textColor,
+							callback: function(value) {
+								 if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+								 return value;
+							}
+						},
+						 grid: {
+							color: state.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+						}
+					},
+					x: {
+						ticks: {
+							font: { family: 'Prompt, sans-serif', size: 10 },
+							color: textColor
+						},
+						grid: {
+							display: false
+						}
+					}
+				},
+				plugins: {
+					datalabels: {
+						display: false, 
+					},
+					legend: {
+						display: true,
+						position: 'top',
+						labels: {
+							usePointStyle: true,
+							boxWidth: 8,
+							font: { family: 'Prompt, sans-serif', size: 12, color: textColor }
+						}
+					},
+					tooltip: {
+						callbacks: {
+							 label: function(context) {
+								let label = context.dataset.label || '';
+								if (label) {
+									label += ': ';
+								}
+								if (context.parsed.y !== null) {
+									label += formatCurrency(context.parsed.y);
+								}
+								return label;
+							}
+						}
+					}
+				}
+			}
+		});
+	}
 
     function renderCalendarView() {
 		try {
@@ -3682,7 +3758,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			if (!calendarEl || !yearInput) return;
 
-			// 1. คำนวณยอดจากรายการจริง (Transaction List)
+			// ฟังก์ชันช่วยแปลงวันที่เป็น YYYY-MM-DD แบบเวลาท้องถิ่น (แก้ปัญหาเด้งผิดเดือน)
+			const getLocalISODate = (date) => {
+				const y = date.getFullYear();
+				const m = String(date.getMonth() + 1).padStart(2, '0');
+				const d = String(date.getDate()).padStart(2, '0');
+				return `${y}-${m}-${d}`;
+			};
+
+			// [Logic] สร้างวันที่ปัจจุบันรูปแบบ YYYY-MM-DD
+			const todayStr = getLocalISODate(new Date());
+
+			// 1. คำนวณยอดจากรายการจริง
 			const dailyTotals = {};
 			state.transactions.forEach(tx => {
 				const dateStr = tx.date.slice(0, 10); 
@@ -3692,23 +3779,21 @@ document.addEventListener('DOMContentLoaded', () => {
 				else if (tx.type === 'transfer') dailyTotals[dateStr].transfer += tx.amount;
 			});
 
-			// 2. [ใหม่] คำนวณรายการประจำล่วงหน้า (Recurring) แสดงผล 1 ปีข้างหน้า
+			// 2. คำนวณรายการประจำล่วงหน้า (Recurring)
 			const recurringEvents = {};
 			const today = new Date();
 			const futureLimit = new Date();
-			futureLimit.setFullYear(today.getFullYear() + 1); // คำนวณล่วงหน้า 1 ปี
+			futureLimit.setFullYear(today.getFullYear() + 1);
 
 			if (state.recurringRules && state.recurringRules.length > 0) {
 				state.recurringRules.forEach(rule => {
 					if (!rule.active) return;
 					
-					// เริ่มนับจากวันครบกำหนดถัดไป
 					let nextDateStr = rule.nextDueDate; 
 					let nextDateObj = new Date(nextDateStr);
 
-					// วนลูปสร้างรายการจำลองจนกว่าจะเกิน 1 ปี
 					while (nextDateObj <= futureLimit) {
-						const dateStr = nextDateStr; // YYYY-MM-DD
+						const dateStr = nextDateStr;
 						
 						if (!recurringEvents[dateStr]) recurringEvents[dateStr] = { income: 0, expense: 0 };
 						
@@ -3718,37 +3803,65 @@ document.addEventListener('DOMContentLoaded', () => {
 							recurringEvents[dateStr].expense += parseFloat(rule.amount);
 						}
 
-						// ขยับไปรอบถัดไป
 						nextDateStr = calculateNextDueDate(nextDateStr, rule.frequency);
 						nextDateObj = new Date(nextDateStr);
 					}
 				});
 			}
 
-			// 3. สร้าง Events รวม
+			// 3. สร้าง Events
 			const calendarEvents = [];
 			
 			// 3.1 ใส่ Events จากรายการจริง
 			Object.keys(dailyTotals).forEach(date => {
 				const totals = dailyTotals[date];
-				if (totals.income > 0) calendarEvents.push({ id: date+'-inc', title: '+฿'+formatCurrency(totals.income).replace(/[^\d.,-]/g,''), start: date, allDay: true, color: '#22c55e', className: 'cursor-pointer' });
-				if (totals.expense > 0) calendarEvents.push({ id: date+'-exp', title: '-฿'+formatCurrency(totals.expense).replace(/[^\d.,-]/g,''), start: date, allDay: true, color: '#ef4444', className: 'cursor-pointer' });
-				if (totals.transfer > 0) calendarEvents.push({ id: date+'-trf', title: '⇄฿'+formatCurrency(totals.transfer).replace(/[^\d.,-]/g,''), start: date, allDay: true, color: '#3b82f6', className: 'cursor-pointer' });
+
+				// [Logic] เปรียบเทียบวันปัจจุบัน
+				const isFuture = date > todayStr;
+				
+				// สี: ถ้าอนาคตใช้สีเหลือง/ส้ม (#f59e0b), ถ้าถึงเวลาแล้วใช้สีแดง (#ef4444)
+				const expenseColor = isFuture ? '#f59e0b' : '#ef4444';
+
+				if (totals.income > 0) calendarEvents.push({ 
+					id: date+'-inc', 
+					title: '+฿'+formatCurrency(totals.income).replace(/[^\d.,-]/g,''), 
+					start: date, 
+					allDay: true, 
+					color: '#22c55e', 
+					className: 'cursor-pointer' 
+				});
+				
+				if (totals.expense > 0) calendarEvents.push({ 
+					id: date+'-exp', 
+					title: '-฿'+formatCurrency(totals.expense).replace(/[^\d.,-]/g,''), 
+					start: date, 
+					allDay: true, 
+					color: expenseColor, 
+					className: 'cursor-pointer' 
+				});
+				
+				if (totals.transfer > 0) calendarEvents.push({ 
+					id: date+'-trf', 
+					title: '⇄฿'+formatCurrency(totals.transfer).replace(/[^\d.,-]/g,''), 
+					start: date, 
+					allDay: true, 
+					color: '#3b82f6', 
+					className: 'cursor-pointer' 
+				});
 			});
 
-			// 3.2 [ใหม่] ใส่ Events จากรายการประจำ (ใช้สีส้ม/เหลือง เพื่อให้รู้ว่าเป็นแผนล่วงหน้า)
+			// 3.2 ใส่ Events จากรายการประจำ
 			Object.keys(recurringEvents).forEach(date => {
 				const rec = recurringEvents[date];
-				// แสดงรายการประจำด้วยสีที่ต่างออกไป (เช่น สีส้ม) และมีสัญลักษณ์นาฬิกาหรือวงเล็บ
 				if (rec.income > 0) {
 					calendarEvents.push({ 
 						id: date+'-rec-inc', 
 						title: '(รอรับ) +'+formatCurrency(rec.income).replace(/[^\d.,-]/g,''), 
 						start: date, 
 						allDay: true, 
-						color: '#d97706', // สีเหลืองเข้ม/ส้ม
-						textColor: '#ffffff',
-						className: 'cursor-pointer opacity-75' // จางกว่าปกติเล็กน้อย
+						color: '#d97706', 
+						textColor: '#ffffff', 
+						className: 'cursor-pointer opacity-75' 
 					});
 				}
 				if (rec.expense > 0) {
@@ -3757,8 +3870,8 @@ document.addEventListener('DOMContentLoaded', () => {
 						title: '(รอจ่าย) -'+formatCurrency(rec.expense).replace(/[^\d.,-]/g,''), 
 						start: date, 
 						allDay: true, 
-						color: '#f59e0b', // สีส้ม
-						textColor: '#ffffff',
+						color: '#f59e0b', 
+						textColor: '#ffffff', 
 						className: 'cursor-pointer opacity-75' 
 					});
 				}
@@ -3766,7 +3879,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			if (myCalendar) myCalendar.destroy();
 			
-			const initialDate = state.calendarCurrentDate || new Date().toISOString().slice(0, 10);
+			// [แก้ไข] ใช้ getLocalISODate แทน toISOString เพื่อป้องกัน Timezone ผิด
+			const initialDate = state.calendarCurrentDate || getLocalISODate(new Date());
 			yearInput.value = new Date(initialDate).getFullYear();
 			
 			myCalendar = new FullCalendar.Calendar(calendarEl, {
@@ -3774,35 +3888,47 @@ document.addEventListener('DOMContentLoaded', () => {
 				initialDate: initialDate,
 				locale: 'th',
 				buttonText: { today: 'วันนี้' },
-				headerToolbar: { left: 'today', center: 'title', right: '' },
+				headerToolbar: {
+					left: 'prev,next today',
+					center: 'title',
+					right: 'dayGridMonth,listMonth' 
+				},
 				showNonCurrentDates: false, 
+				fixedWeekCount: false,      
+				
 				events: calendarEvents,
-				height: 'auto', 
-				fixedWeekCount: false,
+				
 				dateClick: function(info) {
-					showDailyDetails(info.dateStr); // ใช้ฟังก์ชันเดิมเพื่อดูรายละเอียด
+					showDailyDetails(info.dateStr); 
 				},
 				eventClick: function(info) {
 					showDailyDetails(info.event.startStr);
 				},
-				datesSet: function(dateInfo) {
-					const currentFocusDate = myCalendar.getDate();
-					const yyyy = currentFocusDate.getFullYear();
-					const mm = (currentFocusDate.getMonth() + 1).toString().padStart(2, '0');
-					const yyyyMM = `${yyyy}-${mm}`;
-
-					if (parseInt(yearInput.value) !== yyyy) {
-						yearInput.value = yyyy;
-					}
-					state.calendarCurrentDate = `${yyyyMM}-01`;
-				},
-				dayCellClassNames: 'hover:bg-purple-50 cursor-pointer', 
-				eventClassNames: 'hover:opacity-80'
+				
+				// [แก้ไขจุดสำคัญ] บันทึกวันที่ปัจจุบันลง state โดยใช้ Local Time
+				datesSet: function(info) {
+					 const currentStart = info.view.currentStart;
+					 // แปลงเป็น YYYY-MM-DD แบบ Local Time
+					 const safeDateStr = getLocalISODate(currentStart);
+					 
+					 state.calendarCurrentDate = safeDateStr;
+					 yearInput.value = currentStart.getFullYear();
+				}
 			});
+
 			myCalendar.render();
-		} catch (e) {
-			console.error("Error rendering calendar:", e);
-			document.getElementById('calendar-container').innerHTML = '<p class="text-red-500">เกิดข้อผิดพลาดในการแสดงผลปฏิทิน</p>';
+			
+			yearInput.onchange = (e) => {
+				const newYear = e.target.value;
+				if (newYear && newYear.length === 4) {
+					 const currentMonth = myCalendar.getDate().getMonth(); 
+					 const newDate = new Date(newYear, currentMonth, 1);
+					 myCalendar.gotoDate(newDate);
+				}
+			};
+
+		} catch (err) {
+			console.error('Error rendering calendar:', err);
 		}
 	}
 
@@ -3876,23 +4002,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fa-solid fa-receipt"></i>
                     </button>` : '';
 
+                // [UPDATE] ตรวจสอบว่าเป็นรายการล่วงหน้าหรือไม่
+                const txDate = new Date(tx.date);
+                const now = new Date();
+                const isFuture = txDate > now; // ถ้ารายการ > เวลาปัจจุบัน คือรายการล่วงหน้า
+
                 if (tx.type === 'income') {
                     totalIncome += tx.amount;
                     const account = state.accounts.find(a => a.id === tx.accountId);
+                    
+                    // ปรับสีและข้อความตามสถานะ (อนาคต vs ปัจจุบัน/อดีต)
+                    const nameText = isFuture ? `${escapeHTML(tx.name)} (รอรับ)` : escapeHTML(tx.name);
+                    const nameColor = isFuture ? 'text-amber-700' : 'text-gray-800';
+                    const amountColor = isFuture ? 'text-amber-600' : 'text-green-600';
+                    const iconFuture = isFuture ? '<i class="fa-solid fa-clock mr-1 text-amber-500"></i>' : '';
+
                     txHtml = `
-                        <div class="flex justify-between items-center">
-                           <span class="font-medium text-gray-800">${escapeHTML(tx.name)}${receiptIconHtml}</span>
-                           <span class="font-bold text-green-600 whitespace-nowrap ml-4">+${formatCurrency(tx.amount)}</span>
+                        <div class="flex justify-between items-center ${isFuture ? 'opacity-90' : ''}">
+                           <span class="font-medium ${nameColor}">${iconFuture}${nameText}${receiptIconHtml}</span>
+                           <span class="font-bold ${amountColor} whitespace-nowrap ml-4">+${formatCurrency(tx.amount)}</span>
                         </div>
                         <div class="text-sm text-gray-500">${escapeHTML(tx.category)} (${escapeHTML(account ? account.name : 'N/A')})</div>
                     `;
                 } else if (tx.type === 'expense') {
                     totalExpense += tx.amount;
                     const account = state.accounts.find(a => a.id === tx.accountId);
+
+                    // ปรับสีและข้อความตามสถานะ
+                    const nameText = isFuture ? `${escapeHTML(tx.name)} (รอจ่าย)` : escapeHTML(tx.name);
+                    const nameColor = isFuture ? 'text-amber-700' : 'text-gray-800';
+                    const amountColor = isFuture ? 'text-amber-600' : 'text-red-600';
+                    const iconFuture = isFuture ? '<i class="fa-solid fa-clock mr-1 text-amber-500"></i>' : '';
+
                     txHtml = `
-                        <div class="flex justify-between items-center">
-                           <span class="font-medium text-gray-800">${escapeHTML(tx.name)}${receiptIconHtml}</span>
-                           <span class="font-bold text-red-600 whitespace-nowrap ml-4">-${formatCurrency(tx.amount)}</span>
+                        <div class="flex justify-between items-center ${isFuture ? 'opacity-90' : ''}">
+                           <span class="font-medium ${nameColor}">${iconFuture}${nameText}${receiptIconHtml}</span>
+                           <span class="font-bold ${amountColor} whitespace-nowrap ml-4">-${formatCurrency(tx.amount)}</span>
                         </div>
                         <div class="text-sm text-gray-500">${escapeHTML(tx.category)} (${escapeHTML(account ? account.name : 'N/A')})</div>
                     `;
@@ -3900,10 +4045,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalTransfer += tx.amount;
                     const fromAccount = state.accounts.find(a => a.id === tx.accountId);
                     const toAccount = state.accounts.find(a => a.id === tx.toAccountId);
+                    
+                    // ปรับสีและข้อความสำหรับโอนย้ายล่วงหน้า
+                    const nameText = isFuture ? 'โอนย้าย (รอดำเนินการ)' : 'โอนย้าย';
+                    const nameColor = isFuture ? 'text-amber-700' : 'text-blue-700';
+                    const amountColor = isFuture ? 'text-amber-600' : 'text-blue-600';
+                    const iconFuture = isFuture ? '<i class="fa-solid fa-clock mr-1 text-amber-500"></i>' : '';
+
                     txHtml = `
-                        <div class="flex justify-between items-center">
-                           <span class="font-medium text-blue-700">โอนย้าย${receiptIconHtml}</span>
-                           <span class="font-bold text-blue-600 whitespace-nowrap ml-4">⇄${formatCurrency(tx.amount)}</span>
+                        <div class="flex justify-between items-center ${isFuture ? 'opacity-90' : ''}">
+                           <span class="font-medium ${nameColor}">${iconFuture}${nameText}${receiptIconHtml}</span>
+                           <span class="font-bold ${amountColor} whitespace-nowrap ml-4">⇄${formatCurrency(tx.amount)}</span>
                         </div>
                         <div class="text-sm text-gray-500">
                             จาก: ${escapeHTML(fromAccount ? fromAccount.name : 'N/A')}<br>
@@ -3913,7 +4065,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (txHtml) {
-                    html += `<li class="border-b border-gray-200 pb-2">${txHtml}</li>`;
+                    // [UPDATE] ถ้าเป็นอนาคต ให้เส้นขอบเป็นเส้นประ (dashed) และสีเหลือง
+                    const borderClass = isFuture ? 'border-dashed border-amber-300' : 'border-gray-200';
+                    html += `<li class="border-b ${borderClass} pb-2">${txHtml}</li>`;
                 }
             });
 
