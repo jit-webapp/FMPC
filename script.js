@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 	
 	// ============================================
-    // FIREBASE SYNC FUNCTIONS
+    // FIREBASE SYNC FUNCTIONS (แก้ไขใหม่)
     // ============================================
     
     // ฟังก์ชันสำหรับบันทึกขึ้น Cloud (ใช้ document ID เดียวกับ Local DB)
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.auth && window.auth.currentUser && window.db) {
             try {
                 const uid = window.auth.currentUser.uid;
-                // หา ID ของข้อมูล (Transactions ใช้ id, Categories ใช้ type, Config ใช้ key ฯลฯ)
+                // หา ID ของข้อมูล
                 let docId = item.id || item.key || item.name || item.type || item.category;
                 
                 if (!docId) {
@@ -368,11 +368,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const docRef = window.dbDoc(window.db, 'users', uid, storeName, docId);
-                // ใช้ setDoc เพื่อระบุ ID เอง (จะได้ตรงกับ Local DB) และ merge: true เพื่ออัปเดตบางฟิลด์ได้
                 await window.dbSetDoc(docRef, item, { merge: true });
                 console.log(`Cloud Saved: ${storeName}/${docId}`);
-				// +++ แสดงแจ้งเตือนเมื่อบันทึกสำเร็จ +++
-				showToast(`☁️ บันทึกข้อมูลขึ้น Cloud แล้ว`, 'success');
+
+                // +++ แก้ไข: กรองการแจ้งเตือน ไม่ให้แสดงตอนบันทึกค่า Config หรือ AutoComplete +++
+                // STORE_CONFIG = การตั้งค่าต่างๆ, STORE_AUTO_COMPLETE = ระบบจำคำ
+                const silentStores = ['config', 'autoComplete']; 
+                
+                // เช็คว่า storeName ปัจจุบัน อยู่ในรายการที่ต้องเงียบหรือไม่
+                // หมายเหตุ: ใช้ตัวแปร storeName เทียบกับชื่อ Store ที่เรากำหนดไว้ด้านบน
+                if (!silentStores.includes(storeName) && storeName !== STORE_CONFIG && storeName !== STORE_AUTO_COMPLETE) {
+				    showToast(`☁️ บันทึกข้อมูลขึ้น Cloud แล้ว`, 'success');
+                }
+                // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
             } catch (err) {
                 console.error("Cloud Save Error:", err);
             }
@@ -386,9 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const uid = window.auth.currentUser.uid;
                 await window.dbDelete(window.dbDoc(window.db, 'users', uid, storeName, key));
                 console.log(`Cloud Deleted: ${storeName}/${key}`);
-				// +++ แสดงแจ้งเตือนเมื่อลบสำเร็จ +++
-                showToast(`☁️ ลบข้อมูลจาก Cloud แล้ว`, 'success');
-                // ++++++++++++++++++++++++++++++++++++++++++++
+
+                // +++ แก้ไข: กรองการแจ้งเตือนเช่นกัน +++
+                const silentStores = ['config', 'autoComplete']; 
+                if (!silentStores.includes(storeName) && storeName !== STORE_CONFIG && storeName !== STORE_AUTO_COMPLETE) {
+                    showToast(`☁️ ลบข้อมูลจาก Cloud แล้ว`, 'success');
+                }
+                // +++++++++++++++++++++++++++++++++++++++
+
             } catch (err) {
                 console.error("Cloud Delete Error:", err);
             }
