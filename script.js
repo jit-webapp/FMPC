@@ -3887,6 +3887,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				initialView: 'dayGridMonth',
 				initialDate: initialDate,
 				locale: 'th',
+				contentHeight: 'auto',  // <-- สั่งให้สูงตามจำนวนแถวจริง ไม่โดนตัด
 				buttonText: { today: 'วันนี้' },
 				headerToolbar: {
 					left: 'prev,next today',
