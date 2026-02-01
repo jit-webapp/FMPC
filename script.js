@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 	
-    // ฟังก์ชัน Export Excel แท้ (.xlsx) รองรับ Office 365
+    // ฟังก์ชัน Export Excel แท้ (.xlsx) รองรับ Office 365 + สรุปยอด
     function exportAccountExcel(accountId) {
         // ตรวจสอบว่าโหลด Library มาหรือยัง
         if (typeof XLSX === 'undefined') {
@@ -139,8 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // เรียงวันที่เก่า -> ใหม่
         txs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // เตรียมข้อมูลสำหรับ Excel
-        const dataForExcel = txs.map(tx => {
+        // --- ส่วนที่เพิ่ม: คำนวณยอดรวม ---
+        let totalIncome = 0;
+        let totalExpense = 0;
+        let totalTransferIn = 0;
+        let totalTransferOut = 0;
+
+        // เตรียมข้อมูลรายการ (Data Rows)
+        const dataRows = txs.map(tx => {
             const d = new Date(tx.date);
             const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -149,26 +155,29 @@ document.addEventListener('DOMContentLoaded', () => {
             let amount = tx.amount;
             let category = tx.category;
 
-            // จัดการประเภทและยอดเงิน
+            // จัดการประเภท, ยอดเงิน และบวกยอดรวม
             if (tx.type === 'transfer') {
                 if (tx.accountId === accountId) {
                     typeStr = 'โอนออก';
                     amount = -Math.abs(amount);
                     category = 'โอนไปยัง ' + (state.accounts.find(a => a.id === tx.toAccountId)?.name || 'N/A');
+                    totalTransferOut += Math.abs(tx.amount);
                 } else {
                     typeStr = 'รับโอน';
                     amount = Math.abs(amount);
                     category = 'รับโอนจาก ' + (state.accounts.find(a => a.id === tx.accountId)?.name || 'N/A');
+                    totalTransferIn += Math.abs(tx.amount);
                 }
             } else if (tx.type === 'expense') {
                 typeStr = 'รายจ่าย';
                 amount = -Math.abs(amount);
+                totalExpense += Math.abs(tx.amount);
             } else if (tx.type === 'income') {
                 typeStr = 'รายรับ';
                 amount = Math.abs(amount);
+                totalIncome += Math.abs(tx.amount);
             }
 
-            // ส่งค่ากลับเป็น Object (ชื่อ Key จะเป็นหัวคอลัมน์)
             return {
                 "วันที่": dateStr,
                 "เวลา": timeStr,
@@ -180,18 +189,49 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // สร้าง Worksheet จากข้อมูล
-        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        // --- ส่วนที่เพิ่ม: สร้างข้อมูลสรุปยอด (Summary) ---
+        // เราจะสร้าง Array ของ Object เพื่อวางไว้ด้านบน
+        const summaryData = [
+            { "วันที่": `สรุปรายการบัญชี: ${account.name}` }, // หัวข้อ
+            { "วันที่": "รวมรายรับ", "จำนวนเงิน": totalIncome },
+            { "วันที่": "รวมรายจ่าย", "จำนวนเงิน": totalExpense },
+            { "วันที่": "รวมรับโอน", "จำนวนเงิน": totalTransferIn },
+            { "วันที่": "รวมโอนออก", "จำนวนเงิน": totalTransferOut },
+            { "วันที่": "สุทธิ (รับ-จ่าย)", "จำนวนเงิน": (totalIncome + totalTransferIn) - (totalExpense + totalTransferOut) },
+            { "วันที่": "" } // เว้นบรรทัดว่าง 1 บรรทัด
+        ];
 
-        // กำหนดความกว้างคอลัมน์ (หน่วยเป็นตัวอักษร)
+        // รวมข้อมูล: สรุปยอด + รายการ
+        // หมายเหตุ: XLSX.utils.json_to_sheet จะใช้ Keys ของ Object แรกเป็น Header
+        // ดังนั้นเราต้องจัดการให้ดี หรือใช้วิธี sheet_add_json เพื่อแปะข้อมูลต่อกัน
+
+        // วิธีที่ง่าย: สร้าง Sheet จาก transaction ก่อน เพื่อให้ได้ Header ที่ถูกต้อง
+        const ws = XLSX.utils.json_to_sheet(dataRows, { origin: "A9" }); // เริ่มที่บรรทัดที่ 9 (เว้นที่ให้สรุปยอด)
+
+        // เขียนข้อมูลสรุปยอดทับลงไปในช่วงบรรทัดแรก (A1)
+        // ใช้ array of arrays เพื่อความอิสระในการจัดวาง
+        const summaryHeader = [
+            [`สรุปรายการบัญชี: ${account.name}`],
+            ["รายการ", "ยอดรวม (บาท)"],
+            ["รายรับทั้งหมด ", totalIncome],
+            ["รายจ่ายทั้งหมด ", totalExpense],
+            ["รับโอน ", totalTransferIn],
+            ["โอนออก ", totalTransferOut],
+            ["ยอดสุทธิ", (totalIncome + totalTransferIn) - (totalExpense + totalTransferOut)],
+            [] // เว้นบรรทัด
+        ];
+
+        XLSX.utils.sheet_add_aoa(ws, summaryHeader, { origin: "A1" });
+
+        // กำหนดความกว้างคอลัมน์ (ตามที่คุณขอปรับขนาด)
         const wscols = [
-            {wch: 12}, // วันที่
-            {wch: 8},  // เวลา
+            {wch: 13}, // วันที่ (12)
+            {wch: 9},  // เวลา
             {wch: 10}, // ประเภท
-            {wch: 25}, // รายการ (กว้างหน่อย)
-            {wch: 25}, // หมวดหมู่ (กว้างหน่อย)
-            {wch: 15}, // จำนวนเงิน
-            {wch: 40}  // หมายเหตุ (กว้างมาก)
+            {wch: 15}, // รายการ (ปรับลดเหลือ 15)
+            {wch: 15}, // หมวดหมู่ (ปรับลดเหลือ 15)
+            {wch: 12}, // จำนวนเงิน (ปรับลดเหลือ 12)
+            {wch: 45}  // หมายเหตุ
         ];
         ws['!cols'] = wscols;
 
@@ -6333,7 +6373,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			// ตัวแปรเก็บค่าที่เลือก
 			let selectedChoice = null;
 
-			// 2. แสดงเมนูเลือก 3 แบบ
+			// 2. แสดงเมนูเลือก 3 แบบ (แก้ไขปุ่มที่ 2)
 			const { value: choice } = await Swal.fire({
 				title: 'เลือกวิธีการสำรองข้อมูล',
 				html: `
@@ -6342,8 +6382,8 @@ document.addEventListener('DOMContentLoaded', () => {
 							<i class="fa-solid fa-file-code mr-3"></i> สำรองไฟล์ลงเครื่อง (.json)
 						</button>
 
-						<button id="btn-opt-csv" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
-							<i class="fa-solid fa-file-csv mr-3"></i> ส่งออกเป็น Excel (CSV)
+						<button id="btn-opt-xlsx" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
+							<i class="fa-solid fa-file-excel mr-3"></i> ส่งออกเป็น Excel (.xlsx)
 						</button>
 
 						<button id="btn-opt-cloud" class="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 px-4 rounded-xl text-lg font-medium shadow-md transition-all flex items-center justify-center">
@@ -6360,8 +6400,9 @@ document.addEventListener('DOMContentLoaded', () => {
 					document.getElementById('btn-opt-json').onclick = () => {
 						selectedChoice = 'json'; Swal.clickConfirm();
 					};
-					document.getElementById('btn-opt-csv').onclick = () => {
-						selectedChoice = 'csv'; Swal.clickConfirm();
+					// แก้ไข ID และ Value
+					document.getElementById('btn-opt-xlsx').onclick = () => {
+						selectedChoice = 'xlsx'; Swal.clickConfirm();
 					};
 					document.getElementById('btn-opt-cloud').onclick = () => {
 						selectedChoice = 'cloud'; Swal.clickConfirm();
@@ -6374,8 +6415,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			// 3. แยกทำงานตามฟังก์ชัน
 			if (selectedChoice === 'json') {
 				await executeJsonBackup();
-			} else if (selectedChoice === 'csv') {
-				await executeCsvExport();
+			} else if (selectedChoice === 'xlsx') {
+				await executeExcelExport(); // เรียกฟังก์ชันใหม่
 			} else if (selectedChoice === 'cloud') {
 				await executeCloudSync();
 			}
@@ -6453,11 +6494,17 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
-		// --- Logic 2: CSV Export (ย้ายมาจาก handleExportCSV เดิม) ---
-		async function executeCsvExport() {
+		// --- Logic 2: Excel (.xlsx) Export (สวยงาม + มีหน้าสรุป) ---
+		async function executeExcelExport() {
+			// ตรวจสอบ Library
+			if (typeof XLSX === 'undefined') {
+				Swal.fire('Error', 'ไม่พบ Library สำหรับสร้าง Excel (กรุณาตรวจสอบ index.html)', 'error');
+				return;
+			}
+
 			const isConfirmed = await Swal.fire({
-				title: 'ส่งออกเป็น Excel (CSV)?',
-				text: `เหมาะสำหรับนำไปคำนวณต่อในคอมพิวเตอร์`,
+				title: 'ส่งออกเป็น Excel (.xlsx)?',
+				text: `ระบบจะสร้างไฟล์ Excel ที่มีทั้ง "หน้าสรุปยอดบัญชี" และ "รายการเดินบัญชีทั้งหมด"`,
 				icon: 'info',
 				showCancelButton: true,
 				confirmButtonColor: '#16a34a',
@@ -6469,68 +6516,163 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!isConfirmed) return;
 
 			try {
-				const transactions = state.transactions;
-				const accountsMap = new Map(state.accounts.map(a => [a.id, a.name]));
+				Swal.fire({ title: 'กำลังสร้างไฟล์...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-				const header = [
-					"ID", "วันที่และเวลา", "ประเภท", "ชื่อรายการ", "หมวดหมู่", 
-					"จำนวนเงิน", "บัญชีต้นทาง (From/Account)", "บัญชีปลายทาง (To)", "คำอธิบาย", "มีรูปใบเสร็จ"
-				];
-				
-				let csvContent = header.join(",") + "\n";
+				// หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอ Loading แสดงผลทัน
+				setTimeout(() => {
+					try {
+						const wb = XLSX.utils.book_new();
 
-				const escapeCSVValue = (value) => {
-					if (value === null || value === undefined) return "";
-					let str = String(value);
-					if (typeof value === 'number') str = value.toFixed(2); 
-					str = str.replace(/,/g, ''); 
-					return `"${str.replace(/"/g, '""')}"`; 
-				};
+						// ---------------------------------------------------------
+						// ส่วนที่ 1: เตรียมข้อมูลสำหรับ Sheet "Summary" (สรุปภาพรวม)
+						// ---------------------------------------------------------
+						const accountStats = {};
+						// เริ่มต้นค่าสถิติให้ทุกบัญชี
+						state.accounts.forEach(acc => {
+							accountStats[acc.id] = {
+								name: acc.name,
+								type: acc.type,
+								initial: acc.initialBalance || 0,
+								income: 0,
+								expense: 0,
+								transferIn: 0,
+								transferOut: 0,
+								balance: acc.initialBalance || 0
+							};
+						});
 
-				transactions.forEach(tx => {
-					const dateObj = new Date(tx.date);
-					const dateTime = dateObj.toISOString().slice(0, 19).replace('T', ' '); 
-					
-					const row = [
-						escapeCSVValue(tx.id),
-						escapeCSVValue(dateTime),
-						escapeCSVValue(tx.type),
-						escapeCSVValue(tx.name), 
-						escapeCSVValue(tx.category || ''),
-						escapeCSVValue(tx.amount), 
-						escapeCSVValue(accountsMap.get(tx.accountId) || 'N/A'),
-						escapeCSVValue(tx.toAccountId ? accountsMap.get(tx.toAccountId) || 'N/A' : ''),
-						escapeCSVValue(tx.desc || ''),
-						escapeCSVValue(!!tx.receiptBase64 ? 'Yes' : 'No') 
-					];
-					csvContent += row.join(",") + "\n";
-				});
-				
-				const finalContent = '\uFEFF' + csvContent; 
-				const blob = new Blob([finalContent], { type: 'text/csv;charset=utf-8;' });
+						// คำนวณยอดจากรายการธุรกรรมทั้งหมด
+						state.transactions.forEach(tx => {
+							if (accountStats[tx.accountId]) {
+								if (tx.type === 'income') {
+									accountStats[tx.accountId].income += tx.amount;
+									accountStats[tx.accountId].balance += tx.amount;
+								} else if (tx.type === 'expense') {
+									accountStats[tx.accountId].expense += tx.amount;
+									accountStats[tx.accountId].balance -= tx.amount;
+								} else if (tx.type === 'transfer') {
+									accountStats[tx.accountId].transferOut += tx.amount;
+									accountStats[tx.accountId].balance -= tx.amount;
+								}
+							}
+							// กรณีรับโอน (ขาเข้า)
+							if (tx.toAccountId && accountStats[tx.toAccountId]) {
+								accountStats[tx.toAccountId].transferIn += tx.amount;
+								accountStats[tx.toAccountId].balance += tx.amount;
+							}
+						});
 
-				const now = new Date();
-				const dateStr = now.toISOString().slice(0,10);
-				const versionStr = (typeof APP_VERSION !== 'undefined') ? `_${APP_VERSION}` : '';
-				let filename = `transactions${versionStr}_${dateStr}.csv`;
+						// สร้าง Array ข้อมูลสำหรับ Sheet Summary
+						const summaryData = [
+							["รายงานสรุปภาพรวมบัญชี (Account Summary)"],
+							["วันที่ออกรายงาน", new Date().toLocaleString('th-TH')],
+							[], // เว้นบรรทัด
+							["ชื่อบัญชี", "ประเภท", "ยอดยกมา", "รายรับรวม", "รายจ่ายรวม", "รับโอน", "โอนออก", "ยอดคงเหลือสุทธิ"]
+						];
 
-				if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
-					filename = `${window.auth.currentUser.email}${versionStr}_transactions_${dateStr}.csv`;
-				}
-				
-				const url = URL.createObjectURL(blob);
-				const linkElement = document.createElement('a');
-				linkElement.setAttribute('href', url);
-				linkElement.setAttribute('download', filename);
-				document.body.appendChild(linkElement);
-				linkElement.click();
-				document.body.removeChild(linkElement);
-				URL.revokeObjectURL(url); 
-				
-				Swal.fire('สำเร็จ', `ส่งออกไฟล์ ${filename} เรียบร้อย`, 'success');
-				
+						let totalBalance = 0;
+						
+						// เรียงลำดับบัญชีตาม Display Order
+						const sortedAccounts = [...state.accounts].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+						sortedAccounts.forEach(acc => {
+							const stat = accountStats[acc.id];
+							summaryData.push([
+								stat.name,
+								acc.type === 'credit' ? 'บัตรเครดิต' : (acc.type === 'liability' ? 'หนี้สิน' : 'เงินสด/เงินฝาก'),
+								stat.initial,
+								stat.income,
+								stat.expense,
+								stat.transferIn,
+								stat.transferOut,
+								stat.balance
+							]);
+							// คำนวณยอดรวม (เฉพาะบัญชีที่เป็นสินทรัพย์เพื่อความสมเหตุสมผล หรือรวมหมดก็ได้)
+							if(acc.type !== 'liability') totalBalance += stat.balance;
+							else totalBalance -= Math.abs(stat.balance); // ถ้าเป็นหนี้ให้นำมาลบ (แล้วแต่หลักการบัญชีของ user)
+						});
+
+						// สร้าง Sheet Summary
+						const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+						
+						// จัดความกว้างคอลัมน์ Summary
+						wsSummary['!cols'] = [
+							{wch: 25}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 20}
+						];
+						XLSX.utils.book_append_sheet(wb, wsSummary, "ภาพรวมบัญชี");
+
+
+						// ---------------------------------------------------------
+						// ส่วนที่ 2: เตรียมข้อมูลสำหรับ Sheet "Transactions" (รายการละเอียด)
+						// ---------------------------------------------------------
+						const accountsMap = new Map(state.accounts.map(a => [a.id, a.name]));
+						const sortedTxs = [...state.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+						const txData = sortedTxs.map(tx => {
+							const d = new Date(tx.date);
+							const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+							const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+							
+							let signedAmount = tx.amount;
+							if (tx.type === 'expense') signedAmount = -Math.abs(tx.amount);
+							else if (tx.type === 'income') signedAmount = Math.abs(tx.amount);
+							// transfer ปล่อยเป็นบวกในหน้านี้ เพื่อให้ดูง่ายว่ายอดเท่าไหร่
+
+							return {
+								"วันที่": dateStr,
+								"เวลา": timeStr,
+								"ประเภท": tx.type === 'income' ? 'รายรับ' : (tx.type === 'expense' ? 'รายจ่าย' : 'โอนย้าย'),
+								"รายการ": tx.name,
+								"หมวดหมู่": tx.category || '',
+								"จำนวนเงิน": signedAmount,
+								"บัญชีต้นทาง": accountsMap.get(tx.accountId) || 'N/A',
+								"บัญชีปลายทาง": tx.toAccountId ? (accountsMap.get(tx.toAccountId) || '-') : '',
+								"หมายเหตุ": tx.desc || '',
+								"รูปใบเสร็จ": tx.receiptBase64 ? 'มี' : ''
+							};
+						});
+
+						const wsTxs = XLSX.utils.json_to_sheet(txData);
+						wsTxs['!cols'] = [
+							{wch: 12}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 20}, 
+							{wch: 15}, {wch: 20}, {wch: 20}, {wch: 30}, {wch: 8}
+						];
+						XLSX.utils.book_append_sheet(wb, wsTxs, "รายการเดินบัญชี");
+
+						// ---------------------------------------------------------
+						// ส่วนที่ 3: บันทึกไฟล์
+						// ---------------------------------------------------------
+						const now = new Date();
+						const dateStr = now.toISOString().slice(0,10);
+						const versionStr = (typeof APP_VERSION !== 'undefined') ? `_${APP_VERSION}` : '';
+						
+						let filename = `Statement_Summary${versionStr}_${dateStr}.xlsx`;
+						if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
+							filename = `${window.auth.currentUser.email}${versionStr}_Statement_${dateStr}.xlsx`;
+						}
+
+						XLSX.writeFile(wb, filename);
+
+						// ปิด Loading และแสดง Success (กดตกลงเพื่อปิด)
+						Swal.close();
+						setTimeout(() => {
+							Swal.fire({
+								title: 'สำเร็จ',
+								text: `ส่งออกไฟล์ ${filename} เรียบร้อย`,
+								icon: 'success',
+								confirmButtonText: 'ตกลง'
+							});
+						}, 500);
+
+					} catch (innerErr) {
+						console.error(innerErr);
+						Swal.fire('ผิดพลาด', 'เกิดปัญหาระหว่างสร้างไฟล์ Excel', 'error');
+					}
+				}, 1000); // หน่วงเวลา 1 วินาที เพื่อความลื่นไหลของ UI
+
 			} catch (err) {
 				Swal.fire('ผิดพลาด', err.message, 'error');
+				console.error(err);
 			}
 		}
 
