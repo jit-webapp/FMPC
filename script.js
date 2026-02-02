@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // +++ แก้ไข: กรองการแจ้งเตือน ไม่ให้แสดงตอนบันทึกค่า Config หรือ AutoComplete +++
                 // STORE_CONFIG = การตั้งค่าต่างๆ, STORE_AUTO_COMPLETE = ระบบจำคำ
-                const silentStores = ['config', 'autoComplete']; 
+                const silentStores = ['config', 'autoComplete', 'transactions']; 
                 
                 // เช็คว่า storeName ปัจจุบัน อยู่ในรายการที่ต้องเงียบหรือไม่
                 // หมายเหตุ: ใช้ตัวแปร storeName เทียบกับชื่อ Store ที่เรากำหนดไว้ด้านบน
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Cloud Deleted: ${storeName}/${key}`);
 
                 // +++ แก้ไข: กรองการแจ้งเตือนเช่นกัน +++
-                const silentStores = ['config', 'autoComplete']; 
+                const silentStores = ['config', 'autoComplete', 'transactions']; 
                 if (!silentStores.includes(storeName) && storeName !== STORE_CONFIG && storeName !== STORE_AUTO_COMPLETE) {
                     showToast(`☁️ ลบข้อมูลจาก Cloud แล้ว`, 'success');
                 }
@@ -1921,21 +1921,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         
-        // Account Calculator Listeners
-        getEl('toggle-account-calc-btn').addEventListener('click', (e) => toggleCalculator(e, 'input-account-balance', 'account-calculator-popover', 'acc-calc-preview'));
+        // --- Account Calculator Listeners (แก้ไขแล้ว) ---
+        // 1. เครื่องคิดเลขสำหรับเพิ่มบัญชี (Add Account)
+        getEl('toggle-account-calc-btn').addEventListener('click', (e) => 
+            toggleCalculator(e, 'input-account-balance', 'account-calculator-popover', 'acc-calc-preview', 'acc-calc-display')
+        );
         getEl('account-calculator-grid').addEventListener('click', (e) => {
             const calcBtn = e.target.closest('.calc-btn');
-            if (calcBtn) handleCalcClick(calcBtn, 'input-account-balance', 'account-calculator-popover', 'acc-calc-preview');
+            if (calcBtn) 
+                handleCalcClick(calcBtn, 'input-account-balance', 'account-calculator-popover', 'acc-calc-preview', 'acc-calc-display');
         });
-        getEl('input-account-balance').addEventListener('keyup', (e) => handleCalcPreview(e.target.value, 'acc-calc-preview'));
+        getEl('input-account-balance').addEventListener('keyup', (e) => 
+            handleCalcPreview(e.target.value, 'acc-calc-preview')
+        );
 
-        getEl('toggle-edit-account-calc-btn').addEventListener('click', (e) => toggleCalculator(e, 'edit-account-balance', 'edit-account-calculator-popover', 'edit-acc-calc-preview'));
+        // 2. เครื่องคิดเลขสำหรับแก้ไขบัญชี (Edit Account)
+        getEl('toggle-edit-account-calc-btn').addEventListener('click', (e) => 
+            toggleCalculator(e, 'edit-account-balance', 'edit-account-calculator-popover', 'edit-acc-calc-preview', 'edit-acc-calc-display')
+        );
         getEl('edit-account-calculator-grid').addEventListener('click', (e) => {
             const calcBtn = e.target.closest('.calc-btn');
-            if (calcBtn) handleCalcClick(calcBtn, 'edit-account-balance', 'edit-account-calculator-popover', 'edit-acc-calc-preview');
+            if (calcBtn) 
+                handleCalcClick(calcBtn, 'edit-account-balance', 'edit-account-calculator-popover', 'edit-acc-calc-preview', 'edit-acc-calc-display');
         });
-        getEl('edit-account-balance').addEventListener('keyup', (e) => handleCalcPreview(e.target.value, 'edit-acc-calc-preview'));
-        // End Account Calculator Listeners
+        getEl('edit-account-balance').addEventListener('keyup', (e) => 
+            handleCalcPreview(e.target.value, 'edit-acc-calc-preview')
+        );
+        // --- End Account Calculator Listeners ---
 
 
         getEl('form-add-account').addEventListener('submit', handleAddAccount);
@@ -4682,14 +4694,27 @@ document.addEventListener('DOMContentLoaded', () => {
         controlsEl.innerHTML = html;
     }
 
-    function toggleCalculator(e, inputId, popoverId, previewId) {
-        e.stopPropagation();
-        const popover = document.getElementById(popoverId);
-        popover.classList.toggle('hidden');
-        if (!popover.classList.contains('hidden')) {
-            handleCalcPreview(document.getElementById(inputId).value, previewId);
-        }
-    }
+    function toggleCalculator(e, inputId, popoverId, previewId, displayId) {
+		e.stopPropagation(); // ป้องกัน Event Bubbling
+		const popover = document.getElementById(popoverId);
+		const input = document.getElementById(inputId);
+		const previewEl = document.getElementById(previewId);
+		const displayEl = document.getElementById(displayId);
+
+		if (popover.classList.contains('hidden')) {
+			// เปิดเครื่องคิดเลข
+			popover.classList.remove('hidden');
+			
+			// ดึงค่าปัจจุบันมาแสดงทันที
+			if (input && previewEl) {
+				previewEl.textContent = input.value || '0';
+			}
+			if (displayEl) displayEl.textContent = ''; // ล้างผลลัพธ์เก่า
+		} else {
+			// ปิดเครื่องคิดเลข
+			popover.classList.add('hidden');
+		}
+	}
 
 	// --- เพิ่มฟังก์ชันนี้: สำหรับบีบอัดรูปภาพ ---
     function compressImage(file) {
@@ -5687,7 +5712,17 @@ document.addEventListener('DOMContentLoaded', () => {
 			
             closeModal();
             renderSettings();
-            Swal.fire('บันทึกสำเร็จ!', 'บันทึกข้อมูลของคุณเรียบร้อยแล้ว', 'success');
+			const isLogged = window.auth && window.auth.currentUser;
+
+			Swal.fire({
+				title: 'บันทึกสำเร็จ!',
+				text: 'บันทึกข้อมูลของคุณเรียบร้อยแล้ว',
+				icon: 'success',
+				// ถ้าล็อกอิน: ตั้งเวลา 1000ms (1วิ), ถ้าไม่ล็อกอิน: ไม่ตั้งเวลา (undefined)
+				timer: isLogged ? 1000 : undefined, 
+				// ถ้าล็อกอิน: ซ่อนปุ่ม, ถ้าไม่ล็อกอิน: แสดงปุ่ม
+				showConfirmButton: !isLogged 
+			});
         } catch (err) {
             console.error("Failed to save transaction:", err);
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้', 'error');
@@ -5735,28 +5770,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function handleCalcClick(buttonEl, inputId, popoverId, previewId) {
-        const value = buttonEl.dataset.value;
-        const amountInput = document.getElementById(inputId);
-        const popover = document.getElementById(popoverId);
-        let currentVal = amountInput.value;
-        if (value === 'C') {
-            amountInput.value = '';
-        } else if (value === '=') {
-            const result = safeCalculate(currentVal);
-            if (result !== null) {
-                amountInput.value = parseFloat(result.toFixed(2));
-                popover.classList.add('hidden');
-            } else {
-                amountInput.value = '';
-                Swal.fire('คำนวณผิดพลาด', 'รูปแบบการคำนวณไม่ถูกต้อง', 'warning'); 
-            }
-        } else {
-            amountInput.value = currentVal + value;
-        }
-        
-        handleCalcPreview(amountInput.value, previewId);
-    }
+    function handleCalcClick(btn, inputId, popoverId, previewId, displayId) {
+		const input = document.getElementById(inputId);
+		const value = btn.getAttribute('data-value');
+		
+		const previewEl = document.getElementById(previewId);
+		const displayEl = document.getElementById(displayId);
+
+		if (!input) return;
+
+		if (value === 'C') {
+			input.value = '';
+		} else if (value === 'backspace') {
+			input.value = input.value.toString().slice(0, -1);
+		} else if (value === '=' || value === 'enter') { // เพิ่มเงื่อนไข enter ตรงนี้
+			try {
+				const sanitized = input.value.replace(/[^0-9+\-*/().]/g, '');
+				if (sanitized) {
+					const result = Function('"use strict";return (' + sanitized + ')')();
+					input.value = result;
+				}
+			} catch (e) {
+				console.error("Calculation Error", e);
+			}
+
+			// ถ้าเป็นปุ่ม Enter ให้ปิดเครื่องคิดเลขด้วย
+			if (value === 'enter') {
+				const popover = document.getElementById(popoverId);
+				if (popover) {
+					popover.classList.add('hidden');
+				}
+			}
+		} else {
+			input.value += value;
+		}
+
+		// อัปเดตหน้าจอ Preview
+		if (previewEl) {
+			previewEl.textContent = input.value || '0'; 
+		}
+
+		if (displayEl) {
+			try {
+				const sanitized = input.value.replace(/[^0-9+\-*/().]/g, '');
+				if (sanitized && /[+\-*/]/.test(sanitized) && !/[+\-*/]$/.test(sanitized)) {
+					const result = Function('"use strict";return (' + sanitized + ')')();
+					displayEl.textContent = '= ' + result.toLocaleString();
+				} else {
+					displayEl.textContent = '';
+				}
+			} catch (e) {
+				displayEl.textContent = '';
+			}
+		}
+
+		input.dispatchEvent(new Event('input'));
+	}
 
     function handleChangeViewMode(e, source) {
         const newMode = e.target.value;
@@ -5915,7 +5984,16 @@ document.addEventListener('DOMContentLoaded', () => {
 					
 					renderBudgetWidget();
 
-                    Swal.fire('ลบแล้ว!', 'รายการของคุณถูกลบแล้ว', 'success');
+                    // --- โค้ดใหม่: ใช้ตรรกะเดียวกับตอนบันทึก ---
+					const isLogged = window.auth && window.auth.currentUser;
+
+					Swal.fire({
+						title: 'ลบแล้ว!',
+						text: 'รายการของคุณถูกลบแล้ว',
+						icon: 'success',
+						timer: isLogged ? 1000 : undefined,
+						showConfirmButton: !isLogged
+					});
                 } catch (err) {
                     console.error("Failed to delete transaction:", err);
                     Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error');

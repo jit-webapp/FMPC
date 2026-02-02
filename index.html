@@ -1874,32 +1874,37 @@
                     <i class="fa-solid fa-xmark text-3xl"></i>
                 </button>
             </div>
-            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <div id="calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex flex-col justify-end h-24">
+                <div id="calc-display" class="text-right text-gray-500 text-sm h-6 break-all dark:text-gray-400"></div>
+				<div id="calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-end tracking-wider overflow-x-auto no-scrollbar"></div>
             </div>
             <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="calculator-grid">
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-orange-100 text-orange-600 text-2xl font-bold hover:bg-orange-200 active:scale-95 transition flex items-center justify-center" data-value="backspace"><i class="fa-solid fa-delete-left"></i></button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="/">÷</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="*">×</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="+">+</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="+">+</button>
                 
-                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-purple-600 text-white text-4xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
-
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
 
-                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+					<i class="fa-solid fa-check"></i>
+				</button>
             </div>
         </div>
     </div>
@@ -1912,32 +1917,37 @@
                     <i class="fa-solid fa-xmark text-3xl"></i>
                 </button>
             </div>
-            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <div id="acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex flex-col justify-end h-24">
+                <div id="acc-calc-display" class="text-right text-gray-500 text-sm h-6 break-all dark:text-gray-400"></div>
+				<div id="acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-end tracking-wider overflow-x-auto no-scrollbar"></div>
             </div>
             <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="account-calculator-grid">
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-orange-100 text-orange-600 text-2xl font-bold hover:bg-orange-200 active:scale-95 transition flex items-center justify-center" data-value="backspace"><i class="fa-solid fa-delete-left"></i></button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="/">÷</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="*">×</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="+">+</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-green-100 text-green-700 text-2xl font-bold hover:bg-green-200 active:scale-95 transition" data-value="+">+</button>
                 
-                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-green-600 text-white text-4xl font-bold hover:bg-green-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
-
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
 
-                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+					<i class="fa-solid fa-check"></i>
+				</button>
             </div>
         </div>
     </div>
@@ -1950,32 +1960,38 @@
                     <i class="fa-solid fa-xmark text-3xl"></i>
                 </button>
             </div>
-            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <div id="edit-acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 h-14 flex items-center justify-end tracking-wider overflow-x-auto"></div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex flex-col justify-end h-24">
+                <div id="edit-acc-calc-display" class="text-right text-gray-500 text-sm h-6 break-all dark:text-gray-400"></div>
+				<div id="edit-acc-calc-preview" class="text-right text-4xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-end tracking-wider overflow-x-auto no-scrollbar"></div>
             </div>
             <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="edit-account-calculator-grid">
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-orange-100 text-orange-600 text-2xl font-bold hover:bg-orange-200 active:scale-95 transition flex items-center justify-center" data-value="backspace"><i class="fa-solid fa-delete-left"></i></button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="/">÷</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="*">×</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="+">+</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-blue-100 text-blue-700 text-2xl font-bold hover:bg-blue-200 active:scale-95 transition" data-value="+">+</button>
                 
-                <button type="button" class="calc-btn row-span-2 h-full rounded-2xl bg-blue-600 text-white text-4xl font-bold hover:bg-blue-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="=">=</button>
-
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
+                
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
 
-                <button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
+				
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+					<i class="fa-solid fa-check"></i>
+				</button>
             </div>
         </div>
     </div>
