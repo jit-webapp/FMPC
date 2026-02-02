@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const STORE_AUTO_COMPLETE = 'autoComplete'; 
 	const STORE_RECURRING = 'recurring'; // *** เพิ่ม Store ใหม่ ***
 	const STORE_BUDGETS = 'budgets'; // [NEW]
+	const STORE_CUSTOM_NOTIFY = 'custom_notifications';
 	const LINE_USER_ID_KEY = 'lineUserId'; // LineID
     
     const PAGE_IDS = ['page-home', 'page-list', 'page-calendar', 'page-accounts', 'page-settings', 'page-guide']; // เพิ่ม 'page-accounts'
@@ -783,7 +784,15 @@ document.addEventListener('DOMContentLoaded', () => {
         isDarkMode: false, 
         settingsCollapse: {},
         autoLockTimeout: 0,
-		budgets: []
+		budgets: [],
+		notifySettings: {
+            scheduled: true,
+            recurring: true,
+            budget: true
+        },
+        customNotifications: [],
+        ignoredNotifications: [],
+		notificationHistory: []
     };
     
     // ********** NEW: Account Detail Modal View State & Functions **********
@@ -1030,6 +1039,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 text: 'เกิดข้อผิดพลาดในการอ่านฐานข้อมูล: ' + e.message
             });
         }
+		// [ใหม่] โหลดการตั้งค่า Notification
+		const notifyConfig = await dbGet(STORE_CONFIG, 'notification_settings');
+		if (notifyConfig) state.notifySettings = notifyConfig.value;
+
+		const ignoredConfig = await dbGet(STORE_CONFIG, 'ignored_notifications');
+		if (ignoredConfig) state.ignoredNotifications = ignoredConfig.value || [];
+
+		const customNoti = await dbGet(STORE_CONFIG, 'custom_notifications_list');
+		if (customNoti) state.customNotifications = customNoti.value || [];
+		
+		const notiHistory = await dbGet(STORE_CONFIG, 'notification_history');
+		if (notiHistory) state.notificationHistory = notiHistory.value || [];
     }
 		
 		// ============================================
@@ -1341,7 +1362,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			updateSharedControls('home');
 			renderAll(); 
 			renderSettings();
-			resetAutoLockTimer(); 
+			resetAutoLockTimer();
+			// [ใหม่] เช็คแจ้งเตือนหลังจากแอปเริ่มทำงาน 2 วินาที
+				setTimeout(() => {
+					if(typeof checkNotifications === 'function') {
+						checkNotifications();
+					}
+				}, 2000);
 		}
 
 		// [เพิ่มใหม่] ฟังก์ชันสำหรับปลดล็อคเมื่อสำเร็จ (Refactor แยกออกมาเพื่อให้เรียกใช้จากการสแกนนิ้วได้)
@@ -1350,24 +1377,31 @@ document.addEventListener('DOMContentLoaded', () => {
 			if(unlockBtn) unlockBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
 					
 			setTimeout(() => {
+				// 1. ซ่อนหน้าจอ Lock Screen
 				document.getElementById('app-lock-screen').classList.add('hidden'); 
 				
-				// ถ้าเป็นการเปิดครั้งแรก (หน้าอื่นยังไม่แสดง)
+				// 2. ถ้าเป็นการเปิดครั้งแรก (ยังไม่มีหน้าไหนแสดง) ให้ไปหน้า Home และเรียก onAppStart
 				if (document.getElementById('page-home').style.display === 'none' && 
 					document.getElementById('page-list').style.display === 'none') {
-					 document.getElementById('page-home').style.display = 'block';
-					 currentPage = 'home';
-					 onAppStart();
-					 history.replaceState({ pageId: 'page-home' }, null, '#home');
+						document.getElementById('page-home').style.display = 'block';
+						currentPage = 'home';
+						onAppStart(); 
+						history.replaceState({ pageId: 'page-home' }, null, '#home');
 				}
 				
+				// 3. รีเซ็ตค่ารหัสผ่านและปุ่ม
 				document.getElementById('unlock-password').value = '';
 				if(unlockBtn) unlockBtn.innerHTML = '<i class="fa-solid fa-door-open"></i> เข้าสู่ระบบ';
 				renderDropdownList();
 				
-				// Toast Welcome
+				// 4. แสดง Toast
 				showToast("ปลดล็อคสำเร็จ", "success");
-		
+
+				// [ใหม่] 5. หน่วงเวลา 2 วินาที แล้วค่อยเช็คการแจ้งเตือน
+				setTimeout(() => {
+					checkNotifications();
+				}, 2000);
+
 			}, 100);
 		}
 
@@ -2706,6 +2740,300 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		// เรียกใช้ฟังก์ชันปุ่ม Install
         setupInstallButton();
+		
+		// [ใหม่] --- ส่วนจัดการการแจ้งเตือน (Notifications) ---
+    
+        // 1. Toggle Settings (สวิตช์เปิด-ปิด)
+        const toggleSch = document.getElementById('toggle-notify-scheduled');
+        if (toggleSch) {
+            toggleSch.checked = state.notifySettings.scheduled;
+            toggleSch.addEventListener('change', async (e) => {
+                state.notifySettings.scheduled = e.target.checked;
+                await dbPut(STORE_CONFIG, { key: 'notification_settings', value: state.notifySettings });
+            });
+        }
+
+        const toggleRec = document.getElementById('toggle-notify-recurring');
+        if (toggleRec) {
+            toggleRec.checked = state.notifySettings.recurring;
+            toggleRec.addEventListener('change', async (e) => {
+                state.notifySettings.recurring = e.target.checked;
+                await dbPut(STORE_CONFIG, { key: 'notification_settings', value: state.notifySettings });
+            });
+        }
+
+        const toggleBud = document.getElementById('toggle-notify-budget');
+        if (toggleBud) {
+            toggleBud.checked = state.notifySettings.budget;
+            toggleBud.addEventListener('change', async (e) => {
+                state.notifySettings.budget = e.target.checked;
+                await dbPut(STORE_CONFIG, { key: 'notification_settings', value: state.notifySettings });
+            });
+        }
+
+        // 2. Custom Notification Save (ปุ่มบันทึกแจ้งเตือนพิเศษ)
+        const btnSaveCustom = document.getElementById('btn-save-custom-notify');
+        if (btnSaveCustom) {
+            btnSaveCustom.addEventListener('click', async () => {
+                const msg = document.getElementById('custom-notify-msg').value;
+                const date = document.getElementById('custom-notify-date').value;
+                const days = document.getElementById('custom-notify-days').value;
+
+                if (!msg || !date) {
+                    Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อความและวันที่', 'warning');
+                    return;
+                }
+
+                const newNoti = {
+                    id: 'custom_' + Date.now(),
+                    message: msg,
+                    date: date,
+                    advanceDays: days || 0
+                };
+
+                state.customNotifications.push(newNoti);
+                await dbPut(STORE_CONFIG, { key: 'custom_notifications_list', value: state.customNotifications });
+                
+                // ล้างฟอร์มและรีเฟรชรายการ
+                document.getElementById('custom-notify-msg').value = '';
+                document.getElementById('custom-notify-date').value = '';
+                document.getElementById('custom-notify-days').value = '0'; 
+                
+                if(typeof renderCustomNotifyList === 'function') {
+                    renderCustomNotifyList();
+                }
+                Swal.fire('สำเร็จ', 'เพิ่มการแจ้งเตือนแล้ว', 'success');
+            });
+        }
+
+        // เรียก render รายการแจ้งเตือนพิเศษ เมื่อกดเข้าเมนู Settings
+        const navSettingsBtnForNotify = document.getElementById('nav-settings');
+        if (navSettingsBtnForNotify) {
+            navSettingsBtnForNotify.addEventListener('click', () => {
+                if(typeof renderCustomNotifyList === 'function') {
+                    renderCustomNotifyList();
+                }
+            });
+        }
+		
+		// ฟังก์ชันแสดงรายการประวัติ
+		function renderNotificationHistory() {
+			const list = document.getElementById('notification-history-list');
+			if (!list) return;
+
+			if (state.notificationHistory.length === 0) {
+				list.innerHTML = '<p class="text-center text-gray-400 py-4 text-sm">ยังไม่มีประวัติการแจ้งเตือน</p>';
+				return;
+			}
+
+			// เรียงลำดับจากใหม่ไปเก่า (ล่าสุดอยู่บน)
+			const sortedHistory = [...state.notificationHistory].reverse();
+
+			list.innerHTML = sortedHistory.map(h => `
+				<div class="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100 shadow-sm text-sm mb-2">
+					<div class="${h.color || 'text-gray-500'} mt-0.5 text-lg">
+						<i class="fa-solid ${h.icon || 'fa-bell'}"></i>
+					</div>
+					<div class="flex-1">
+						<div class="flex justify-between items-start">
+							<span class="font-bold text-gray-700">${h.title}</span>
+							<span class="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">${h.date} ${h.time}</span>
+						</div>
+						<div class="text-gray-600 mt-1">${h.message}</div>
+					</div>
+				</div>
+			`).join('');
+		}
+
+		// เพิ่ม Event Listener สำหรับปุ่ม History
+		document.addEventListener('DOMContentLoaded', () => {
+			// ปุ่มเปิด-ปิดดูประวัติ
+			const btnToggleHist = document.getElementById('btn-toggle-history');
+			const histList = document.getElementById('notification-history-list');
+			
+			if (btnToggleHist && histList) {
+				btnToggleHist.addEventListener('click', () => {
+					histList.classList.toggle('hidden');
+					if (!histList.classList.contains('hidden')) {
+						btnToggleHist.textContent = 'ซ่อนประวัติ';
+						// เรียก render ทุกครั้งที่กดเปิด เพื่อให้ข้อมูลอัปเดตเสมอ
+						if(typeof renderNotificationHistory === 'function') {
+							renderNotificationHistory();
+						}
+					} else {
+						btnToggleHist.textContent = 'แสดงประวัติที่ผ่านมา';
+					}
+				});
+			}
+
+			// ปุ่มล้างประวัติ
+			const btnClearHist = document.getElementById('btn-clear-history');
+			if (btnClearHist) {
+				btnClearHist.addEventListener('click', async () => {
+					const confirm = await Swal.fire({
+						title: 'ล้างประวัติ?',
+						text: 'ประวัติการแจ้งเตือนทั้งหมดจะหายไป',
+						icon: 'warning',
+						showCancelButton: true,
+						confirmButtonText: 'ล้างข้อมูล',
+						cancelButtonText: 'ยกเลิก'
+					});
+
+					if (confirm.isConfirmed) {
+						state.notificationHistory = [];
+						await dbPut(STORE_CONFIG, { key: 'notification_history', value: [] });
+						renderNotificationHistory();
+						showToast('ล้างประวัติเรียบร้อย', 'success');
+					}
+				});
+			}
+		});
+		
+		// ==========================================
+		//  ฟังก์ชันแสดงผล (Updated for Dark Mode)
+		// ==========================================
+
+		// 1. ฟังก์ชันแสดงรายการแจ้งเตือนพิเศษ (Custom Notify List)
+		function renderCustomNotifyList() {
+			const list = document.getElementById('active-custom-notify-list');
+			if(!list) return;
+			list.innerHTML = '';
+			
+			if (!state.customNotifications || state.customNotifications.length === 0) {
+				return;
+			}
+			
+			const today = new Date().toISOString().slice(0, 10);
+			
+			state.customNotifications.forEach((n, idx) => {
+				const isPassed = n.date < today; 
+				// ปรับสี Text ให้รองรับ Dark Mode
+				const statusClass = isPassed 
+					? 'text-gray-400 dark:text-gray-500 line-through' 
+					: 'text-purple-700 dark:text-purple-400';
+				
+				const dateObj = new Date(n.date);
+				const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+
+				// ปรับ Background และ Border สำหรับ Dark Mode
+				const html = `
+					<div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm mb-2 transition-colors">
+						<div class="${statusClass}">
+							<div class="font-bold text-sm">${n.message}</div>
+							<div class="text-xs mt-1 text-gray-500 dark:text-gray-400">
+								<i class="fa-regular fa-calendar mr-1"></i>${dateStr} (เตือนก่อน ${n.advanceDays} วัน)
+							</div>
+						</div>
+						<button class="text-red-500 hover:text-red-700 dark:hover:text-red-400 delete-custom-notify p-2 transition" data-idx="${idx}">
+							<i class="fa-solid fa-trash"></i>
+						</button>
+					</div>
+				`;
+				list.insertAdjacentHTML('beforeend', html);
+			});
+
+			// Event Listener สำหรับปุ่มลบ
+			document.querySelectorAll('.delete-custom-notify').forEach(btn => {
+				btn.addEventListener('click', async (e) => {
+					const targetBtn = e.target.closest('.delete-custom-notify'); 
+					if(!targetBtn) return;
+					const idx = targetBtn.dataset.idx;
+					
+					const confirm = await Swal.fire({
+						title: 'ลบรายการ?',
+						text: 'ต้องการลบการแจ้งเตือนนี้ใช่ไหม',
+						icon: 'warning',
+						showCancelButton: true,
+						confirmButtonText: 'ลบ',
+						cancelButtonText: 'ยกเลิก',
+						confirmButtonColor: '#d33',
+						// Swal รองรับ Dark Mode อัตโนมัติถ้าตั้งค่า theme ไว้ หรือปรับ CSS แยก
+					});
+
+					if (confirm.isConfirmed) {
+						state.customNotifications.splice(idx, 1);
+						await dbPut(STORE_CONFIG, { key: 'custom_notifications_list', value: state.customNotifications });
+						renderCustomNotifyList(); 
+					}
+				});
+			});
+		}
+
+		// 2. ฟังก์ชันแสดงประวัติการแจ้งเตือน (Notification History)
+		function renderNotificationHistory() {
+			const list = document.getElementById('notification-history-list');
+			if (!list) return;
+
+			if (!state.notificationHistory || state.notificationHistory.length === 0) {
+				list.innerHTML = '<p class="text-center text-gray-400 dark:text-gray-500 py-4 text-sm">ยังไม่มีประวัติการแจ้งเตือน</p>';
+				return;
+			}
+
+			const sortedHistory = [...state.notificationHistory].reverse();
+
+			list.innerHTML = sortedHistory.map(h => `
+				<div class="flex items-start gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm text-sm mb-2 transition-colors">
+					<div class="${h.color || 'text-gray-500 dark:text-gray-400'} mt-0.5 text-lg">
+						<i class="fa-solid ${h.icon || 'fa-bell'}"></i>
+					</div>
+					<div class="flex-1">
+						<div class="flex justify-between items-start">
+							<span class="font-bold text-gray-700 dark:text-gray-200">${h.title}</span>
+							<span class="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+								${h.date} ${h.time}
+							</span>
+						</div>
+						<div class="text-gray-600 dark:text-gray-400 mt-1 text-xs">${h.message}</div>
+					</div>
+				</div>
+			`).join('');
+		}
+
+		// 3. เรียกใช้งานปุ่มเปิด/ปิด History และปุ่มล้างประวัติ
+		const btnToggleHist = document.getElementById('btn-toggle-history');
+		const histList = document.getElementById('notification-history-list');
+		
+		if (btnToggleHist && histList) {
+			btnToggleHist.addEventListener('click', () => {
+				histList.classList.toggle('hidden');
+				if (!histList.classList.contains('hidden')) {
+					btnToggleHist.textContent = 'ซ่อนประวัติ';
+					renderNotificationHistory();
+				} else {
+					btnToggleHist.textContent = 'แสดงประวัติที่ผ่านมา';
+				}
+			});
+		}
+
+		const btnClearHist = document.getElementById('btn-clear-history');
+		if (btnClearHist) {
+			btnClearHist.addEventListener('click', async () => {
+				const confirm = await Swal.fire({
+					title: 'ล้างประวัติ?',
+					text: 'ประวัติทั้งหมดจะหายไป',
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonText: 'ล้างข้อมูล',
+					cancelButtonText: 'ยกเลิก',
+					confirmButtonColor: '#d33'
+				});
+
+				if (confirm.isConfirmed) {
+					state.notificationHistory = [];
+					await dbPut(STORE_CONFIG, { key: 'notification_history', value: [] });
+					renderNotificationHistory();
+					showToast('ล้างประวัติเรียบร้อย', 'success');
+				}
+			});
+		}
+
+		// เรียกแสดงผลครั้งแรกเมื่อเข้าหน้า Settings
+		const settingsBtn = document.getElementById('nav-settings');
+		if (settingsBtn) {
+			settingsBtn.addEventListener('click', () => {
+				renderCustomNotifyList();
+			});
+		}
 	
     }
 	
@@ -5788,7 +6116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				const sanitized = input.value.replace(/[^0-9+\-*/().]/g, '');
 				if (sanitized) {
 					const result = Function('"use strict";return (' + sanitized + ')')();
-					input.value = result;
+					input.value = parseFloat(result.toFixed(2));
 				}
 			} catch (e) {
 				console.error("Calculation Error", e);
@@ -5802,8 +6130,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 		} else {
-			input.value += value;
-		}
+            // [แก้ไข] ลบเลข 0 นำหน้าออก (ถ้าค่าเดิมคือ "0" และค่าใหม่ไม่ใช่จุดทศนิยม ให้แทนที่เลย)
+            if (input.value === '0' && value !== '.') {
+                input.value = value;
+            } else {
+                input.value += value;
+            }
+        }
 
 		// อัปเดตหน้าจอ Preview
 		if (previewEl) {
@@ -5815,7 +6148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				const sanitized = input.value.replace(/[^0-9+\-*/().]/g, '');
 				if (sanitized && /[+\-*/]/.test(sanitized) && !/[+\-*/]$/.test(sanitized)) {
 					const result = Function('"use strict";return (' + sanitized + ')')();
-					displayEl.textContent = '= ' + result.toLocaleString();
+					displayEl.textContent = '= ' + parseFloat(result.toFixed(2)).toLocaleString();
 				} else {
 					displayEl.textContent = '';
 				}
@@ -8919,5 +9252,193 @@ document.addEventListener('DOMContentLoaded', () => {
 					});
 				}
 			}
+			
+			// เพิ่มฟังก์ชันใหม่เหล่านี้ลงใน script.js
+
+			function checkNotifications() {
+				const alerts = [];
+				const today = new Date();
+				today.setHours(0, 0, 0, 0); // เที่ยงคืนของวันนี้
+				const todayStr = today.toISOString().slice(0, 10);
+
+				// ดึงรายการทั้งหมดที่เป็นของ "วันนี้"
+				const todaysTransactions = state.transactions.filter(tx => tx.date.startsWith(todayStr));
+
+				todaysTransactions.forEach(tx => {
+					// ข้ามรายการที่ผู้ใช้กด "ไม่ต้องแจ้งเตือนอีก"
+					if (state.ignoredNotifications.includes(tx.id)) return;
+
+					// 1. ตรวจสอบ "รายการประจำ" (Recurring)
+					// รายการประจำที่ระบบสร้างให้จะมี ID ขึ้นต้นด้วย "tx-rec-"
+					if (state.notifySettings.recurring && tx.id.startsWith('tx-rec-')) {
+						alerts.push({
+							id: tx.id,
+							title: 'รายการประจำถึงกำหนด',
+							message: `${tx.name} (${formatCurrency(tx.amount)})`,
+							icon: 'fa-rotate'
+						});
+					}
+					
+					// 2. ตรวจสอบ "รายการล่วงหน้า" (Scheduled)
+					// เงื่อนไข: เป็น ID ปกติ (tx-...) แต่ "วันที่สร้าง" ต้องเกิดขึ้น "ก่อนวันนี้"
+					else if (state.notifySettings.scheduled && tx.id.startsWith('tx-') && !tx.id.startsWith('tx-rec-') && !tx.id.startsWith('tx-adj-')) {
+						const parts = tx.id.split('-');
+						if (parts.length >= 2) {
+							const timestamp = parseInt(parts[1]); // แกะเวลาที่สร้างจาก ID
+							if (!isNaN(timestamp)) {
+								const createdDate = new Date(timestamp);
+								createdDate.setHours(0,0,0,0);
+								
+								// ถ้าวันที่สร้าง (Created) < วันนี้ (Today) แสดงว่าลงล่วงหน้าไว้ -> แจ้งเตือน
+								// ถ้าวันที่สร้าง == วันนี้ แสดงว่าเพิ่งลงเมื่อกี้ -> ไม่ต้องเตือน
+								if (createdDate < today) {
+									alerts.push({
+										id: tx.id,
+										title: 'รายการล่วงหน้าถึงกำหนด',
+										message: `${tx.name} (${formatCurrency(tx.amount)})`,
+										icon: 'fa-clock'
+									});
+								}
+							}
+						}
+					}
+				});
+
+				// 3. ตรวจสอบ "งบประมาณ" (Budget) ใกล้หมด (>80%)
+				if (state.notifySettings.budget && state.budgets) {
+					const currentMonth = todayStr.slice(0, 7);
+					const expenseByCat = {};
+					
+					// คำนวณยอดใช้จ่ายรายหมวดของเดือนนี้
+					state.transactions.forEach(tx => {
+						if (tx.type === 'expense' && tx.date.startsWith(currentMonth)) {
+							if (!expenseByCat[tx.category]) expenseByCat[tx.category] = 0;
+							expenseByCat[tx.category] += tx.amount;
+						}
+					});
+
+					state.budgets.forEach(bg => {
+						const used = expenseByCat[bg.category] || 0;
+						const percent = (used / bg.amount) * 100;
+						const alertId = `budget_${bg.category}_${currentMonth}`;
+
+						if (percent >= 80 && !state.ignoredNotifications.includes(alertId)) {
+							alerts.push({
+								id: alertId,
+								title: 'งบประมาณใกล้หมด!',
+								message: `หมวด ${bg.category} ใช้ไปแล้ว ${percent.toFixed(1)}% (${formatCurrency(used)}/${formatCurrency(bg.amount)})`,
+								icon: 'fa-triangle-exclamation',
+								color: 'text-red-600'
+							});
+						}
+					});
+				}
+
+				// 4. ตรวจสอบ "การแจ้งเตือนพิเศษ" (Custom)
+				state.customNotifications.forEach(notif => {
+					const targetDate = new Date(notif.date);
+					targetDate.setHours(0,0,0,0);
+					
+					const triggerDate = new Date(targetDate);
+					triggerDate.setDate(targetDate.getDate() - parseInt(notif.advanceDays));
+
+					if (today >= triggerDate && today <= targetDate) {
+						if (!state.ignoredNotifications.includes(notif.id)) {
+							const diffTime = targetDate - today;
+							const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+							let daysText = diffDays === 0 ? 'วันนี้' : `อีก ${diffDays} วัน`;
+
+							alerts.push({
+								id: notif.id,
+								title: 'แจ้งเตือนพิเศษ',
+								message: `${notif.message} (${daysText})`,
+								icon: 'fa-star',
+								color: 'text-yellow-600'
+							});
+						}
+					}
+				});
+
+				if (alerts.length > 0) {
+					showNotificationModal(alerts);
+				}
+			}
+			// แทนที่ฟังก์ชัน showNotificationModal ตัวเดิม
+			async function showNotificationModal(alerts) {
+				const modal = document.getElementById('notification-modal');
+				const content = document.getElementById('notification-content');
+				const btnIgnore = document.getElementById('btn-notify-ignore');
+				const btnAck = document.getElementById('btn-notify-ack');
+				
+				if(!modal || !content) return;
+
+				// --- [เพิ่มใหม่] ส่วนบันทึกประวัติ (History Logging) ---
+				const today = new Date();
+				const dateStr = today.toISOString().slice(0, 10);
+				const timeStr = today.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+				let historyChanged = false;
+
+				alerts.forEach(alert => {
+					// สร้าง Key เพื่อเช็คว่าวันนี้บันทึกรายการนี้ไปหรือยัง (กันซ้ำ)
+					const historyKey = `${dateStr}_${alert.id}`;
+					
+					// เช็คว่าในประวัติมี Key นี้หรือยัง
+					const alreadyLogged = state.notificationHistory.some(h => h.historyKey === historyKey);
+
+					if (!alreadyLogged) {
+						state.notificationHistory.unshift({ // เพิ่มไว้บนสุด
+							historyKey: historyKey,
+							date: dateStr,
+							time: timeStr,
+							title: alert.title,
+							message: alert.message,
+							icon: alert.icon,
+							color: alert.color
+						});
+						historyChanged = true;
+					}
+				});
+
+				// ถ้ามีการเพิ่มประวัติใหม่ ให้บันทึกลง DB
+				if (historyChanged) {
+					// จำกัดประวัติไว้แค่ 100 รายการล่าสุด เพื่อไม่ให้หนักเครื่อง
+					if (state.notificationHistory.length > 100) {
+						state.notificationHistory = state.notificationHistory.slice(0, 100);
+					}
+					await dbPut(STORE_CONFIG, { key: 'notification_history', value: state.notificationHistory });
+					
+					// ถ้าเปิดหน้า History อยู่ให้รีเฟรช
+					if(typeof renderNotificationHistory === 'function') renderNotificationHistory();
+				}
+				// -----------------------------------------------------
+
+				// สร้าง HTML สำหรับ Modal (เหมือนเดิม)
+				content.innerHTML = alerts.map(alert => `
+					<div class="bg-gray-50 p-4 rounded-2xl border-l-8 ${alert.color ? alert.color.replace('text', 'border') : 'border-purple-500'} shadow-sm flex items-start gap-4">
+						<div class="mt-1 text-2xl ${alert.color || 'text-purple-600'}">
+							<i class="fa-solid ${alert.icon}"></i>
+						</div>
+						<div>
+							<h3 class="font-bold text-xl text-gray-800">${alert.title}</h3>
+							<p class="text-gray-600 text-lg">${alert.message}</p>
+						</div>
+					</div>
+				`).join('');
+
+				modal.classList.remove('hidden');
+
+				btnAck.onclick = () => {
+					modal.classList.add('hidden');
+				};
+
+				btnIgnore.onclick = async () => {
+					const newIgnored = alerts.map(a => a.id);
+					state.ignoredNotifications = [...state.ignoredNotifications, ...newIgnored];
+					await dbPut(STORE_CONFIG, { key: 'ignored_notifications', value: state.ignoredNotifications });
+					modal.classList.add('hidden');
+					showToast('จะไม่แจ้งเตือนรายการเหล่านี้อีก', 'success');
+				};
+			}
+			
 			
         });
