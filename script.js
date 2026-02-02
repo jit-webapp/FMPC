@@ -9343,8 +9343,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 			
-			// เพิ่มฟังก์ชันใหม่เหล่านี้ลงใน script.js
-
 			function checkNotifications() {
 				const alerts = [];
 				const today = new Date();
@@ -9427,24 +9425,46 @@ document.addEventListener('DOMContentLoaded', () => {
 				// 4. ตรวจสอบ "การแจ้งเตือนพิเศษ" (Custom)
 				state.customNotifications.forEach(notif => {
 					const targetDate = new Date(notif.date);
-					targetDate.setHours(0,0,0,0);
-					
-					const triggerDate = new Date(targetDate);
-					triggerDate.setDate(targetDate.getDate() - parseInt(notif.advanceDays));
+					targetDate.setHours(0, 0, 0, 0);
 
-					if (today >= triggerDate && today <= targetDate) {
-						if (!state.ignoredNotifications.includes(notif.id)) {
-							const diffTime = targetDate - today;
-							const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-							let daysText = diffDays === 0 ? 'วันนี้' : `อีก ${diffDays} วัน`;
+					// คำนวณระยะห่างวัน (Diff)
+					const diffTime = targetDate - today;
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 0 = วันนี้, 1 = พรุ่งนี้
 
-							alerts.push({
-								id: notif.id,
-								title: 'แจ้งเตือนพิเศษ',
-								message: `${notif.message} (${daysText})`,
-								icon: 'fa-star',
-								color: 'text-yellow-600'
-							});
+					// จำนวนวันที่ตั้งเตือนล่วงหน้า
+					const advanceDays = parseInt(notif.advanceDays) || 0;
+
+					// ตรวจสอบว่าอยู่ในช่วงที่ต้องเตือนหรือไม่ (ตั้งแต่วันเริ่มเตือน จนถึง วันจริง)
+					if (diffDays >= 0 && diffDays <= advanceDays) {
+
+						// --- กรณี A: ถึงวันจริงแล้ว! (และเคยมีการตั้งเตือนล่วงหน้าไว้ >= 1 วัน) ---
+						// ต้องแจ้งเตือนซ้ำ โดยใช้ ID ใหม่ (_due) เพื่อให้เด้งเตือนแม้ว่าจะเคยกดอ่านตอนเตือนล่วงหน้าไปแล้ว
+						if (diffDays === 0 && advanceDays >= 1) {
+							const dueAlertId = `${notif.id}_due`; // *** สร้าง ID ใหม่ ***
+
+							if (!state.ignoredNotifications.includes(dueAlertId)) {
+								alerts.push({
+									id: dueAlertId,
+									title: '🚨 ครบกำหนดวันนี้!', // เปลี่ยนหัวข้อให้ตื่นตัว
+									message: `${notif.message} (ถึงกำหนดแล้ว)`,
+									icon: 'fa-exclamation-circle',
+									color: 'text-red-600' // สีแดง
+								});
+							}
+						}
+						// --- กรณี B: ช่วงเตือนล่วงหน้า หรือ วันจริงแบบปกติ (ที่ไม่ได้ตั้งล่วงหน้าไว้) ---
+						else {
+							if (!state.ignoredNotifications.includes(notif.id)) {
+								let daysText = diffDays === 0 ? 'วันนี้' : `อีก ${diffDays} วัน`;
+								
+								alerts.push({
+									id: notif.id,
+									title: diffDays === 0 ? 'แจ้งเตือนพิเศษ (วันนี้)' : 'แจ้งเตือนพิเศษ',
+									message: `${notif.message} (${daysText})`,
+									icon: diffDays === 0 ? 'fa-star' : 'fa-clock',
+									color: diffDays === 0 ? 'text-red-600' : 'text-yellow-600'
+								});
+							}
 						}
 					}
 				});
