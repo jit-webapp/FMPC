@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 	
     const DB_NAME = 'expenseTrackerDB_JamesIT';
-    const DB_VERSION = 6; // *** อัปเดตเป็นเวอร์ชัน 6 ***
+    const DB_VERSION = 7; // *** อัปเดตเป็นเวอร์ชัน 6 ***
 	
     const STORE_TRANSACTIONS = 'transactions';
     const STORE_CATEGORIES = 'categories';
@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const STORE_RECURRING = 'recurring'; // *** เพิ่ม Store ใหม่ ***
 	const STORE_BUDGETS = 'budgets'; // [NEW]
 	const STORE_CUSTOM_NOTIFY = 'custom_notifications';
+	const STORE_NOTIFICATIONS = 'notifications'; // <--- (เก็บประวัติแจ้งเตือนที่จะ Sync)
 	const LINE_USER_ID_KEY = 'lineUserId'; // LineID
     
     const PAGE_IDS = ['page-home', 'page-list', 'page-calendar', 'page-accounts', 'page-settings', 'page-guide']; // เพิ่ม 'page-accounts'
@@ -341,6 +342,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 					console.log('IndexedDB Upgrade: Running v6 migration (Added "budgets" store)');
 				}
+				
+				// --- V7: Notifications Feature (NEW) ---
+				if (event.oldVersion < 7) {
+					if (!db.objectStoreNames.contains(STORE_NOTIFICATIONS)) {
+						// +++ [เพิ่มตรงนี้] สร้างห้อง notifications +++
+					db.createObjectStore(STORE_NOTIFICATIONS, { keyPath: 'id' });
+					}
+					console.log('IndexedDB Upgrade: Running v6 migration (Added "budgets" store)');
+				}
             };
 
             request.onsuccess = (event) => {
@@ -374,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // +++ แก้ไข: กรองการแจ้งเตือน ไม่ให้แสดงตอนบันทึกค่า Config หรือ AutoComplete +++
                 // STORE_CONFIG = การตั้งค่าต่างๆ, STORE_AUTO_COMPLETE = ระบบจำคำ
-                const silentStores = ['config', 'autoComplete', 'transactions']; 
+                const silentStores = ['config', 'autoComplete', 'transactions', 'notifications'];
                 
                 // เช็คว่า storeName ปัจจุบัน อยู่ในรายการที่ต้องเงียบหรือไม่
                 // หมายเหตุ: ใช้ตัวแปร storeName เทียบกับชื่อ Store ที่เรากำหนดไว้ด้านบน
@@ -409,6 +419,85 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+	
+	// ============================================
+	// REAL-TIME NOTIFICATION LISTENER
+	// ============================================
+	let notifUnsubscribe = null;
+
+	function initNotificationListener() {
+		if (!window.auth || !window.auth.currentUser || !window.db) return;
+		
+		const uid = window.auth.currentUser.uid;
+
+		// ยกเลิกตัวเก่าก่อน (ถ้ามี)
+		if (notifUnsubscribe) notifUnsubscribe();
+
+		// ดักฟังเฉพาะการแจ้งเตือนที่ "ยังไม่อ่าน" (isRead: false)
+		// หรือถ้าคุณไม่ได้เก็บสถานะ isRead ใน object ก็ดึงมาทั้งหมดตามวันที่
+		const colRef = window.dbCollection(window.db, 'users', uid, STORE_NOTIFICATIONS);
+		
+		// Query: เอาเฉพาะที่ timestamp ไม่เก่าเกินไป หรือเอาสถานะ 'unread'
+		// ตัวอย่างนี้ดึงทั้งหมดที่เปลี่ยนแบบ Realtime
+		notifUnsubscribe = colRef.onSnapshot(snapshot => {
+			let hasChanges = false;
+			
+			snapshot.docChanges().forEach(change => {
+				const data = change.doc.data();
+				const docId = change.doc.id;
+
+				if (change.type === "added" || change.type === "modified") {
+					// อัปเดตข้อมูลลง Local State (เพื่อให้ข้อมูลตรงกัน)
+					const existingIndex = state.notificationHistory.findIndex(n => n.id === docId);
+					
+					if (existingIndex > -1) {
+						state.notificationHistory[existingIndex] = { ...data, id: docId };
+					} else {
+						state.notificationHistory.unshift({ ...data, id: docId });
+						hasChanges = true; // มีของใหม่มา
+					}
+				}
+				
+				if (change.type === "removed") {
+					state.notificationHistory = state.notificationHistory.filter(n => n.id !== docId);
+				}
+			});
+
+			// ถ้ามีการเปลี่ยนแปลง ให้รีเฟรชหน้าจอแจ้งเตือน
+			if (hasChanges || snapshot.docChanges().length > 0) {
+				// บันทึกลง IndexedDB (Local)
+				dbPut(STORE_CONFIG, { key: 'notification_history', value: state.notificationHistory });
+				
+				// เรียกฟังก์ชันแสดงผล (Render) เดิมของคุณ
+				if(typeof renderNotificationHistory === 'function') renderNotificationHistory();
+
+				// เช็คว่าต้องเด้ง Modal ไหม (เฉพาะที่มีการแจ้งเตือนใหม่จริงๆ)
+				// คุณอาจจะเพิ่ม Logic เช็คว่าถ้าเป็น change.type === "added" ค่อยสั่ง showModal
+				const unreadAlerts = state.notificationHistory.filter(n => !n.isRead);
+				if (unreadAlerts.length > 0) {
+					// เรียกใช้ Modal แจ้งเตือนของคุณ
+					const modal = document.getElementById('notification-modal');
+					if (modal && modal.classList.contains('hidden')) {
+						 // showFullScreenModal(unreadAlerts); // เรียกฟังก์ชันเปิด Modal ของคุณ
+						 // หรือถ้าไม่มีฟังก์ชันแยก ก็สั่งเปิดตรงนี้:
+						 // modal.classList.remove('hidden'); 
+						 // (แต่ต้องระวัง loop เด้งซ้ำตอนเปิดหน้าเว็บครั้งแรก)
+					}
+				}
+			}
+		});
+	}
+
+	// *** เรียกใช้ฟังก์ชันนี้ตอน Login สำเร็จ ***
+	// ใส่ต่อท้ายใน loadDataFromCloud หรือ auth.onAuthStateChanged
+	// ตัวอย่าง:
+	/*
+		auth.onAuthStateChanged(user => {
+			if(user) {
+				initNotificationListener(); 
+			}
+		});
+	*/
 
     // ฟังก์ชันโหลดข้อมูลจาก Cloud ลงเครื่อง (เรียกตอน Login)
     // แก้ไขล่าสุด: บังคับ Overwrite (ล้างเครื่องแล้วโหลดใหม่) เสมอ โดยไม่ถาม
@@ -423,7 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
             STORE_CONFIG,
             STORE_AUTO_COMPLETE,
             STORE_RECURRING,
-            STORE_BUDGETS
+            STORE_BUDGETS,
+			STORE_NOTIFICATIONS
         ];
 
         try {
@@ -9360,6 +9450,16 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 
 				if (alerts.length > 0) {
+					// +++ [แทรกตรงนี้] ส่งแจ้งเตือนที่ตรวจเจอขึ้น Cloud ทันที +++
+					alerts.forEach(alertItem => {
+						// เติมสถานะตั้งต้นเป็น "ยังไม่อ่าน"
+						const cloudAlert = { 
+							...alertItem, 
+							isRead: false,
+							timestamp: new Date().toISOString()
+						};
+						saveToCloud(STORE_NOTIFICATIONS, cloudAlert);
+					});
 					showNotificationModal(alerts);
 				}
 			}
@@ -9429,6 +9529,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				btnAck.onclick = () => {
 					modal.classList.add('hidden');
+					
+					// +++ [แทรกตรงนี้] แจ้ง Cloud ว่ารายการเหล่านี้ "อ่านแล้ว" +++
+					// เครื่องอื่นที่เปิดอยู่ จะได้รับข้อมูลนี้และปิด Modal ลงอัตโนมัติ
+					alerts.forEach(alertItem => {
+						saveToCloud(STORE_NOTIFICATIONS, { 
+							id: alertItem.id, 
+							isRead: true 
+						});
+					});
 				};
 
 				btnIgnore.onclick = async () => {
