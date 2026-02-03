@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 	
     const DB_NAME = 'expenseTrackerDB_JamesIT';
-    const DB_VERSION = 7; // *** อัปเดตเป็นเวอร์ชัน 6 ***
+    const DB_VERSION = 7; // *** อัปเดตเป็นเวอร์ชัน 7 ***
 	
     const STORE_TRANSACTIONS = 'transactions';
     const STORE_CATEGORIES = 'categories';
@@ -842,6 +842,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	// --- เพิ่ม: ค่ากำหนดการบีบอัด
     const COMPRESS_MAX_WIDTH = 1024; // ความกว้างหรือสูงสูงสุด (pixel) - 1024px ชัดพอสำหรับใบเสร็จ
     const COMPRESS_QUALITY = 0.7;    // คุณภาพไฟล์ JPEG (0.0 - 1.0) - 0.7 คือ 70% (ชัดแต่ไฟล์เล็ก)
+	
+	// เพิ่มตัวแปรเก็บ Cache วันหยุด เพื่อไม่ต้องโหลดซ้ำบ่อยๆ
+	const holidayCache = {};
 
     let currentPage = 'home';
     let isTransitioning = false; 
@@ -2955,28 +2958,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				});
 			}
-
-			// ปุ่มล้างประวัติ
-			const btnClearHist = document.getElementById('btn-clear-history');
-			if (btnClearHist) {
-				btnClearHist.addEventListener('click', async () => {
-					const confirm = await Swal.fire({
-						title: 'ล้างประวัติ?',
-						text: 'ประวัติการแจ้งเตือนทั้งหมดจะหายไป',
-						icon: 'warning',
-						showCancelButton: true,
-						confirmButtonText: 'ล้างข้อมูล',
-						cancelButtonText: 'ยกเลิก'
-					});
-
-					if (confirm.isConfirmed) {
-						state.notificationHistory = [];
-						await dbPut(STORE_CONFIG, { key: 'notification_history', value: [] });
-						renderNotificationHistory();
-						showToast('ล้างประวัติเรียบร้อย', 'success');
-					}
-				});
-			}
 		});
 		
 		// ==========================================
@@ -3116,6 +3097,59 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			});
 		}
+		
+		// --- ปุ่มล้างการแจ้งเตือนพิเศษที่เลยกำหนด (วางใน setupEventListeners) ---
+		const btnClearCustomExpired = document.getElementById('btn-clear-custom-expired');
+		
+		if (btnClearCustomExpired) {
+			btnClearCustomExpired.addEventListener('click', async () => {
+				// 1. ตรวจสอบว่ามีรายการที่ต้องลบไหม
+				const today = new Date().toISOString().slice(0, 10);
+				
+				// หาจำนวนรายการที่ "วันที่ < วันนี้" (คือรายการที่แจ้งเตือนไปแล้ว)
+				const expiredCount = state.customNotifications.filter(n => n.date < today).length;
+				
+				if (expiredCount === 0) {
+					Swal.fire('ไม่มีรายการเก่า', 'ไม่มีการแจ้งเตือนพิเศษที่เลยกำหนดให้ลบ', 'info');
+					return;
+				}
+
+				// 2. ถามยืนยัน
+				const confirm = await Swal.fire({
+					title: 'ล้างรายการเก่า?',
+					text: `พบ ${expiredCount} รายการที่แจ้งเตือนไปแล้ว คุณต้องการลบออกทั้งหมดหรือไม่?`,
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonColor: '#d33',
+					confirmButtonText: 'ลบรายการเก่า',
+					cancelButtonText: 'ยกเลิก'
+				});
+
+				if (confirm.isConfirmed) {
+					try {
+						// 3. กรองเอาเฉพาะรายการที่ "ยังไม่ถึงกำหนด" หรือ "เป็นวันนี้" (date >= today)
+						const activeNotifications = state.customNotifications.filter(n => n.date >= today);
+						
+						// อัปเดต State
+						state.customNotifications = activeNotifications;
+						
+						// 4. บันทึกลง DB
+						await dbPut(STORE_CONFIG, { key: 'custom_notifications_list', value: state.customNotifications });
+						
+						// 5. แสดงผลรายการใหม่ทันที
+						if (typeof renderCustomNotifyList === 'function') {
+							renderCustomNotifyList();
+						}
+						
+						showToast(`ลบรายการเก่าเรียบร้อย (${expiredCount} รายการ)`, 'success');
+
+					} catch (err) {
+						console.error(err);
+						Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+					}
+				}
+			});
+		}
 
 		// เรียกแสดงผลครั้งแรกเมื่อเข้าหน้า Settings
 		const settingsBtn = document.getElementById('nav-settings');
@@ -3124,6 +3158,29 @@ document.addEventListener('DOMContentLoaded', () => {
 				renderCustomNotifyList();
 			});
 		}
+		const yearInput = document.getElementById('cal-year-input');
+		if (yearInput) {
+			yearInput.addEventListener('change', () => {
+				const year = parseInt(yearInput.value);
+				// ตรวจสอบว่าเป็นปีที่สมเหตุสมผลหรือไม่ (เช่น 1900-2100)
+				if (year > 1900 && year < 2100) {
+					// กำหนดวันที่ให้ไปวันที่ 1 มกราคม ของปีนั้น
+					state.calendarCurrentDate = `${year}-01-01`;
+					renderCalendarView(); // สั่งให้วาดปฏิทินใหม่ (ซึ่งจะไปดึงวันหยุดใหม่ด้วย)
+				}
+			});
+		}
+		// --- สั่งให้สวิตช์ทำงานทันที ---
+		const calSwitches = ['cal-toggle-holiday', 'cal-toggle-buddhist', 'cal-toggle-money'];
+		calSwitches.forEach(id => {
+			const el = document.getElementById(id);
+			if (el) {
+				el.addEventListener('change', () => {
+					// รีโหลดปฏิทินทันทีที่กดสวิตช์
+					renderCalendarView(); 
+				});
+			}
+		});
 	
     }
 	
@@ -4257,182 +4314,264 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-    function renderCalendarView() {
+    // ==========================================
+	// ส่วนจัดการวันสำคัญ (ฉบับอัปเดตปี 2569/2026 ตาม MyHora)
+	// ==========================================
+
+	// 1. วันหยุดราชการสำรอง (กรณีดึง Online ไม่ได้ หรือใช้เป็นฐานข้อมูลหลัก)
+	const OFFLINE_HOLIDAYS = {
+		// 2026 (ปีปัจจุบัน)
+		'2026-01-01': 'วันขึ้นปีใหม่',
+		'2026-03-03': 'วันมาฆบูชา',
+		'2026-04-06': 'วันจักรี',
+		'2026-04-13': 'วันสงกรานต์',
+		'2026-04-14': 'วันสงกรานต์',
+		'2026-04-15': 'วันสงกรานต์',
+		'2026-05-01': 'วันแรงงานแห่งชาติ',
+		'2026-05-04': 'วันฉัตรมงคล',
+		'2026-05-31': 'วันวิสาขบูชา',        // เลื่อนเป็นเดือน 7 (ปีอธิกมาส)
+		'2026-06-01': 'ชดเชยวันวิสาขบูชา',
+		'2026-06-03': 'วันเฉลิมพระชนมพรรษาพระราชินี',
+		'2026-07-28': 'วันเฉลิมพระชนมพรรษา ร.10',
+		'2026-07-29': 'วันอาสาฬหบูชา',       // เลื่อนเป็นเดือน 8 หนที่สอง
+		'2026-07-30': 'วันเข้าพรรษา',
+		'2026-08-12': 'วันแม่แห่งชาติ',
+		'2026-10-13': 'วันนวมินทรมหาราช',
+		'2026-10-23': 'วันปิยมหาราช',
+		'2026-12-05': 'วันพ่อแห่งชาติ',
+		'2026-12-10': 'วันรัฐธรรมนูญ',
+		'2026-12-31': 'วันสิ้นปี'
+	};
+
+	// 2. ฟังก์ชันดึงวันหยุดราชการ (Online + Fallback)
+	async function fetchPublicHolidays(year) {
+		// ถ้าเป็นปี 2026 ให้ใช้ข้อมูลที่เราเตรียมไว้เลย (แม่นยำกว่า API บางตัว)
+		if (year === 2026) return OFFLINE_HOLIDAYS;
+
+		// ปีอื่นๆ ลองดึงจาก API
+		if (holidayCache[year]) return holidayCache[year];
+		try {
+			const response = await fetch(`https://date.nager.at/api/v3/publicholidays/${year}/TH`);
+			if (!response.ok) throw new Error('API Connect Failed');
+			const data = await response.json();
+			const holidays = {};
+			data.forEach(item => { holidays[item.date] = item.localName || item.name; });
+			holidayCache[year] = holidays;
+			return holidays;
+		} catch (error) {
+			// ถ้าดึงไม่ได้ ให้คืนค่าว่างหรือข้อมูล Offline (ถ้ามี)
+			return OFFLINE_HOLIDAYS; 
+		}
+	}
+
+	// 3. ฟังก์ชันคำนวณวันพระ (ฉบับแก้ไขปี 2569 ตาม MyHora)
+	function calculateBuddhistHolyDays(year) {
+		const yearNum = parseInt(year);
+		
+		// ข้อมูลวันพระปี 2569 (2026) - ปีอธิกมาส (มีเดือน 8 สองหน)
+		if (yearNum === 2026) {
+			return [
+				// มกราคม
+				'2026-01-03', '2026-01-11', '2026-01-18', '2026-01-26',
+				// กุมภาพันธ์
+				'2026-02-02', '2026-02-10', '2026-02-16', '2026-02-24',
+				// มีนาคม
+				'2026-03-03', // มาฆบูชา
+				'2026-03-11', '2026-03-18', '2026-03-26',
+				// เมษายน
+				'2026-04-02', '2026-04-10', '2026-04-16', '2026-04-24',
+				// พฤษภาคม
+				'2026-05-01', '2026-05-09', '2026-05-16', '2026-05-24', 
+				'2026-05-31', // วิสาขบูชา (เดือน 7)
+				// มิถุนายน
+				'2026-06-08', '2026-06-14', '2026-06-22', '2026-06-29',
+				// กรกฎาคม
+				'2026-07-07', '2026-07-14', '2026-07-22', 
+				'2026-07-29', // อาสาฬหบูชา (เดือน 8-8)
+				// สิงหาคม
+				'2026-08-06', '2026-08-13', '2026-08-21', '2026-08-28',
+				// กันยายน
+				'2026-09-05', '2026-09-11', '2026-09-19', '2026-09-26',
+				// ตุลาคม
+				'2026-10-04', '2026-10-11', '2026-10-19', 
+				'2026-10-26', // ออกพรรษา
+				// พฤศจิกายน
+				'2026-11-03', '2026-11-09', '2026-11-17', 
+				'2026-11-24', // ลอยกระทง
+				// ธันวาคม
+				'2026-12-02', '2026-12-09', '2026-12-17', '2026-12-24'
+			];
+		} 
+		
+		// ปี 2025 (เผื่อกดดูย้อนหลัง)
+		if (yearNum === 2025) {
+			 return [
+				'2025-01-06','2025-01-13','2025-01-21','2025-01-28','2025-02-05','2025-02-12','2025-02-20','2025-02-26',
+				'2025-03-06','2025-03-13','2025-03-21','2025-03-28','2025-04-05','2025-04-12','2025-04-20','2025-04-26',
+				'2025-05-04','2025-05-11','2025-05-19','2025-05-26','2025-06-03','2025-06-10','2025-06-18','2025-06-25',
+				'2025-07-03','2025-07-10','2025-07-18','2025-07-25','2025-08-01','2025-08-09','2025-08-16','2025-08-24',
+				'2025-08-31','2025-09-07','2025-09-15','2025-09-22','2025-09-30','2025-10-07','2025-10-15','2025-10-22',
+				'2025-10-30','2025-11-06','2025-11-14','2025-11-20','2025-11-28','2025-12-05','2025-12-13','2025-12-20','2025-12-28'
+			];
+		}
+
+		return []; // ปีอื่นๆ คืนค่าว่าง (หรือจะเขียนสูตรคำนวณเพิ่มก็ได้)
+	}
+
+	// 3. ฟังก์ชัน Render ปฏิทิน (อัปเดตใหม่)
+	async function renderCalendarView() {
 		try {
 			const calendarEl = document.getElementById('calendar-container');
-			const yearInput = document.getElementById('cal-year-input'); 
+			const yearInput = document.getElementById('cal-year-input');
 			
 			if (!calendarEl || !yearInput) return;
 
-			// ฟังก์ชันช่วยแปลงวันที่เป็น YYYY-MM-DD แบบเวลาท้องถิ่น (แก้ปัญหาเด้งผิดเดือน)
-			const getLocalISODate = (date) => {
-				const y = date.getFullYear();
-				const m = String(date.getMonth() + 1).padStart(2, '0');
-				const d = String(date.getDate()).padStart(2, '0');
-				return `${y}-${m}-${d}`;
-			};
+			// ดึงปีปัจจุบัน
+			let currentYearVal = parseInt(yearInput.value);
+			if (isNaN(currentYearVal)) {
+				currentYearVal = new Date(state.calendarCurrentDate || new Date()).getFullYear();
+			}
 
-			// [Logic] สร้างวันที่ปัจจุบันรูปแบบ YYYY-MM-DD
-			const todayStr = getLocalISODate(new Date());
+			// --- ดึงข้อมูลวันหยุด (Online) ---
+			const onlineHolidays = await fetchPublicHolidays(currentYearVal);
+			
+			// --- คำนวณวันพระ (Calculation) ---
+			const buddhistDays = calculateBuddhistHolyDays(currentYearVal);
 
-			// 1. คำนวณยอดจากรายการจริง
-			const dailyTotals = {};
-			state.transactions.forEach(tx => {
-				const dateStr = tx.date.slice(0, 10); 
-				if (!dailyTotals[dateStr]) dailyTotals[dateStr] = { income: 0, expense: 0, transfer: 0 }; 
-				if (tx.type === 'expense') dailyTotals[dateStr].expense += tx.amount;
-				else if (tx.type === 'income') dailyTotals[dateStr].income += tx.amount;
-				else if (tx.type === 'transfer') dailyTotals[dateStr].transfer += tx.amount;
-			});
+			// เช็คสวิตช์
+			const showHoliday = document.getElementById('cal-toggle-holiday')?.checked ?? true;
+			const showBuddhist = document.getElementById('cal-toggle-buddhist')?.checked ?? true;
+			const showMoney = document.getElementById('cal-toggle-money')?.checked ?? true;
 
-			// 2. คำนวณรายการประจำล่วงหน้า (Recurring)
-			const recurringEvents = {};
-			const today = new Date();
-			const futureLimit = new Date();
-			futureLimit.setFullYear(today.getFullYear() + 1);
+			const calendarEvents = [];
 
-			if (state.recurringRules && state.recurringRules.length > 0) {
-				state.recurringRules.forEach(rule => {
-					if (!rule.active) return;
+			// 1. ใส่ Events: วันหยุด (จาก API)
+			if (showHoliday) {
+				for (const [date, name] of Object.entries(onlineHolidays)) {
+					calendarEvents.push({
+						id: 'hol-' + date,
+						title: '🚫 ' + name,
+						start: date,
+						allDay: true,
+						display: 'background',
+						backgroundColor: '#fee2e2',
+						classNames: ['holiday-bg-event']
+					});
+					calendarEvents.push({
+						 id: 'hol-txt-' + date,
+						 title: name,
+						 start: date,
+						 allDay: true,
+						 color: 'transparent',
+						 textColor: '#ef4444',
+						 classNames: ['font-bold', 'text-xs', 'holiday-text-label']
+					});
+				}
+			}
+
+			// 2. ใส่ Events: วันพระ (จากสูตรคำนวณ)
+			if (showBuddhist) {
+				buddhistDays.forEach(date => {
+					calendarEvents.push({
+						id: 'bud-' + date,
+						title: '🙏 วันพระ',
+						start: date,
+						allDay: true,
+						color: '#fef08a', // สีเหลืองอ่อน
+						textColor: '#854d0e', // สีน้ำตาล
+						classNames: ['text-xs', 'font-medium', 'buddhist-event']
+					});
+				});
+			}
+
+			// 3. ใส่ Events: ยอดเงิน (Transactions)
+			if (showMoney) {
+				const dailyTotals = {};
+				state.transactions.forEach(tx => {
+					const dateStr = tx.date.slice(0, 10);
+					if (!dailyTotals[dateStr]) dailyTotals[dateStr] = { income: 0, expense: 0 };
+					if (tx.type === 'expense') dailyTotals[dateStr].expense += tx.amount;
+					else if (tx.type === 'income') dailyTotals[dateStr].income += tx.amount;
+				});
+
+				const todayStr = new Date().toISOString().slice(0, 10);
+				
+				Object.keys(dailyTotals).forEach(date => {
+					const totals = dailyTotals[date];
+					const isFuture = date > todayStr;
+					const expenseColor = isFuture ? '#f59e0b' : '#ef4444';
 					
-					let nextDateStr = rule.nextDueDate; 
-					let nextDateObj = new Date(nextDateStr);
-
-					while (nextDateObj <= futureLimit) {
-						const dateStr = nextDateStr;
-						
-						if (!recurringEvents[dateStr]) recurringEvents[dateStr] = { income: 0, expense: 0 };
-						
-						if (rule.type === 'income') {
-							recurringEvents[dateStr].income += parseFloat(rule.amount);
-						} else if (rule.type === 'expense') {
-							recurringEvents[dateStr].expense += parseFloat(rule.amount);
-						}
-
-						nextDateStr = calculateNextDueDate(nextDateStr, rule.frequency);
-						nextDateObj = new Date(nextDateStr);
+					if (totals.income > 0) {
+						calendarEvents.push({ 
+							id: date+'-inc', 
+							title: '+'+formatCurrency(totals.income).replace(/[^\d.,-]/g,''), 
+							start: date, 
+							allDay: true, 
+							color: '#22c55e',
+							classNames: ['money-event']
+						});
+					}
+					if (totals.expense > 0) {
+						calendarEvents.push({ 
+							id: date+'-exp', 
+							title: '-'+formatCurrency(totals.expense).replace(/[^\d.,-]/g,''), 
+							start: date, 
+							allDay: true, 
+							color: expenseColor,
+							classNames: ['money-event']
+						});
 					}
 				});
 			}
 
-			// 3. สร้าง Events
-			const calendarEvents = [];
-			
-			// 3.1 ใส่ Events จากรายการจริง
-			Object.keys(dailyTotals).forEach(date => {
-				const totals = dailyTotals[date];
-
-				// [Logic] เปรียบเทียบวันปัจจุบัน
-				const isFuture = date > todayStr;
-				
-				// สี: ถ้าอนาคตใช้สีเหลือง/ส้ม (#f59e0b), ถ้าถึงเวลาแล้วใช้สีแดง (#ef4444)
-				const expenseColor = isFuture ? '#f59e0b' : '#ef4444';
-
-				if (totals.income > 0) calendarEvents.push({ 
-					id: date+'-inc', 
-					title: '+฿'+formatCurrency(totals.income).replace(/[^\d.,-]/g,''), 
-					start: date, 
-					allDay: true, 
-					color: '#22c55e', 
-					className: 'cursor-pointer' 
-				});
-				
-				if (totals.expense > 0) calendarEvents.push({ 
-					id: date+'-exp', 
-					title: '-฿'+formatCurrency(totals.expense).replace(/[^\d.,-]/g,''), 
-					start: date, 
-					allDay: true, 
-					color: expenseColor, 
-					className: 'cursor-pointer' 
-				});
-				
-				if (totals.transfer > 0) calendarEvents.push({ 
-					id: date+'-trf', 
-					title: '⇄฿'+formatCurrency(totals.transfer).replace(/[^\d.,-]/g,''), 
-					start: date, 
-					allDay: true, 
-					color: '#3b82f6', 
-					className: 'cursor-pointer' 
-				});
-			});
-
-			// 3.2 ใส่ Events จากรายการประจำ
-			Object.keys(recurringEvents).forEach(date => {
-				const rec = recurringEvents[date];
-				if (rec.income > 0) {
-					calendarEvents.push({ 
-						id: date+'-rec-inc', 
-						title: '(รอรับ) +'+formatCurrency(rec.income).replace(/[^\d.,-]/g,''), 
-						start: date, 
-						allDay: true, 
-						color: '#d97706', 
-						textColor: '#ffffff', 
-						className: 'cursor-pointer opacity-75' 
-					});
-				}
-				if (rec.expense > 0) {
-					calendarEvents.push({ 
-						id: date+'-rec-exp', 
-						title: '(รอจ่าย) -'+formatCurrency(rec.expense).replace(/[^\d.,-]/g,''), 
-						start: date, 
-						allDay: true, 
-						color: '#f59e0b', 
-						textColor: '#ffffff', 
-						className: 'cursor-pointer opacity-75' 
-					});
-				}
-			});
-
 			if (myCalendar) myCalendar.destroy();
 			
-			// [แก้ไข] ใช้ getLocalISODate แทน toISOString เพื่อป้องกัน Timezone ผิด
-			const initialDate = state.calendarCurrentDate || getLocalISODate(new Date());
+			// กำหนดวันเริ่มต้นปฏิทิน
+			const initialDate = state.calendarCurrentDate || new Date().toISOString().slice(0, 10);
 			yearInput.value = new Date(initialDate).getFullYear();
-			
-			myCalendar = new FullCalendar.Calendar(calendarEl, {
-				initialView: 'dayGridMonth',
-				initialDate: initialDate,
-				locale: 'th',
-				contentHeight: 'auto',  // <-- สั่งให้สูงตามจำนวนแถวจริง ไม่โดนตัด
-				buttonText: { today: 'วันนี้' },
-				headerToolbar: {
-					left: 'prev,next today',
-					center: 'title',
-					right: 'dayGridMonth,listMonth' 
-				},
-				showNonCurrentDates: false, 
-				fixedWeekCount: false,      
-				
-				events: calendarEvents,
-				
-				dateClick: function(info) {
-					showDailyDetails(info.dateStr); 
-				},
-				eventClick: function(info) {
-					showDailyDetails(info.event.startStr);
-				},
-				
-				// [แก้ไขจุดสำคัญ] บันทึกวันที่ปัจจุบันลง state โดยใช้ Local Time
-				datesSet: function(info) {
-					 const currentStart = info.view.currentStart;
-					 // แปลงเป็น YYYY-MM-DD แบบ Local Time
-					 const safeDateStr = getLocalISODate(currentStart);
-					 
-					 state.calendarCurrentDate = safeDateStr;
-					 yearInput.value = currentStart.getFullYear();
-				}
-			});
 
-			myCalendar.render();
-			
-			yearInput.onchange = (e) => {
-				const newYear = e.target.value;
-				if (newYear && newYear.length === 4) {
-					 const currentMonth = myCalendar.getDate().getMonth(); 
-					 const newDate = new Date(newYear, currentMonth, 1);
-					 myCalendar.gotoDate(newDate);
-				}
-			};
+			// ... (โค้ดก่อนหน้าใน renderCalendarView) ...
+
+            myCalendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                initialDate: initialDate,
+                locale: 'th',
+                contentHeight: 'auto',
+                buttonText: { today: 'วันนี้' },
+                headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+                
+                // [เพิ่มบรรทัดนี้] ซ่อนวันที่ที่ไม่ใช่ของเดือนปัจจุบัน
+                showNonCurrentDates: false, 
+                // [เพิ่มบรรทัดนี้] บังคับให้แสดงแค่จำนวนแถวที่จำเป็น (ไม่ Fix 6 แถว)
+                fixedWeekCount: false, 
+
+                events: calendarEvents,
+                eventOrder: "id",
+                
+                // ... (Event Handlers เดิม: dateClick, eventClick, datesSet) ...
+                dateClick: function(info) { showDailyDetails(info.dateStr); },
+                eventClick: function(info) { 
+                    const dateStr = info.event.startStr.slice(0, 10);
+                    showDailyDetails(dateStr); 
+                },
+                datesSet: function(info) {
+                    // ... (โค้ดเดิมใน datesSet) ...
+                    const currentStart = info.view.currentStart;
+                    const newYear = currentStart.getFullYear();
+                    
+                    const offset = currentStart.getTimezoneOffset();
+                    const localDate = new Date(currentStart.getTime() - (offset*60*1000));
+                    const newDateStr = localDate.toISOString().slice(0, 10);
+
+                    state.calendarCurrentDate = newDateStr;
+                    
+                    if(parseInt(yearInput.value) !== newYear) {
+                         yearInput.value = newYear;
+                         renderCalendarView(); 
+                    }
+                }
+            });
+            myCalendar.render();
 
 		} catch (err) {
 			console.error('Error rendering calendar:', err);
@@ -4446,7 +4585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         txsOnDay.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // 2. [ใหม่] คำนวณรายการประจำ (Recurring) ที่ตรงกับวันนี้
+        // 2. คำนวณรายการประจำ (Recurring) ที่ตรงกับวันนี้
         const recurringOnDay = [];
         if (state.recurringRules && state.recurringRules.length > 0) {
             const targetDate = new Date(date);
@@ -4481,13 +4620,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // --- สร้าง Header HTML (เพิ่มปุ่มแจ้งเตือนตรงนี้) ---
         let headerHtml = `
             <div class="flex justify-between items-center mb-4 w-full">
                 <h3 class="text-xl font-bold text-gray-800">สรุปวันที่ ${new Date(date).toLocaleDateString('th-TH', {day: 'numeric', month: 'long', year: 'numeric'})}</h3>
             </div>
-            <div class="flex justify-end w-full mb-2">
-                 <button id="cal-add-tx-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition duration-300 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-plus"></i> เพิ่มธุรกรรมใหม่
+            
+            <div class="flex gap-2 w-full mb-2">
+                 <button id="cal-add-tx-btn" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-3 rounded-xl shadow-md transition duration-300 flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                 </button>
+                 
+                 <button id="cal-add-notify-btn" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-3 rounded-xl shadow-md transition duration-300 flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-bell"></i> แจ้งเตือน
                  </button>
             </div>
         `;
@@ -4499,7 +4644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- ส่วนแสดงรายการจริง ---
         if (txsOnDay.length === 0 && recurringOnDay.length === 0) {
-             html = '<p class="text-center text-gray-500 mt-8 mb-8">ไม่มีรายการในวันนี้</p>';
+             html += '<p class="text-center text-gray-500 mt-8 mb-8">ไม่มีรายการในวันนี้</p>';
         } else {
             // A. แสดงรายการที่บันทึกแล้ว
             txsOnDay.forEach(tx => {
@@ -4509,7 +4654,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fa-solid fa-receipt"></i>
                     </button>` : '';
 
-                // [UPDATE] ตรวจสอบว่าเป็นรายการล่วงหน้าหรือไม่
+                // ตรวจสอบว่าเป็นรายการล่วงหน้าหรือไม่
                 const txDate = new Date(tx.date);
                 const now = new Date();
                 const isFuture = txDate > now; // ถ้ารายการ > เวลาปัจจุบัน คือรายการล่วงหน้า
@@ -4518,7 +4663,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalIncome += tx.amount;
                     const account = state.accounts.find(a => a.id === tx.accountId);
                     
-                    // ปรับสีและข้อความตามสถานะ (อนาคต vs ปัจจุบัน/อดีต)
                     const nameText = isFuture ? `${escapeHTML(tx.name)} (รอรับ)` : escapeHTML(tx.name);
                     const nameColor = isFuture ? 'text-amber-700' : 'text-gray-800';
                     const amountColor = isFuture ? 'text-amber-600' : 'text-green-600';
@@ -4535,7 +4679,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalExpense += tx.amount;
                     const account = state.accounts.find(a => a.id === tx.accountId);
 
-                    // ปรับสีและข้อความตามสถานะ
                     const nameText = isFuture ? `${escapeHTML(tx.name)} (รอจ่าย)` : escapeHTML(tx.name);
                     const nameColor = isFuture ? 'text-amber-700' : 'text-gray-800';
                     const amountColor = isFuture ? 'text-amber-600' : 'text-red-600';
@@ -4553,7 +4696,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const fromAccount = state.accounts.find(a => a.id === tx.accountId);
                     const toAccount = state.accounts.find(a => a.id === tx.toAccountId);
                     
-                    // ปรับสีและข้อความสำหรับโอนย้ายล่วงหน้า
                     const nameText = isFuture ? 'โอนย้าย (รอดำเนินการ)' : 'โอนย้าย';
                     const nameColor = isFuture ? 'text-amber-700' : 'text-blue-700';
                     const amountColor = isFuture ? 'text-amber-600' : 'text-blue-600';
@@ -4572,13 +4714,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (txHtml) {
-                    // [UPDATE] ถ้าเป็นอนาคต ให้เส้นขอบเป็นเส้นประ (dashed) และสีเหลือง
                     const borderClass = isFuture ? 'border-dashed border-amber-300' : 'border-gray-200';
                     html += `<li class="border-b ${borderClass} pb-2">${txHtml}</li>`;
                 }
             });
 
-            // B. [ใหม่] แสดงรายการ Recurring (รอจ่าย/รอรับ) แบบไม่มีพื้นหลัง (แค่เส้นประ)
+            // B. แสดงรายการ Recurring (รอจ่าย/รอรับ)
             if (recurringOnDay.length > 0) {
                 if (txsOnDay.length > 0) {
                     html += `<li class="pt-2 text-xs font-bold text-gray-400 uppercase tracking-wider mt-2 border-t border-dashed border-gray-300">รายการประจำ (ประมาณการ)</li>`;
@@ -4650,14 +4791,81 @@ document.addEventListener('DOMContentLoaded', () => {
             showConfirmButton: false, 
             showCloseButton: true,
             didOpen: () => {
-                const btn = document.getElementById('cal-add-tx-btn');
-                if(btn) {
-                    btn.addEventListener('click', () => {
+                // Event ปุ่มเพิ่มรายการ (เดิม)
+                const btnAdd = document.getElementById('cal-add-tx-btn');
+                if(btnAdd) {
+                    btnAdd.addEventListener('click', () => {
                         Swal.close(); 
                         openModal(null, null, date); 
                     });
                 }
                 
+                // [ใหม่] Event ปุ่มเพิ่มการแจ้งเตือน
+                // [ใน showDailyDetails] แก้ไข Event ปุ่มแจ้งเตือน
+                const btnNotify = document.getElementById('cal-add-notify-btn');
+                if(btnNotify) {
+                    btnNotify.addEventListener('click', async () => {
+                        Swal.close(); // ปิดหน้าต่างสรุปก่อน
+                        
+                        // เปิด Popup แบบ Form (มีช่องข้อความ และ ช่องจำนวนวัน)
+                        const { value: formValues } = await Swal.fire({
+                            title: 'สร้างการแจ้งเตือน',
+                            html: `
+                                <div class="text-left mb-1 text-sm font-semibold text-gray-600">ข้อความเตือน:</div>
+                                <input id="swal-noti-text" class="swal2-input" placeholder="เช่น จ่ายค่าบัตรเครดิต" style="margin: 0 0 1.25em 0;">
+                                
+                                <div class="text-left mb-1 text-sm font-semibold text-gray-600">เตือนล่วงหน้า (วัน):</div>
+                                <input id="swal-noti-days" type="number" class="swal2-input" value="0" min="0" placeholder="0 = เตือนวันนั้นเลย" style="margin: 0;">
+                                <div class="text-xs text-gray-400 mt-1 text-left">* ใส่ 0 หากต้องการให้เตือนในวันที่ถึงกำหนด</div>
+                            `,
+                            showCancelButton: true,
+                            confirmButtonText: 'บันทึก',
+                            confirmButtonColor: '#f97316',
+                            cancelButtonText: 'ยกเลิก',
+                            focusConfirm: false,
+                            preConfirm: () => {
+                                return [
+                                    document.getElementById('swal-noti-text').value,
+                                    document.getElementById('swal-noti-days').value
+                                ]
+                            }
+                        });
+
+                        if (formValues) {
+                            const [text, advanceDaysStr] = formValues;
+                            if (!text) return; // ถ้าไม่ใส่ข้อความก็ไม่บันทึก
+
+                            // เตรียมตัวแปร state
+                            if (!state.customNotifications) state.customNotifications = [];
+                            
+                            const newNoti = {
+                                id: 'custom_' + Date.now(),
+                                message: text,
+                                date: date,                // วันที่เป้าหมาย (จากปฏิทิน)
+                                advanceDays: parseInt(advanceDaysStr) || 0, // วันที่เตือนล่วงหน้า
+                                isRead: false
+                            };
+                            
+                            state.customNotifications.push(newNoti);
+                            
+                            try {
+                                // บันทึกลง DB
+                                await dbPut(STORE_CONFIG, { key: 'custom_notifications_list', value: state.customNotifications });
+                                
+                                showToast('บันทึกการแจ้งเตือนเรียบร้อย', 'success');
+                                
+                                // [สำคัญ] อัปเดตรายการในหน้าตั้งค่าทันที
+                                renderCustomNotificationsList(); 
+                                
+                            } catch (err) {
+                                console.error('Save notification failed', err);
+                                showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+                            }
+                        }
+                    });
+                }
+                
+                // Event ปุ่มดูใบเสร็จ
                 document.querySelectorAll('.view-receipt-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const base64 = e.currentTarget.dataset.base64;
@@ -9347,7 +9555,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				const alerts = [];
 				const today = new Date();
 				today.setHours(0, 0, 0, 0); // เที่ยงคืนของวันนี้
-				const todayStr = today.toISOString().slice(0, 10);
+
+				// [แก้ไข] สร้าง string YYYY-MM-DD จาก Local Time (แทน toISOString ที่เป็น UTC)
+				// เพื่อให้ตรงกับวันที่ใน tx.date ที่เก็บเป็น Local Time
+				const year = today.getFullYear();
+				const month = String(today.getMonth() + 1).padStart(2, '0');
+				const day = String(today.getDate()).padStart(2, '0');
+				const todayStr = `${year}-${month}-${day}`;
 
 				// ดึงรายการทั้งหมดที่เป็นของ "วันนี้"
 				const todaysTransactions = state.transactions.filter(tx => tx.date.startsWith(todayStr));
@@ -9357,7 +9571,6 @@ document.addEventListener('DOMContentLoaded', () => {
 					if (state.ignoredNotifications.includes(tx.id)) return;
 
 					// 1. ตรวจสอบ "รายการประจำ" (Recurring)
-					// รายการประจำที่ระบบสร้างให้จะมี ID ขึ้นต้นด้วย "tx-rec-"
 					if (state.notifySettings.recurring && tx.id.startsWith('tx-rec-')) {
 						alerts.push({
 							id: tx.id,
@@ -9378,7 +9591,7 @@ document.addEventListener('DOMContentLoaded', () => {
 								createdDate.setHours(0,0,0,0);
 								
 								// ถ้าวันที่สร้าง (Created) < วันนี้ (Today) แสดงว่าลงล่วงหน้าไว้ -> แจ้งเตือน
-								// ถ้าวันที่สร้าง == วันนี้ แสดงว่าเพิ่งลงเมื่อกี้ -> ไม่ต้องเตือน
+								// ถ้าวันที่สร้าง == วันนี้ แสดงว่าเพิ่งลงเมื่อกี้ -> ไม่ต้องเตือน (เงื่อนไขถูกต้องแล้ว)
 								if (createdDate < today) {
 									alerts.push({
 										id: tx.id,
@@ -9392,12 +9605,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				});
 
+				// ... (โค้ดส่วนตรวจสอบ Budget และ Custom Notify คงเดิม) ...
+                // คุณสามารถก๊อปปี้ส่วน Budget และ Custom Notify จากไฟล์เดิมมาต่อท้ายได้เลยครับ
+                // หรือใช้โค้ดเต็มด้านล่างนี้
+                
 				// 3. ตรวจสอบ "งบประมาณ" (Budget) ใกล้หมด (>80%)
 				if (state.notifySettings.budget && state.budgets) {
 					const currentMonth = todayStr.slice(0, 7);
 					const expenseByCat = {};
 					
-					// คำนวณยอดใช้จ่ายรายหมวดของเดือนนี้
 					state.transactions.forEach(tx => {
 						if (tx.type === 'expense' && tx.date.startsWith(currentMonth)) {
 							if (!expenseByCat[tx.category]) expenseByCat[tx.category] = 0;
@@ -9427,36 +9643,27 @@ document.addEventListener('DOMContentLoaded', () => {
 					const targetDate = new Date(notif.date);
 					targetDate.setHours(0, 0, 0, 0);
 
-					// คำนวณระยะห่างวัน (Diff)
 					const diffTime = targetDate - today;
-					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 0 = วันนี้, 1 = พรุ่งนี้
-
-					// จำนวนวันที่ตั้งเตือนล่วงหน้า
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 					const advanceDays = parseInt(notif.advanceDays) || 0;
 
-					// ตรวจสอบว่าอยู่ในช่วงที่ต้องเตือนหรือไม่ (ตั้งแต่วันเริ่มเตือน จนถึง วันจริง)
 					if (diffDays >= 0 && diffDays <= advanceDays) {
-
-						// --- กรณี A: ถึงวันจริงแล้ว! (และเคยมีการตั้งเตือนล่วงหน้าไว้ >= 1 วัน) ---
-						// ต้องแจ้งเตือนซ้ำ โดยใช้ ID ใหม่ (_due) เพื่อให้เด้งเตือนแม้ว่าจะเคยกดอ่านตอนเตือนล่วงหน้าไปแล้ว
 						if (diffDays === 0 && advanceDays >= 1) {
-							const dueAlertId = `${notif.id}_due`; // *** สร้าง ID ใหม่ ***
+							const dueAlertId = `${notif.id}_due`; 
 
 							if (!state.ignoredNotifications.includes(dueAlertId)) {
 								alerts.push({
 									id: dueAlertId,
-									title: '🚨 ครบกำหนดวันนี้!', // เปลี่ยนหัวข้อให้ตื่นตัว
+									title: '🚨 ครบกำหนดวันนี้!', 
 									message: `${notif.message} (ถึงกำหนดแล้ว)`,
 									icon: 'fa-exclamation-circle',
-									color: 'text-red-600' // สีแดง
+									color: 'text-red-600'
 								});
 							}
 						}
-						// --- กรณี B: ช่วงเตือนล่วงหน้า หรือ วันจริงแบบปกติ (ที่ไม่ได้ตั้งล่วงหน้าไว้) ---
 						else {
 							if (!state.ignoredNotifications.includes(notif.id)) {
 								let daysText = diffDays === 0 ? 'วันนี้' : `อีก ${diffDays} วัน`;
-								
 								alerts.push({
 									id: notif.id,
 									title: diffDays === 0 ? 'แจ้งเตือนพิเศษ (วันนี้)' : 'แจ้งเตือนพิเศษ',
@@ -9470,9 +9677,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 
 				if (alerts.length > 0) {
-					// +++ [แทรกตรงนี้] ส่งแจ้งเตือนที่ตรวจเจอขึ้น Cloud ทันที +++
 					alerts.forEach(alertItem => {
-						// เติมสถานะตั้งต้นเป็น "ยังไม่อ่าน"
 						const cloudAlert = { 
 							...alertItem, 
 							isRead: false,
@@ -9567,6 +9772,73 @@ document.addEventListener('DOMContentLoaded', () => {
 					modal.classList.add('hidden');
 					showToast('จะไม่แจ้งเตือนรายการเหล่านี้อีก', 'success');
 				};
+			}
+			
+			// --- ฟังก์ชันแสดงรายการแจ้งเตือนในหน้าตั้งค่า ---
+			function renderCustomNotificationsList() {
+				const container = document.getElementById('custom-notification-list');
+				if (!container) return;
+
+				if (!state.customNotifications || state.customNotifications.length === 0) {
+					container.innerHTML = '<p class="text-gray-400 text-center py-4 border-2 border-dashed border-gray-100 rounded-xl">ไม่มีรายการแจ้งเตือน</p>';
+					return;
+				}
+
+				// เรียงลำดับตามวันที่เป้าหมาย
+				const sortedNotis = [...state.customNotifications].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+				let html = '';
+				sortedNotis.forEach(noti => {
+					const dateObj = new Date(noti.date);
+					const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+					
+					// คำนวณวันแจ้งเตือนจริง
+					const alertDate = new Date(dateObj);
+					alertDate.setDate(alertDate.getDate() - (noti.advanceDays || 0));
+					const alertDateStr = alertDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
+					html += `
+						<div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm transition">
+							<div class="flex items-start gap-3">
+								<div class="bg-orange-100 text-orange-600 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+									<i class="fa-regular fa-bell"></i>
+								</div>
+								<div>
+									<div class="font-bold text-gray-800">${noti.message}</div>
+									<div class="text-sm text-gray-500">
+										เป้าหมาย: <span class="text-purple-600 font-medium">${dateStr}</span>
+										${noti.advanceDays > 0 ? `<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full ml-1">เตือนก่อน ${noti.advanceDays} วัน (${alertDateStr})</span>` : ''}
+									</div>
+								</div>
+							</div>
+							<button onclick="deleteCustomNotification('${noti.id}')" class="text-gray-400 hover:text-red-500 p-2 transition">
+								<i class="fa-solid fa-trash"></i>
+							</button>
+						</div>
+					`;
+				});
+
+				container.innerHTML = html;
+			}
+
+			// ฟังก์ชันลบแจ้งเตือน
+			async function deleteCustomNotification(id) {
+				const result = await Swal.fire({
+					title: 'ลบการแจ้งเตือน?',
+					text: "คุณต้องการลบรายการนี้ใช่ไหม",
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonColor: '#ef4444',
+					confirmButtonText: 'ลบ',
+					cancelButtonText: 'ยกเลิก'
+				});
+
+				if (result.isConfirmed) {
+					state.customNotifications = state.customNotifications.filter(n => n.id !== id);
+					await dbPut(STORE_CONFIG, { key: 'custom_notifications_list', value: state.customNotifications });
+					renderCustomNotificationsList();
+					showToast('ลบเรียบร้อย', 'success');
+				}
 			}
 			
 			

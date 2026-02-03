@@ -1,2 +1,2 @@
 // ไฟล์: version.js // แก้เลขเวอร์ชันที่บรรทัดนี้ที่เดียว
-const APP_VERSION = 'v8.4.1-6';
+const APP_VERSION = 'v8.4.2-1';
