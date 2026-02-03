@@ -4450,7 +4450,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				for (const [date, name] of Object.entries(onlineHolidays)) {
 					calendarEvents.push({
 						id: 'hol-' + date,
-						title: '🚫 ' + name,
 						start: date,
 						allDay: true,
 						display: 'background',
