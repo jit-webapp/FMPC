@@ -232,57 +232,111 @@
             </div> 
         
             <div id="page-list" class="app-page hidden">
-                <div id="transaction-list-container" class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
-                    <div class="mb-6 border-b pb-6">
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-                            <h3 id="list-chart-title" class="text-xl font-bold text-purple-600">สรุปข้อมูล</h3>
-                            <select id="list-chart-selector" class="form-select text-base text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 py-2 px-4">
-                                <option value="items" selected>แยกตามชื่อรายการ (Top 15)</option>
-                                <option value="summary">เปรียบเทียบ รายรับ vs รายจ่าย (ยอดรวม)</option>
-                                <option value="accounts">ยอดเงินคงเหลือแต่ละบัญชี</option>
-                                <option value="trend_month">แนวโน้ม: รายรับ-รายจ่าย รายเดือน</option>
-                                <option value="trend_year">แนวโน้ม: รายรับ-รายจ่าย รายปี</option>
-                            </select>
-                        </div>
-                        <div class="h-80 md:h-96 relative">
-                            <canvas id="list-page-bar-chart"></canvas>
-                            <p id="list-chart-no-data" class="absolute inset-0 flex items-center justify-center text-gray-500 hidden">ไม่มีข้อมูลสำหรับแสดงผล</p>
-                        </div>
-                    </div>
+				<div id="transaction-list-container" class="bg-white p-4 md:p-6 rounded-xl shadow-lg pb-24"> <h2 class="text-xl font-bold text-purple-600 mb-4 flex items-center">
+						<i class="fa-solid fa-filter mr-2"></i> ค้นหาและวิเคราะห์ (Advanced Filter)
+					</h2>
 
-                    <h2 class="text-xl font-bold text-purple-600 mb-4">รายการธุรกรรม</h2>
-                    <div class="flex flex-col md:flex-row gap-4 mb-4">
-                        <div class="relative flex-grow">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                                <i class="fa-solid fa-search text-gray-400"></i>
-                            </span>
-                            <input type="text" id="search-input" placeholder="ค้นหา ( ชื่อ, หมวดหมู่, บัญชี, จำนวนเงิน, วันเดือนปี )..." class="w-full pl-10 pr-4 py-3 px-4 text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500"> 
-                        </div>
-                        <div class="flex-shrink-0">
-                            <select id="list-group-by-select" class="form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 py-3 px-4 h-full">
-                                <option value="none">ไม่จัดกลุ่ม</option>
-                                <option value="day">จัดกลุ่มรายวัน</option>
-                                <option option value="month">จัดกลุ่มรายเดือน</option>
-                            </select>
-                        </div>
-                        <div class="flex-shrink-0">
-                        <select id="items-per-page-select" class="form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 py-3 px-4 h-full">
-                                <option value="10">แสดง 10</option>
-                                <option value="20">แสดง 20</option>
-                                <option value="50">แสดง 50</option>
-                            </select>
-                        </div>
-                        <div class="flex-shrink-0 flex gap-2 justify-center" id="list-filter-buttons">
-                        <button class="filter-btn bg-purple-500 text-white px-5 py-3 text-base rounded-xl" data-filter="all">ทั้งหมด</button>
-                            <button class="filter-btn bg-gray-200 text-gray-700 px-5 py-3 text-base rounded-xl" data-filter="income">รายรับ</button>
-                            <button class="filter-btn bg-gray-200 text-gray-700 px-5 py-3 text-base rounded-xl" data-filter="expense">รายจ่าย</button>
-                            <button class="filter-btn bg-gray-200 text-gray-700 px-5 py-3 text-base rounded-xl" data-filter="transfer">โอนย้าย</button>
-                        </div>
-                    </div>
-                    <div id="list-table-placeholder" class="overflow-x-auto"></div>
-                    <div id="list-pagination-controls" class="flex justify-center items-center gap-2 mt-4"></div>
-                </div>
-            </div> 
+					<div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3">
+						
+						<div class="grid grid-cols-2 gap-3">
+							<div>
+								<label class="block text-xs font-bold text-gray-500 mb-1 ml-1">ตั้งแต่วันที่</label>
+								<input type="date" id="adv-filter-start" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700">
+							</div>
+							<div>
+								<label class="block text-xs font-bold text-gray-500 mb-1 ml-1">ถึงวันที่</label>
+								<input type="date" id="adv-filter-end" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700">
+							</div>
+						</div>
+
+						<div class="grid grid-cols-3 gap-3">
+							<div class="col-span-1">
+								<label class="block text-xs font-bold text-gray-500 mb-1 ml-1">ประเภท</label>
+								<select id="adv-filter-type" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 h-[38px]">
+									<option value="all">ทั้งหมด</option>
+									<option value="income">รายรับ</option>
+									<option value="expense">รายจ่าย</option>
+									<option value="transfer">โอนย้าย</option>
+								</select>
+							</div>
+							<div class="col-span-2">
+								<label class="block text-xs font-bold text-gray-500 mb-1 ml-1">คำค้นหา (ชื่อ/หมวด/Note)</label>
+								<div class="relative">
+									<input type="text" id="adv-filter-search" placeholder="พิมพ์เช่น '7-11' หรือ 'กาแฟ'" class="w-full p-2 pl-8 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 h-[38px]">
+									<i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+									<button id="btn-clear-search" class="absolute right-2 top-1 text-gray-400 hover:text-gray-600 p-1 hidden">
+										<i class="fa-solid fa-times-circle"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border border-purple-100 dark:border-gray-700 rounded-lg p-3 mt-2 transition-colors duration-200">
+							<div class="flex justify-between items-center text-xs text-gray-500 mb-2">
+								<span><i class="fa-solid fa-chart-simple mr-1"></i>สรุปยอด (ตามรายการที่เห็น)</span>
+								
+								<div id="analytics-section" class="mt-4 mb-6 hidden">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+										
+										<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-3 h-80 flex flex-col transition-colors duration-200">
+											<h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2 flex-shrink-0">
+												<i class="fa-solid fa-chart-pie text-purple-500"></i> สัดส่วนหมวดหมู่
+											</h3>
+											<div class="relative w-full flex-grow min-h-0">
+												<canvas id="chart-category"></canvas>
+											</div>
+										</div>
+
+										<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-3 h-80 flex flex-col transition-colors duration-200">
+											<h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2 flex-shrink-0">
+												<i class="fa-solid fa-chart-column text-blue-500"></i> แนวโน้มช่วงเวลา
+											</h3>
+											<div class="relative w-full flex-grow min-h-0">
+												<canvas id="chart-time"></canvas>
+											</div>
+										</div>
+
+									</div>
+								</div>
+								
+								<span id="dyn-count-display" class="bg-white px-2 py-0.5 rounded-full border border-gray-200">0 รายการ</span>
+							</div>
+							<div class="grid grid-cols-3 gap-2 text-center divide-x divide-gray-200">
+								<div>
+									<div class="text-[10px] text-gray-500">รวมรายรับ</div>
+									<div id="dyn-sum-income" class="text-sm md:text-base font-bold text-green-600">0</div>
+								</div>
+								<div>
+									<div class="text-[10px] text-gray-500">รวมรายจ่าย</div>
+									<div id="dyn-sum-expense" class="text-sm md:text-base font-bold text-red-600">0</div>
+								</div>
+								<div>
+									<div class="text-[10px] text-gray-500">สุทธิ</div>
+									<div id="dyn-sum-net" class="text-sm md:text-base font-bold text-blue-600">0</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="flex justify-between items-center mb-2 gap-2">
+						<h3 class="font-bold text-gray-700 flex-grow">รายการ</h3>
+						
+						<button id="btn-export-filtered" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-2 transition-colors">
+							<i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Export Excel</span>
+						</button>
+
+						<select id="items-per-page-select" class="text-xs bg-gray-100 border-0 rounded-lg py-1 px-2 text-gray-600">
+							<option value="10">10 / หน้า</option>
+							<option value="50">50 / หน้า</option>
+							<option value="100">100 / หน้า</option>
+							<option value="9999">ทั้งหมด</option>
+						</select>
+					</div>
+
+					<div id="list-table-placeholder" class="overflow-x-auto min-h-[300px]"></div>
+					<div id="list-pagination-controls" class="flex justify-center items-center gap-2 mt-4 pb-4"></div>
+				</div>
+			</div>
             
             <div id="page-calendar" class="app-page hidden">
 				<div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
@@ -517,34 +571,39 @@
 				</div>
 				
 				<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-					<div class="flex justify-between items-center mb-2 border-b pb-2">
+					<div class="flex justify-between items-center mb-2 border-b pb-2 cursor-pointer settings-toggle-header" data-target="settings-line-content">
 						<h3 class="font-bold text-gray-800">
 							<i class="fa-brands fa-line text-green-500 mr-2"></i>การแจ้งเตือน LINE
 						</h3>
-						<a href="https://line.me/R/ti/p/@660yvqhj" target="_blank" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg hover:bg-green-200 transition-colors">
-							<i class="fa-solid fa-user-plus mr-1"></i> แอดบอท
-						</a>
+						<div class="flex items-center gap-2">
+							<a href="https://line.me/R/ti/p/@660yvqhj" target="_blank" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg hover:bg-green-200 transition-colors" onclick="event.stopPropagation()">
+								<i class="fa-solid fa-user-plus mr-1"></i> แอดบอท
+							</a>
+							<i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
+						</div>
 					</div>
 					
-					<div class="flex flex-col gap-2 mb-3">
-						<div class="flex gap-2">
-							<input type="text" id="input-line-nickname" class="w-1/3 p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:border-purple-500" placeholder="ชื่อเล่น (เช่น เจมส์)">
-							<input type="text" id="input-line-user-id" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:border-purple-500" placeholder="User ID (U...)">
+					<div id="settings-line-content" class="transition-all">
+						<div class="flex flex-col gap-2 mb-3">
+							<div class="flex gap-2">
+								<input type="text" id="input-line-nickname" class="w-1/3 p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:border-purple-500" placeholder="ชื่อเล่น (เช่น เจมส์)">
+								<input type="text" id="input-line-user-id" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:border-purple-500" placeholder="User ID (U...)">
+							</div>
+							<button id="btn-add-line-id" class="bg-green-500 hover:bg-green-600 text-white w-full py-2 rounded-lg transition-colors font-medium text-sm">
+								<i class="fa-solid fa-plus mr-1"></i> เพิ่มผู้รับแจ้งเตือน
+							</button>
 						</div>
-						<button id="btn-add-line-id" class="bg-green-500 hover:bg-green-600 text-white w-full py-2 rounded-lg transition-colors font-medium text-sm">
-							<i class="fa-solid fa-plus mr-1"></i> เพิ่มผู้รับแจ้งเตือน
-						</button>
+
+						<div id="line-id-list" class="space-y-2">
+							</div>
+
+						<p class="text-xs text-gray-400 mt-2">
+							<i class="fa-solid fa-circle-info mr-1"></i>วิธีใช้:
+							1. กดปุ่ม "แอดบอท" ด้านบน<br>
+							2. พิมพ์คำว่า "id" ในแชทบอท<br>
+							3. นำรหัส U... มาใส่ในช่อง User ID
+						</p>
 					</div>
-
-					<div id="line-id-list" class="space-y-2">
-						</div>
-
-					<p class="text-xs text-gray-400 mt-2">
-						<i class="fa-solid fa-circle-info mr-1"></i>วิธีใช้:
-						1. กดปุ่ม "แอดบอท" ด้านบน<br>
-						2. พิมพ์คำว่า "id" ในแชทบอท<br>
-						3. นำรหัส U... มาใส่ในช่อง User ID
-					</p>
 				</div>
 				
 				<div class="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg mb-6 border border-purple-100 dark:border-gray-700 transition-colors">
@@ -601,6 +660,25 @@
 							<input type="number" id="custom-notify-days" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors" value="0" min="0">
 						</div>
 					</div>
+					
+					<div class="mt-3 border-t border-gray-200 dark:border-gray-600 pt-3">
+						<label class="block text-sm text-gray-600 dark:text-gray-300 mb-2 font-bold">เวลาแจ้งเตือน</label>
+						<div class="flex flex-wrap items-center gap-4">
+							<label class="inline-flex items-center cursor-pointer">
+								<input type="radio" name="notify-time-type" value="all1day" class="form-radio text-purple-600 w-4 h-4" checked>
+								<span class="ml-2 text-sm text-gray-700 dark:text-gray-300">เตือนทั้งวัน</span>
+							</label>
+							<label class="inline-flex items-center cursor-pointer">
+								<input type="radio" name="notify-time-type" value="specific" class="form-radio text-purple-600 w-4 h-4">
+								<span class="ml-2 text-sm text-gray-700 dark:text-gray-300">ระบุช่วงเวลา</span>
+							</label>
+						</div>
+						
+						<div id="notify-time-input-wrapper" class="hidden mt-2">
+							<input type="time" id="custom-notify-time" class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors">
+						</div>
+					</div>
+					
 					<button id="btn-save-custom-notify" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow transition duration-300 mt-2">
 						บันทึกการแจ้งเตือน
 					</button>
