@@ -10993,19 +10993,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 					drafts.forEach(draft => {
 						const html = `
-							<div class="flex justify-between items-center bg-yellow-50 p-3 rounded-lg border border-yellow-200 mb-2 cursor-pointer hover:bg-yellow-100 transition"
+							<div class="flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700 mb-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition shadow-sm group"
 								 onclick="convertDraftToTx('${draft.id}')">
-								<div class="flex items-center gap-3">
-									<div class="bg-yellow-200 text-yellow-700 w-8 h-8 rounded-full flex items-center justify-center">
-										<i class="fa-solid fa-pen-nib"></i>
+								<div class="flex items-center gap-4">
+									<div class="bg-yellow-200 dark:bg-yellow-600/80 text-yellow-800 dark:text-yellow-100 w-10 h-10 rounded-full flex items-center justify-center shadow-sm">
+										<i class="fa-solid fa-pen-nib text-lg"></i>
 									</div>
 									<div>
-										<div class="font-bold text-gray-800">${formatCurrency(draft.amount)}</div>
-										<div class="text-xs text-gray-600">${escapeHTML(draft.desc)}</div>
+										<div class="font-black text-xl text-gray-800 dark:text-white mb-0.5">${formatCurrency(draft.amount)}</div>
+										<div class="text-sm font-medium text-gray-600 dark:text-gray-300">${escapeHTML(draft.desc)}</div>
 									</div>
 								</div>
-								<div class="text-xs text-gray-400">
-									<i class="fa-solid fa-chevron-right"></i>
+								<div class="text-gray-400 dark:text-gray-500 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+									<i class="fa-solid fa-chevron-right text-xl"></i>
 								</div>
 							</div>
 						`;
