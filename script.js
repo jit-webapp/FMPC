@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 	
     const DB_NAME = 'expenseTrackerDB_JamesIT';
-    const DB_VERSION = 7; // *** อัปเดตเป็นเวอร์ชัน 7 ***
+    const DB_VERSION = 8; // *** อัปเดตเป็นเวอร์ชัน 8 ***
 	
     const STORE_TRANSACTIONS = 'transactions';
     const STORE_CATEGORIES = 'categories';
@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const STORE_BUDGETS = 'budgets'; // [NEW]
 	const STORE_CUSTOM_NOTIFY = 'custom_notifications';
 	const STORE_NOTIFICATIONS = 'notifications'; // <--- (เก็บประวัติแจ้งเตือนที่จะ Sync)
+	const STORE_DRAFTS = 'drafts'; // *** เพิ่ม Store สำหรับ Draft ***
 	const LINE_USER_ID_KEY = 'lineUserId'; // LineID
     
     const PAGE_IDS = ['page-home', 'page-list', 'page-calendar', 'page-accounts', 'page-settings', 'page-guide']; // เพิ่ม 'page-accounts'
@@ -350,6 +351,14 @@ document.addEventListener('DOMContentLoaded', () => {
 					db.createObjectStore(STORE_NOTIFICATIONS, { keyPath: 'id' });
 					}
 					console.log('IndexedDB Upgrade: Running v6 migration (Added "budgets" store)');
+				}
+				
+				// --- V8: Quick Drafts ---
+				if (event.oldVersion < 8) {
+					if (!db.objectStoreNames.contains(STORE_DRAFTS)) {
+						db.createObjectStore(STORE_DRAFTS, { keyPath: 'id' });
+					}
+					console.log('IndexedDB Upgrade: Running v8 migration (Added "drafts" store)');
 				}
             };
 
@@ -3796,6 +3805,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderSummary(visibleTransactions, allAccountBalances);
         renderAllAccountSummary(allAccountBalances); // อัปเดตการ์ดบัญชีด้านบน
+		renderDraftsWidget();
         
         applySettingsPreferences();
         
@@ -6584,7 +6594,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('transaction-form').reset();
         document.getElementById('calc-preview').textContent = ''; 
         document.getElementById('calculator-popover').classList.add('hidden');
-        clearReceiptFile(); 
+        clearReceiptFile();
+		// ล้างค่า Draft ID ทิ้งเมื่อปิดหน้าต่าง
+		const hiddenDraftInput = document.getElementById('hidden-draft-id');
+		if(hiddenDraftInput) hiddenDraftInput.value = '';
     }
 
     function openAccountModal(accountId = null, closeOnly = false) {
@@ -6972,193 +6985,210 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleFormSubmit(e) {
-        e.preventDefault();
-        document.getElementById('calculator-popover').classList.add('hidden');
+		e.preventDefault();
+		document.getElementById('calculator-popover').classList.add('hidden');
 
-        const getEl = (id) => document.getElementById(id);
-        
-        const rawAmount = getEl('tx-amount').value;
-        let finalAmount = safeCalculate(rawAmount);
-        if (finalAmount === null || finalAmount <= 0) {
-            Swal.fire('ข้อมูลไม่ครบถ้วน', 'จำนวนเงินไม่ถูกต้อง (ต้องมากกว่า 0)', 'warning');
-            return;
-        }
-        finalAmount = parseFloat(finalAmount.toFixed(2));
-        const txId = getEl('tx-id').value;
-        const type = document.querySelector('input[name="tx-type"]:checked').value;
-        
-        let transaction = {
-            id: txId || `tx-${new Date().getTime()}`,
-            type: type,
-            amount: finalAmount,
-            date: getEl('tx-date').value,
-            desc: getEl('tx-desc').value.trim() || null,
-            name: null,
-            category: null,
-            accountId: null,
-            toAccountId: null,
-            receiptBase64: currentReceiptBase64 
-        };
+		const getEl = (id) => document.getElementById(id);
+		
+		const rawAmount = getEl('tx-amount').value;
+		let finalAmount = safeCalculate(rawAmount);
+		if (finalAmount === null || finalAmount <= 0) {
+			Swal.fire('ข้อมูลไม่ครบถ้วน', 'จำนวนเงินไม่ถูกต้อง (ต้องมากกว่า 0)', 'warning');
+			return;
+		}
+		finalAmount = parseFloat(finalAmount.toFixed(2));
+		const txId = getEl('tx-id').value;
+		const type = document.querySelector('input[name="tx-type"]:checked').value;
+		
+		let transaction = {
+			id: txId || `tx-${new Date().getTime()}`,
+			type: type,
+			amount: finalAmount,
+			date: getEl('tx-date').value,
+			desc: getEl('tx-desc').value.trim() || null,
+			name: null,
+			category: null,
+			accountId: null,
+			toAccountId: null,
+			receiptBase64: currentReceiptBase64 
+		};
 
-        transaction.name = getEl('tx-name').value.trim();
+		transaction.name = getEl('tx-name').value.trim();
 
-        if (type === 'income' || type === 'expense') {
-            transaction.category = getEl('tx-category').value;
-            transaction.accountId = getEl('tx-account').value;
-            
-            if (!transaction.name || !transaction.category || !transaction.accountId) {
-                Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อรายการ, หมวดหมู่, และบัญชี', 'warning');
-                return;
-            }
+		if (type === 'income' || type === 'expense') {
+			transaction.category = getEl('tx-category').value;
+			transaction.accountId = getEl('tx-account').value;
+			
+			if (!transaction.name || !transaction.category || !transaction.accountId) {
+				Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อรายการ, หมวดหมู่, และบัญชี', 'warning');
+				return;
+			}
 
-            const learnData = {
-                name: transaction.name,
-                type: transaction.type,
-                category: transaction.category,
-                amount: transaction.amount
-            };
-            dbPut(STORE_AUTO_COMPLETE, learnData).catch(err => console.warn("Auto-learn failed", err));
-            const existingIndex = state.autoCompleteList.findIndex(item => item.name === transaction.name);
-            if (existingIndex >= 0) {
-                 state.autoCompleteList[existingIndex] = learnData;
-            } else {
-                 state.autoCompleteList.push(learnData);
-            }
+			const learnData = {
+				name: transaction.name,
+				type: transaction.type,
+				category: transaction.category,
+				amount: transaction.amount
+			};
+			dbPut(STORE_AUTO_COMPLETE, learnData).catch(err => console.warn("Auto-learn failed", err));
+			const existingIndex = state.autoCompleteList.findIndex(item => item.name === transaction.name);
+			if (existingIndex >= 0) {
+				 state.autoCompleteList[existingIndex] = learnData;
+			} else {
+				 state.autoCompleteList.push(learnData);
+			}
 
-        } else if (type === 'transfer') {
-            if (!transaction.name) transaction.name = 'โอนย้าย';
+		} else if (type === 'transfer') {
+			if (!transaction.name) transaction.name = 'โอนย้าย';
 
-            transaction.accountId = getEl('tx-account-from').value;
-            transaction.toAccountId = getEl('tx-account-to').value;
-            
-            if (!transaction.accountId || !transaction.toAccountId) {
-                Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกบัญชีต้นทางและปลายทาง', 'warning');
-                return;
-            }
-            if (transaction.accountId === transaction.toAccountId) {
-                    Swal.fire('ข้อมูลผิดพลาด', 'บัญชีต้นทางและปลายทางต้องไม่ซ้ำกัน', 'warning');
-                return;
-            }
-        }
+			transaction.accountId = getEl('tx-account-from').value;
+			transaction.toAccountId = getEl('tx-account-to').value;
+			
+			if (!transaction.accountId || !transaction.toAccountId) {
+				Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกบัญชีต้นทางและปลายทาง', 'warning');
+				return;
+			}
+			if (transaction.accountId === transaction.toAccountId) {
+					Swal.fire('ข้อมูลผิดพลาด', 'บัญชีต้นทางและปลายทางต้องไม่ซ้ำกัน', 'warning');
+				return;
+			}
+		}
 
-        try {
-            await dbPut(STORE_TRANSACTIONS, transaction);
+		try {
+			// 1. บันทึกรายการลง DB หลัก
+			await dbPut(STORE_TRANSACTIONS, transaction);
+
+			// =========================================================
+			// [ส่วนที่เพิ่ม] ตรวจสอบและลบ Draft หลังจากบันทึกสำเร็จ
+			// =========================================================
+			const hiddenDraftInput = document.getElementById('hidden-draft-id');
+			const draftIdToDelete = hiddenDraftInput ? hiddenDraftInput.value : null;
+
+			if (draftIdToDelete) {
+				try {
+					// ลบออกจาก Store Draft
+					await dbDelete(STORE_DRAFTS, draftIdToDelete);
+					// ล้างค่า ID ที่ซ่อนไว้
+					if(hiddenDraftInput) hiddenDraftInput.value = ''; 
+					// อัปเดตกล่องแสดงผลหน้าแรก
+					if (typeof renderDraftsWidget === 'function') {
+						renderDraftsWidget(); 
+					}
+				} catch (e) {
+					console.error("Error deleting draft:", e);
+				}
+			}
+			// =========================================================
+
 			// เช็คว่าถ้ามี txId แสดงว่าเป็นการ "แก้ไข" ถ้าไม่มีคือ "เพิ่มใหม่"
 			const actionType = txId ? 'edit' : 'add'; 
 			sendLineAlert(transaction, actionType);
-			// ++++++++++++++++++
-            if (txId) {
-                const oldTx = state.transactions.find(t => t.id === txId);
-                state.transactions = state.transactions.map(t => t.id === txId ? transaction : t);
-                setLastUndoAction({ type: 'tx-edit', oldData: JSON.parse(JSON.stringify(oldTx)), newData: transaction });
-            } else {
-                state.transactions.push(transaction);
-                setLastUndoAction({ type: 'tx-add', data: transaction });
-            }
 			
-			// +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            // [เพิ่มใหม่] Logic บันทึก Recurring จากหน้าเพิ่มรายการ
-            // +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            const txRecurringCheckbox = document.getElementById('tx-is-recurring'); // เช็คก่อนว่ามี element นี้ไหม
-            const isRecurring = txRecurringCheckbox ? txRecurringCheckbox.checked : false;
-            
-            if (isRecurring) {
-                const freq = document.getElementById('tx-recurring-freq').value;
-                
-                // คำนวณวันครบกำหนดถัดไป
-                const nextDueDate = calculateNextDueDate(transaction.date.slice(0, 10), freq);
-                
-                const newRule = {
-                    id: `rec-${Date.now()}`,
-                    name: transaction.name,
-                    amount: transaction.amount,
-                    type: transaction.type,
-                    category: transaction.category || 'โอนย้าย', 
-                    accountId: transaction.accountId,
-                    toAccountId: transaction.toAccountId || null, 
-                    frequency: freq,
-                    nextDueDate: nextDueDate, 
-                    active: true
-                };
+			if (txId) {
+				const oldTx = state.transactions.find(t => t.id === txId);
+				state.transactions = state.transactions.map(t => t.id === txId ? transaction : t);
+				setLastUndoAction({ type: 'tx-edit', oldData: JSON.parse(JSON.stringify(oldTx)), newData: transaction });
+			} else {
+				state.transactions.push(transaction);
+				setLastUndoAction({ type: 'tx-add', data: transaction });
+			}
+			
+			// Logic บันทึก Recurring
+			const txRecurringCheckbox = document.getElementById('tx-is-recurring'); 
+			const isRecurring = txRecurringCheckbox ? txRecurringCheckbox.checked : false;
+			
+			if (isRecurring) {
+				const freq = document.getElementById('tx-recurring-freq').value;
+				const nextDueDate = calculateNextDueDate(transaction.date.slice(0, 10), freq);
+				
+				const newRule = {
+					id: `rec-${Date.now()}`,
+					name: transaction.name,
+					amount: transaction.amount,
+					type: transaction.type,
+					category: transaction.category || 'โอนย้าย', 
+					accountId: transaction.accountId,
+					toAccountId: transaction.toAccountId || null, 
+					frequency: freq,
+					nextDueDate: nextDueDate, 
+					active: true
+				};
 
-                await dbPut(STORE_RECURRING, newRule);
-                state.recurringRules.push(newRule);
-            }
+				await dbPut(STORE_RECURRING, newRule);
+				state.recurringRules.push(newRule);
+			}
 
-            if (currentPage === 'home') {
-                renderAll();
-            }
-            if (currentPage === 'list') {
-                renderListPage();
-            }
-            if (currentPage === 'calendar') { 
-                renderCalendarView();
-            }
+			if (currentPage === 'home') {
+				renderAll();
+			}
+			if (currentPage === 'list') {
+				renderListPage();
+			}
+			if (currentPage === 'calendar') { 
+				renderCalendarView();
+			}
 
-            // +++ Update Account Detail Modal if open +++
-            await refreshAccountDetailModalIfOpen();
-            
+			await refreshAccountDetailModalIfOpen();
+			
 			renderBudgetWidget();
 			renderDropdownList();
 			
-            closeModal();
-            renderSettings();
+			closeModal();
+			renderSettings();
 			const isLogged = window.auth && window.auth.currentUser;
 
 			Swal.fire({
 				title: 'บันทึกสำเร็จ!',
 				text: 'บันทึกข้อมูลของคุณเรียบร้อยแล้ว',
 				icon: 'success',
-				// ถ้าล็อกอิน: ตั้งเวลา 1000ms (1วิ), ถ้าไม่ล็อกอิน: ไม่ตั้งเวลา (undefined)
 				timer: isLogged ? 1000 : undefined, 
-				// ถ้าล็อกอิน: ซ่อนปุ่ม, ถ้าไม่ล็อกอิน: แสดงปุ่ม
 				showConfirmButton: !isLogged 
 			});
-        } catch (err) {
-            console.error("Failed to save transaction:", err);
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้', 'error');
-        }
-    }
+		} catch (err) {
+			console.error("Failed to save transaction:", err);
+			Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้', 'error');
+		}
+	}
 
           function safeCalculate(expression) {
-        try {
-            let sanitized = String(expression).replace(/,/g, '').replace(/\s/g, '');
-            if (!/^-?[0-9+\-*/.]+$/.test(sanitized)) { return null;
-            } 
-            if (!/^-?[0-9.]/.test(sanitized) || !/[0-9.]$/.test(sanitized)) { return null;
-            }
-            if (/[\+\-\*\/]{2,}/.test(sanitized)) { return null;
-            }
-            const result = eval(sanitized);
-            if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) { return null;
-            }
-            return result;
-        } catch (error) {
-            return null;
-        }
-    }
+			try {
+				let sanitized = String(expression).replace(/,/g, '').replace(/\s/g, '');
+				if (!/^-?[0-9+\-*/.]+$/.test(sanitized)) { return null;
+				} 
+				if (!/^-?[0-9.]/.test(sanitized) || !/[0-9.]$/.test(sanitized)) { return null;
+				}
+				if (/[\+\-\*\/]{2,}/.test(sanitized)) { return null;
+				}
+				const result = eval(sanitized);
+				if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) { return null;
+				}
+				return result;
+			} catch (error) {
+				return null;
+			}
+		}
 
 
     function handleCalcPreview(expression, previewId) {
         const previewEl = document.getElementById(previewId);
-        if (!expression) {
-            previewEl.textContent = '';
-            return;
-        }
+			if (!expression) {
+				previewEl.textContent = '';
+				return;
+			}
 
-        const lastChar = expression.trim().slice(-1);
-        if (['+', '-', '*', '/'].includes(lastChar)) {
-                previewEl.textContent = '';
-            return;
-        }
+			const lastChar = expression.trim().slice(-1);
+			if (['+', '-', '*', '/'].includes(lastChar)) {
+					previewEl.textContent = '';
+				return;
+			}
 
-        const result = safeCalculate(expression);
-        if (result !== null) {
-            previewEl.textContent = '= ' + parseFloat(result.toFixed(2));
-        } else {
-            previewEl.textContent = '';
-        }
-    }
+			const result = safeCalculate(expression);
+			if (result !== null) {
+				previewEl.textContent = '= ' + parseFloat(result.toFixed(2));
+			} else {
+				previewEl.textContent = '';
+			}
+		}
 
 
     function handleCalcClick(btn, inputId, popoverId, previewId, displayId) {
@@ -10817,6 +10847,225 @@ document.addEventListener('DOMContentLoaded', () => {
 					if (typeof renderAll === 'function') renderAll();
 				}
 			};
+			
+			// ============================================
+			// QUICK DRAFT FUNCTIONS (แก้ไขให้เข้ากับของเดิม)
+			// ============================================
+			// 1. ฟังก์ชันสั่งงานด้วยเสียงสำหรับ Draft (ปรับปรุงใหม่ รองรับ Browser มากขึ้น)
+			window.startQuickDraftVoice = function() {
+				// ตรวจสอบหาตัว API ทั้งแบบมาตรฐาน และแบบ Webkit (Chrome/Safari)
+				const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+				if (!SpeechRecognition) {
+					Swal.fire({
+						icon: 'error',
+						title: 'ไม่รองรับการสั่งเสียง',
+						html: 'Browser นี้ไม่รองรับฟีเจอร์แปลงเสียงเป็นข้อความ<br><br>แนะนำให้ใช้ <b>Google Chrome</b> หรือ <b>Safari</b><br>และต้องใช้งานผ่าน <b>HTTPS</b> เท่านั้น'
+					});
+					return;
+				}
+
+				// สร้าง Object recognition ถ้ายังไม่มี
+				if (!window.recognition) {
+					window.recognition = new SpeechRecognition();
+					window.recognition.lang = 'th-TH'; // ภาษาไทย
+					window.recognition.continuous = false; // ฟังทีละประโยคแล้วหยุด
+					window.recognition.interimResults = false;
+
+					// ตั้งค่า Event Handlers (ทำแค่ครั้งเดียวตอนสร้าง)
+					window.recognition.onresult = (event) => {
+						const transcript = event.results[0][0].transcript;
+						console.log('Draft Voice:', transcript);
+
+						// เรียกใช้ฟังก์ชัน parseVoiceInput ตัวเดิมของคุณ
+						const parsed = parseVoiceInput(transcript); 
+
+						if (parsed && parsed.amount) {
+							document.getElementById('draft-amount').value = parsed.amount;
+							
+							let fullNote = parsed.name || '';
+							if (parsed.description) fullNote += ' ' + parsed.description;
+							if (!fullNote.trim()) fullNote = transcript.replace(parsed.amount, '').replace('บาท', '').trim();
+
+							document.getElementById('draft-note').value = fullNote;
+						} else {
+							document.getElementById('draft-note').value = transcript;
+						}
+						stopVoiceUI();
+					};
+
+					window.recognition.onerror = (event) => {
+						console.error("Voice Error:", event.error);
+						stopVoiceUI();
+						
+						let msg = 'เกิดข้อผิดพลาดในการรับเสียง';
+						if (event.error === 'not-allowed') msg = 'กรุณากดอนุญาตให้ใช้ไมโครโฟน';
+						if (event.error === 'network') msg = 'กรุณาตรวจสอบอินเทอร์เน็ต';
+						
+						if (event.error !== 'no-speech' && event.error !== 'aborted') {
+							showToast(msg, 'error');
+						}
+					};
+
+					window.recognition.onend = () => {
+						stopVoiceUI();
+					};
+				}
+
+				// เริ่มต้นการทำงาน UI
+				const btn = document.getElementById('btn-draft-voice');
+				const originalHtml = '<i class="fa-solid fa-microphone"></i> พูดเพื่อจด (เช่น "ข้าว 50")';
+				
+				btn.innerHTML = '<i class="fa-solid fa-microphone-lines fa-beat"></i> กำลังฟัง...';
+				btn.classList.add('bg-red-500', 'text-white', 'border-red-600');
+				btn.classList.remove('bg-gray-100', 'text-gray-600');
+
+				try {
+					window.recognition.start();
+				} catch (e) {
+					// กรณีมีการกดรัวๆ หรือ service ทำงานค้างอยู่
+					console.warn("Recognition already started or error:", e);
+					window.recognition.stop();
+				}
+
+				// ฟังก์ชันคืนค่าปุ่ม
+				function stopVoiceUI() {
+					if(btn) {
+						btn.innerHTML = originalHtml;
+						btn.classList.remove('bg-red-500', 'text-white', 'border-red-600', 'fa-beat');
+						btn.classList.add('bg-gray-100', 'text-gray-600');
+					}
+				}
+			}
+
+			// 2. บันทึก Draft (Update: เพิ่ม window. นำหน้า)
+			window.saveQuickDraft = async function() {
+				const amountVal = document.getElementById('draft-amount').value;
+				const noteVal = document.getElementById('draft-note').value.trim();
+
+				if (!amountVal || parseFloat(amountVal) <= 0) {
+					Swal.fire('ระบุยอดเงิน', 'กรุณาใส่จำนวนเงิน', 'warning');
+					return;
+				}
+
+				const draft = {
+					id: `draft-${Date.now()}`,
+					amount: parseFloat(amountVal),
+					desc: noteVal || 'รายการเร่งด่วน',
+					date: new Date().toISOString()
+				};
+
+				try {
+					// ตรวจสอบว่า db พร้อมใช้งานหรือไม่
+					if (typeof db === 'undefined') {
+						 console.error("Database not initialized");
+						 return;
+					}
+					
+					await dbPut(STORE_DRAFTS, draft);
+					
+					if (typeof closeQuickDraftModal === 'function') closeQuickDraftModal();
+					if (typeof renderDraftsWidget === 'function') renderDraftsWidget();
+					
+					showToast('จดร่างรายการไว้แล้ว', 'success');
+				} catch (err) {
+					console.error(err);
+					Swal.fire('Error', 'บันทึกไม่สำเร็จ: ' + err.message, 'error');
+				}
+			}
+
+			// 3. แสดง Widget รายการ Draft
+			window.renderDraftsWidget = async function() {
+				const container = document.getElementById('home-drafts-container');
+				if (!container) return;
+
+				try {
+					const drafts = await dbGetAll(STORE_DRAFTS);
+					
+					if (drafts.length === 0) {
+						container.classList.add('hidden');
+						return;
+					}
+
+					container.classList.remove('hidden');
+					const listEl = document.getElementById('drafts-list');
+					listEl.innerHTML = '';
+
+					drafts.forEach(draft => {
+						const html = `
+							<div class="flex justify-between items-center bg-yellow-50 p-3 rounded-lg border border-yellow-200 mb-2 cursor-pointer hover:bg-yellow-100 transition"
+								 onclick="convertDraftToTx('${draft.id}')">
+								<div class="flex items-center gap-3">
+									<div class="bg-yellow-200 text-yellow-700 w-8 h-8 rounded-full flex items-center justify-center">
+										<i class="fa-solid fa-pen-nib"></i>
+									</div>
+									<div>
+										<div class="font-bold text-gray-800">${formatCurrency(draft.amount)}</div>
+										<div class="text-xs text-gray-600">${escapeHTML(draft.desc)}</div>
+									</div>
+								</div>
+								<div class="text-xs text-gray-400">
+									<i class="fa-solid fa-chevron-right"></i>
+								</div>
+							</div>
+						`;
+						listEl.insertAdjacentHTML('beforeend', html);
+					});
+
+				} catch (err) {
+					console.error("Error loading drafts:", err);
+				}
+			}
+
+			// 4. แปลง Draft เป็นรายการจริง
+			window.convertDraftToTx = async function(draftId) {
+				try {
+					const draft = await dbGet(STORE_DRAFTS, draftId);
+					if (!draft) return;
+
+					openModal(); // เปิดหน้าบันทึก
+					
+					// เติมข้อมูลลงฟอร์ม
+					document.getElementById('tx-amount').value = draft.amount;
+					document.getElementById('tx-desc').value = draft.desc;
+					
+					// Trigger ให้คำนวณเลข (ถ้ามีระบบคำนวณ)
+					const amountInput = document.getElementById('tx-amount');
+					if(amountInput) amountInput.dispatchEvent(new Event('keyup'));
+
+					// [ใหม่] ฝาก ID ไว้ใน input ที่ซ่อนไว้ (ยังไม่ลบจาก DB)
+					const hiddenInput = document.getElementById('hidden-draft-id');
+					if(hiddenInput) hiddenInput.value = draftId;
+
+					// *** ลบโค้ด dbDelete เดิมออกไปแล้ว ***
+					
+					showToast('ดึงข้อมูลมาแล้ว กรุณาตรวจสอบและกดบันทึก', 'info');
+					
+				} catch (err) {
+					console.error(err);
+				}
+			}
+
+			// 5. เปิด/ปิด Modal
+			window.openQuickDraftModal = () => {
+				const modal = document.getElementById('quick-draft-modal');
+				if(modal) {
+					modal.classList.remove('hidden');
+					setTimeout(() => {
+						const input = document.getElementById('draft-amount');
+						if(input) input.focus();
+					}, 100);
+				}
+			}
+
+			window.closeQuickDraftModal = () => {
+				const modal = document.getElementById('quick-draft-modal');
+				if(modal) {
+					modal.classList.add('hidden');
+					document.getElementById('draft-amount').value = '';
+					document.getElementById('draft-note').value = '';
+				}
+			}
 			
 
         });

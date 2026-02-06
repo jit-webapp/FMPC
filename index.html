@@ -182,6 +182,9 @@
 						<button id="voice-add-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 md:py-3 px-4 rounded-xl shadow-lg transition duration-300 text-base md:text-lg mt-3 md:mt-4">
 							<i class="fa-solid fa-microphone mr-2"></i> เพิ่มด้วยเสียง
 						</button>
+						<button onclick="openQuickDraftModal()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 md:py-3 px-4 rounded-xl shadow-lg transition duration-300 text-base md:text-lg mt-3 md:mt-4 mb-4">
+							<i class="fa-solid fa-bolt mr-2"></i> จดด่วน (Draft)
+						</button>
 					</div>
                     
                     <div class="lg:col-span-2 bg-white p-3 md:p-6 rounded-xl shadow-lg lg:order-2">
@@ -204,7 +207,16 @@
                             </div>
                         </div>
                     </div>
-                </div> <div id="home-transaction-list-container" class="bg-white p-5 md:p-6 rounded-xl shadow-lg mt-6"> 
+                </div> 
+				
+				<div id="home-drafts-container" class="bg-white p-5 md:p-6 rounded-xl shadow-lg mb-6 hidden border-l-8 border-yellow-400">
+					<h2 class="text-lg font-bold text-yellow-700 mb-3 flex items-center">
+						<i class="fa-solid fa-clipboard-list mr-2"></i> รายการที่รอจัดการ (Drafts)
+					</h2>
+					<div id="drafts-list" class="space-y-2"></div>
+				</div>
+				
+				<div id="home-transaction-list-container" class="bg-white p-5 md:p-6 rounded-xl shadow-lg mt-6"> 
                     <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="home-transactions-content">
                         <h2 class="text-xl font-bold text-purple-600">รายการธุรกรรมล่าสุด</h2>
                         <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 text-xl"></i>
@@ -1286,7 +1298,7 @@
                         </button>
                     </div>
                     <input type="text" id="tx-amount" inputmode="decimal" placeholder="0.00 หรือ 50+20" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
-                    
+                    <input type="hidden" id="hidden-draft-id">
                 </div>
 
                 <div>
@@ -2228,5 +2240,41 @@
 			</div>
 		</div>
 	</div>
+	
+	<div id="quick-draft-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-[80] backdrop-blur-sm">
+		<div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm transform scale-100 transition-all">
+			<div class="flex justify-between items-center mb-4">
+				<h2 class="text-xl font-bold text-yellow-600"><i class="fa-solid fa-bolt mr-2"></i>จดรายการด่วน</h2>
+				<button onclick="closeQuickDraftModal()" class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 text-3xl font-bold transition-all shadow-sm">
+					<i class="fa-solid fa-xmark"></i>
+				</button>
+			</div>
+			
+			<div class="space-y-4">
+				<div>
+					<label class="block text-gray-700 font-medium mb-1">จำนวนเงิน</label>
+					<div class="relative">
+						<input type="number" id="draft-amount" class="w-full text-3xl font-bold text-center py-3 border-2 border-yellow-300 rounded-xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 outline-none" placeholder="0.00">
+					</div>
+				</div>
+
+				<div class="flex justify-center">
+					<button id="btn-draft-voice" onclick="startQuickDraftVoice()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-bold border border-gray-300 hover:bg-gray-200 transition-all active:scale-95">
+						<i class="fa-solid fa-microphone"></i> พูดเพื่อจด (เช่น "ข้าว 50")
+					</button>
+				</div>
+
+				<div>
+					<label class="block text-gray-700 font-medium mb-1">กันลืม (Note)</label>
+					<input type="text" id="draft-note" class="w-full py-2 px-3 border border-gray-300 rounded-xl text-lg" placeholder="ค่าอะไร...">
+				</div>
+				
+				<button onclick="saveQuickDraft()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl shadow-lg text-lg transition-transform active:scale-95">
+					บันทึกไว้ก่อน
+				</button>
+			</div>
+		</div>
+	</div>
+	
 </body>
 </html>
