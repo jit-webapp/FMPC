@@ -10947,12 +10947,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					Swal.fire('ระบุยอดเงิน', 'กรุณาใส่จำนวนเงิน', 'warning');
 					return;
 				}
+				
+				const now = new Date();
+				const localIsoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
 				const draft = {
 					id: `draft-${Date.now()}`,
 					amount: parseFloat(amountVal),
 					desc: noteVal || 'รายการเร่งด่วน',
-					date: new Date().toISOString()
+					date: localIsoString
 				};
 
 				try {
@@ -10992,6 +10995,21 @@ document.addEventListener('DOMContentLoaded', () => {
 					listEl.innerHTML = '';
 
 					drafts.forEach(draft => {
+						// [ส่วนที่ 1] แปลงวันที่และเวลาให้เป็น format ไทย
+						// ถ้าระบบใหม่มี draft.date ก็ใช้เลย / ถ้าระบบเก่าไม่มี ให้ดึงจาก id (timestamp)
+						let dateObj;
+						if (draft.date) {
+							dateObj = new Date(draft.date);
+						} else {
+							// รองรับข้อมูลเก่าที่เก็บ id เป็น timestamp (ตัดคำว่า draft- ออก)
+							const timestamp = parseInt(draft.id.replace('draft-', ''));
+							dateObj = new Date(timestamp);
+						}
+
+						const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+						const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+						// [ส่วนที่ 2] HTML เพิ่มส่วนแสดงวันที่ (บรรทัดล่างสุด)
 						const html = `
 							<div class="flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700 mb-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition shadow-sm group"
 								 onclick="convertDraftToTx('${draft.id}')">
@@ -11002,6 +11020,10 @@ document.addEventListener('DOMContentLoaded', () => {
 									<div>
 										<div class="font-black text-xl text-gray-800 dark:text-white mb-0.5">${formatCurrency(draft.amount)}</div>
 										<div class="text-sm font-medium text-gray-600 dark:text-gray-300">${escapeHTML(draft.desc)}</div>
+										
+										<div class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+											<i class="fa-regular fa-clock"></i> ${dateStr} ${timeStr} น.
+										</div>
 									</div>
 								</div>
 								<div class="text-gray-400 dark:text-gray-500 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
@@ -11028,6 +11050,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					// เติมข้อมูลลงฟอร์ม
 					document.getElementById('tx-amount').value = draft.amount;
 					document.getElementById('tx-desc').value = draft.desc;
+					
+					// [เพิ่มใหม่] ตรวจสอบและเติมวันที่เดิม (ถ้ามี)
+					if (draft.date) {
+						document.getElementById('tx-date').value = draft.date;
+					} else {
+						// กรณี Draft เก่าที่ไม่มีวันที่เก็บไว้ ให้ใช้วันปัจจุบัน
+						const now = new Date();
+						document.getElementById('tx-date').value = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+					}
 					
 					// Trigger ให้คำนวณเลข (ถ้ามีระบบคำนวณ)
 					const amountInput = document.getElementById('tx-amount');
@@ -11064,6 +11095,787 @@ document.addEventListener('DOMContentLoaded', () => {
 					modal.classList.add('hidden');
 					document.getElementById('draft-amount').value = '';
 					document.getElementById('draft-note').value = '';
+				}
+			}
+			
+			// ============================================
+			// SMART VOICE COMMAND (ผู้ช่วยสั่งงานด้วยเสียง)
+			// ============================================
+
+			window.activateVoiceCommand = function() {
+				// 1. ตรวจสอบ API
+				const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+				if (!SpeechRecognition) {
+					Swal.fire('ไม่รองรับ', 'Browser นี้ไม่รองรับคำสั่งเสียง', 'error');
+					return;
+				}
+
+				const btn = document.getElementById('smart-voice-btn');
+				const ripple = document.getElementById('smart-voice-ripple');
+				const icon = btn.querySelector('i');
+
+				// 2. แต่งปุ่มให้รู้ว่ากำลังฟัง
+				btn.classList.remove('from-blue-500', 'to-cyan-500');
+				btn.classList.add('from-red-500', 'to-pink-500', 'scale-110');
+				icon.classList.remove('fa-microphone');
+				icon.classList.add('fa-ear-listen', 'fa-beat');
+				ripple.classList.add('animate-ping', 'opacity-75');
+
+				// 3. เริ่มฟัง
+				const recognition = new SpeechRecognition();
+				recognition.lang = 'th-TH';
+				recognition.continuous = false; // ฟังประโยคเดียวจบ
+				recognition.interimResults = false;
+
+				recognition.onresult = (event) => {
+					const transcript = event.results[0][0].transcript.trim();
+					console.log('Voice Command:', transcript);
+					
+					// ส่งไปประมวลผล
+					executeCommand(transcript);
+				};
+
+				recognition.onerror = (event) => {
+					console.error(event.error);
+					if(event.error !== 'no-speech') {
+						showToast('ฟังไม่ทัน กรุณาลองใหม่', 'warning');
+					}
+				};
+
+				recognition.onend = () => {
+					// คืนค่าปุ่มสู่สภาพเดิม
+					btn.classList.add('from-blue-500', 'to-cyan-500');
+					btn.classList.remove('from-red-500', 'to-pink-500', 'scale-110');
+					icon.classList.add('fa-microphone');
+					icon.classList.remove('fa-ear-listen', 'fa-beat');
+					ripple.classList.remove('animate-ping', 'opacity-75');
+				};
+
+				try {
+					recognition.start();
+					showToast('พูดคำสั่งได้เลย... (เช่น "กลับบ้าน", "ค้นหา ข้าว")', 'info');
+				} catch (e) {
+					console.warn(e);
+				}
+			}
+
+			// ============================================
+			// SMART VOICE COMMAND (GLOBAL BRAIN V.7)
+			// ============================================
+
+			window.activateGlobalVoice = function() {
+				// 1. ตรวจสอบ API
+				const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+				if (!SpeechRecognition) {
+					Swal.fire('ไม่รองรับ', 'Browser นี้ไม่รองรับคำสั่งเสียง', 'error');
+					return;
+				}
+
+				const btn = document.getElementById('smart-voice-btn');
+				const icon = btn.querySelector('i');
+
+				// 2. แต่งปุ่มให้รู้ว่ากำลังฟัง (UI Feedback)
+				btn.classList.remove('from-blue-500', 'to-cyan-500');
+				btn.classList.add('from-red-500', 'to-pink-500', 'scale-125', 'ring-4', 'ring-red-200');
+				icon.classList.remove('fa-microphone');
+				icon.classList.add('fa-ear-listen', 'fa-beat-fade');
+
+				// 3. เริ่มฟัง
+				const recognition = new SpeechRecognition();
+				recognition.lang = 'th-TH';
+				recognition.continuous = false; // ฟังประโยคเดียวจบ
+				recognition.interimResults = false;
+
+				recognition.onresult = (event) => {
+					const transcript = event.results[0][0].transcript.trim();
+					console.log('Global Voice Command:', transcript);
+					
+					// ส่งไปประมวลผลที่ "สมองกล"
+					processGlobalCommand(transcript);
+				};
+
+				recognition.onerror = (event) => {
+					console.error(event.error);
+					if(event.error !== 'no-speech' && event.error !== 'aborted') {
+						showToast('ฟังไม่ทัน กรุณาลองใหม่', 'warning');
+					}
+				};
+
+				recognition.onend = () => {
+					// คืนค่าปุ่มสู่สภาพเดิม
+					btn.classList.add('from-blue-500', 'to-cyan-500');
+					btn.classList.remove('from-red-500', 'to-pink-500', 'scale-125', 'ring-4', 'ring-red-200');
+					icon.classList.add('fa-microphone');
+					icon.classList.remove('fa-ear-listen', 'fa-beat-fade');
+				};
+
+				try {
+					recognition.start();
+					showToast('พูดคำสั่งได้เลย... (เช่น "กลับบ้าน", "จ่ายค่าไฟ 500")', 'info');
+				} catch (e) {
+					console.warn(e);
+				}
+			}
+
+			// ==========================================
+			// GLOBAL BRAIN PROCESSOR V.2 (ฉบับสมองกลอัจฉริยะ)
+			// ==========================================
+			function processGlobalCommand(text) {
+				if (!text) return;
+				// ทำความสะอาดข้อความ
+				text = text.trim().replace(/[.。,]+$/, "").replace(/\s+/g, ' ');
+				const lowerText = text.toLowerCase();
+				
+				console.log("🧠 SMART BRAIN V.7 Analyzing:", text);
+
+				// ===== 1. PRIORITY: คำสั่งระบบด่วน =====
+				// ปิด/ยกเลิก ทุกอย่าง (Priority สูงสุด)
+				if (lowerText.match(/^(ปิด|ยกเลิก|หยุด|ออก|esc|cancel|ปิดหน้าต่าง|ไปต่อ)/)) {
+					closeEverything();
+					showToast('ยกเลิกแล้ว', 'info');
+					return;
+				}
+				
+				// บันทึก/ตกลง
+				if (lowerText.match(/^(บันทึก|เสร็จ|เรียบร้อย|save|ตกลง|ok|โอเค|ยืนยัน|ใช่)/)) {
+					const saved = clickSaveButton();
+					if (saved) return;
+				}
+				
+				// ความช่วยเหลือ
+				if (lowerText.match(/^(ช่วยเหลือ|ช่วย|help|คู่มือ|สอน|วิธีใช้|ใช้งาน)/)) {
+					showPage('page-guide');
+					speak("เปิดหน้าคู่มือการใช้งานแล้ว คุณสามารถถามเกี่ยวกับวิธีใช้ได้");
+					return;
+				}
+
+				// ===== 2. CONTEXT AWARE: เช็ค context ปัจจุบัน =====
+				const activeContext = detectCurrentContext();
+				console.log("Current Context:", activeContext);
+				
+				// ถ้ามี modal หรือ form เปิดอยู่ ให้ประมวลผลตาม context
+				if (activeContext !== 'home') {
+					const handled = handleContextualCommand(text, activeContext);
+					if (handled) return;
+				}
+
+				// ===== 3. SMART MENU NAVIGATION =====
+				const menuHandled = handleMenuNavigation(lowerText, text);
+				if (menuHandled) return;
+
+				// ===== 4. SMART DATA ENTRY =====
+				const dataHandled = handleSmartDataEntry(text, lowerText);
+				if (dataHandled) return;
+
+				// ===== 5. SMART SEARCH =====
+				const searchHandled = handleSmartSearch(text, lowerText);
+				if (searchHandled) return;
+
+				// ===== 6. SETTINGS & CONFIG =====
+				const settingsHandled = handleSmartSettings(text, lowerText);
+				if (settingsHandled) return;
+
+				// ===== 7. SMART TRANSACTION DETECTION =====
+				// ตรวจจับรายการธุรกรรมอัตโนมัติ
+				const transactionHandled = handleTransactionDetection(text, lowerText);
+				if (transactionHandled) return;
+
+				// ===== 8. FALLBACK: พยายามเดาความหมาย =====
+				handleFallbackCommand(text);
+			}
+
+			// ===== ฟังก์ชันช่วยตรวจจับ Context =====
+			function detectCurrentContext() {
+				// ตรวจสอบว่ามี modal เปิดอยู่ไหม
+				const modal = document.querySelector('.modal:not(.hidden), [class*="modal"]:not(.hidden)');
+				if (modal) {
+					if (modal.id === 'form-modal') return 'transaction-form';
+					if (modal.id === 'quick-draft-modal') return 'quick-draft';
+					if (modal.id.includes('recurring')) return 'recurring-form';
+					return 'modal';
+				}
+				
+				// ตรวจสอบ Swal
+				if (document.querySelector('.swal2-container')) return 'swal';
+				
+				// ตรวจสอบหน้า active
+				const activePage = document.querySelector('.page.active, [class*="page-"]:not(.hidden)');
+				if (activePage) {
+					if (activePage.id === 'page-list') return 'list';
+					if (activePage.id === 'page-calendar') return 'calendar';
+					if (activePage.id === 'page-accounts') return 'accounts';
+					if (activePage.id === 'page-settings') return 'settings';
+					if (activePage.id === 'page-guide') return 'guide';
+				}
+				
+				return 'home';
+			}
+
+			// ===== ฟังก์ชันจัดการคำสั่งตาม Context =====
+			function handleContextualCommand(text, context) {
+				const lowerText = text.toLowerCase();
+				
+				switch(context) {
+					case 'transaction-form':
+						// ในหน้าเพิ่มรายการ
+						if (lowerText.match(/^(ประเภท|หมวดหมู่|category)/)) {
+							document.getElementById('type-income').focus();
+							speak("เลือกประเภทรายการ กด 1 สำหรับรายรับ กด 2 สำหรับรายจ่าย");
+							return true;
+						}
+						if (lowerText.match(/^(จำนวน|เงิน|amount|บาท)/)) {
+							document.getElementById('amount').focus();
+							speak("กรุณาพูดจำนวนเงิน");
+							return true;
+						}
+						if (lowerText.match(/^(รายละเอียด|หมายเหตุ|note|อะไร)/)) {
+							document.getElementById('note').focus();
+							speak("กรุณาพูกรายละเอียด");
+							return true;
+						}
+						if (lowerText.match(/^(วันที่|date)/)) {
+							document.getElementById('date').focus();
+							speak("กรุณาพูดวันที่ในรูปแบบ วันเดือนปี");
+							return true;
+						}
+						break;
+						
+					case 'list':
+						// ในหน้ารายการ
+						if (lowerText.match(/^(เรียง|sort|จัด)/)) {
+							const sortBtn = document.querySelector('[data-sort]');
+							if (sortBtn) sortBtn.click();
+							speak("เรียงลำดับรายการแล้ว");
+							return true;
+						}
+						if (lowerText.match(/^(กรอง|filter|เฉพาะ)/)) {
+							document.getElementById('adv-filter-search').focus();
+							speak("กรุณาพูดคำค้นหาที่ต้องการกรอง");
+							return true;
+						}
+						if (lowerText.match(/^(ส่งออก|export|excel|พิมพ์)/)) {
+							exportData();
+							speak("กำลังส่งออกข้อมูล");
+							return true;
+						}
+						break;
+						
+					case 'calendar':
+						// ในหน้าปฏิทิน
+						if (lowerText.match(/^(วันนี้|today)/)) {
+							// กลับไปที่วันปัจจุบัน
+							if (typeof calendar !== 'undefined') calendar.today();
+							speak("แสดงวันนี้");
+							return true;
+						}
+						if (lowerText.match(/^(เดือนหน้า|next)/)) {
+							if (typeof calendar !== 'undefined') calendar.next();
+							speak("แสดงเดือนหน้า");
+							return true;
+						}
+						if (lowerText.match(/^(เดือนก่อน|previous)/)) {
+							if (typeof calendar !== 'undefined') calendar.prev();
+							speak("แสดงเดือนก่อนหน้า");
+							return true;
+						}
+						break;
+				}
+				
+				return false;
+			}
+
+			// ===== ฟังก์ชันเมนูอัจฉริยะ =====
+			function handleMenuNavigation(lowerText, originalText) {
+				// แมปคำสั่งกับหน้า
+				const menuMap = {
+					'หน้าแรก|home|หลัก|dashboard|เริ่มต้น': 'page-home',
+					'รายการ|ประวัติ|list|ทั้งหมด|transaction': 'page-list',
+					'ปฏิทิน|calendar|ตาราง|นัดหมาย': 'page-calendar',
+					'บัญชี|account|ธนาคาร|กระเป๋า': 'page-accounts',
+					'ตั้งค่า|setting|config|configuration|เครื่องมือ': 'page-settings',
+					'คู่มือ|guide|help|วิธีใช้|สอน': 'page-guide',
+					'รายงาน|report|สถิติ|graph|กราฟ': 'page-reports',
+					'แจ้งเตือน|notification|reminder|เตือน': 'page-calendar',
+					'หมวดหมู่|category|กลุ่ม|ประเภท': 'page-settings',
+					'เป้าหมาย|goal|target|วัตถุประสงค์': 'page-goals',
+					'งบประมาณ|budget|แผนการใช้จ่าย': 'page-budget'
+				};
+				
+				// ตรวจสอบคำสั่งเปิด/ไปที่
+				for (const [keywords, pageId] of Object.entries(menuMap)) {
+					const regex = new RegExp(`(เปิด|ไป|ไปที่|ดู|แสดง|ที่|หน้า|เมนู)\\s*(${keywords})`, 'i');
+					if (regex.test(originalText) || lowerText === keywords.split('|')[0]) {
+						showPage(pageId);
+						
+						// พูดคำอธิบายเพิ่มเติม
+						const pageNames = {
+							'page-home': 'หน้าแรก ภาพรวมทั้งหมด',
+							'page-list': 'หน้ารายการ รายรับรายจ่ายทั้งหมด',
+							'page-calendar': 'หน้าปฏิทิน แสดงตามวันที่',
+							'page-accounts': 'หน้าบัญชี การเงินทั้งหมด',
+							'page-settings': 'หน้าตั้งค่า กำหนดค่าต่างๆ',
+							'page-guide': 'หน้าคู่มือ วิธีการใช้งาน'
+						};
+						
+						speak(`เปิด${pageNames[pageId] || pageId}แล้ว`);
+						return true;
+					}
+				}
+				
+				// คำสั่งย่อยในเมนูตั้งค่า
+				if (lowerText.includes('ตั้งค่า')) {
+					const settingsMap = {
+						'ธีม|theme|สี|โหมด': 'theme-settings',
+						'ภาษา|language|ไทย|อังกฤษ': 'language-settings',
+						'เสียง|sound|พูด|voice': 'voice-settings',
+						'แจ้งเตือน|notification': 'notification-settings',
+						'ข้อมูล|data|สำรอง|backup': 'backup-settings',
+						'ความปลอดภัย|security|รหัส': 'security-settings',
+						'เกี่ยวกับ|about|เวอร์ชั่น': 'about-section'
+					};
+					
+					for (const [key, sectionId] of Object.entries(settingsMap)) {
+						if (lowerText.includes(key)) {
+							showPage('page-settings');
+							setTimeout(() => {
+								const section = document.getElementById(sectionId);
+								if (section && section.classList.contains('hidden')) {
+									const toggleBtn = document.querySelector(`[data-target="${sectionId}"]`);
+									if (toggleBtn) toggleBtn.click();
+								}
+								section.scrollIntoView({ behavior: 'smooth' });
+							}, 300);
+							return true;
+						}
+					}
+				}
+				
+				return false;
+			}
+
+			// ===== ฟังก์ชันใส่ข้อมูลอัจฉริยะ =====
+			function handleSmartDataEntry(text, lowerText) {
+				// จดบันทึกด่วน
+				if (lowerText.match(/^(จด|โน้ต|บันทึก|note|draft|จดไว|ช่วยจำ)\s*(.+)/)) {
+					openQuickDraftModal();
+					const content = text.replace(/^(จด|โน้ต|บันทึก|note|draft|จดไว|ช่วยจำ)\s*/i, '');
+					smartParseContent(content);
+					return true;
+				}
+				
+				// เพิ่มบัญชีใหม่
+				if (lowerText.match(/^(เพิ่ม|สร้าง)บัญชี\s*(.+)/)) {
+					showPage('page-accounts');
+					const accountName = text.replace(/^(เพิ่ม|สร้าง)บัญชี\s*/i, '');
+					setTimeout(() => {
+						document.getElementById('input-account-name').value = accountName;
+						document.getElementById('input-account-name').focus();
+						speak(`เตรียมเพิ่มบัญชี ${accountName} กรุณาระบุยอดเริ่มต้น`);
+					}, 500);
+					return true;
+				}
+				
+				// เพิ่มหมวดหมู่
+				if (lowerText.match(/^(เพิ่ม|สร้าง)หมวดหมู่\s*(.+)/)) {
+					showPage('page-settings');
+					const categoryName = text.replace(/^(เพิ่ม|สร้าง)หมวดหมู่\s*/i, '');
+					setTimeout(() => {
+						const categorySection = document.getElementById('category-settings');
+						if (categorySection && categorySection.classList.contains('hidden')) {
+							document.querySelector('[data-target="category-settings"]').click();
+						}
+						document.getElementById('new-category-name').value = categoryName;
+						document.getElementById('new-category-name').focus();
+						speak(`เตรียมเพิ่มหมวดหมู่ ${categoryName} กรุณาเลือกสีและประเภท`);
+					}, 500);
+					return true;
+				}
+				
+				return false;
+			}
+
+			// ===== ฟังก์ชันค้นหาอัจฉริยะ =====
+			function handleSmartSearch(text, lowerText) {
+				// ค้นหาทั่วไป
+				const searchMatch = lowerText.match(/^(ค้นหา|หา|search|filter|กรอง|ดู)\s+(.+)/);
+				if (searchMatch) {
+					const keyword = searchMatch[2].trim();
+					showPage('page-list');
+					
+					setTimeout(() => {
+						// ค้นหาหลายช่อง
+						const searchInput = document.getElementById('adv-filter-search') || 
+										  document.querySelector('input[type="search"]') ||
+										  document.querySelector('input[placeholder*="ค้นหา"]');
+						
+						if (searchInput) {
+							searchInput.value = keyword;
+							searchInput.focus();
+							
+							// สร้างและส่ง event input
+							const event = new Event('input', { bubbles: true });
+							searchInput.dispatchEvent(event);
+							
+							// สร้างและส่ง event change
+							const changeEvent = new Event('change', { bubbles: true });
+							searchInput.dispatchEvent(changeEvent);
+							
+							// พูดผลลัพธ์
+							setTimeout(() => {
+								const results = document.querySelectorAll('.transaction-item, .list-item');
+								speak(`พบ ${results.length} รายการที่ตรงกับ "${keyword}"`);
+							}, 800);
+						}
+					}, 300);
+					return true;
+				}
+				
+				// ค้นหาเฉพาะ
+				if (lowerText.match(/^(รายจ่าย|จ่าย|เสีย|outcome|expense)/)) {
+					filterByType('expense');
+					speak("แสดงรายจ่ายทั้งหมด");
+					return true;
+				}
+				
+				if (lowerText.match(/^(รายรับ|รับ|ได้|income|revenue)/)) {
+					filterByType('income');
+					speak("แสดงรายรับทั้งหมด");
+					return true;
+				}
+				
+				// ค้นหาตามช่วงเวลา
+				const timeMatch = lowerText.match(/(วันนี้|เมื่อวาน|สัปดาห์นี้|เดือนนี้|ปีนี้|7วัน|30วัน)/);
+				if (timeMatch) {
+					applyTimeFilter(timeMatch[1]);
+					speak(`แสดงข้อมูล${timeMatch[1]}`);
+					return true;
+				}
+				
+				return false;
+			}
+
+			// ===== ฟังก์ชันตั้งค่าอัจฉริยะ =====
+			function handleSmartSettings(text, lowerText) {
+				// เปลี่ยนธีม
+				if (lowerText.match(/^(โหมดมืด|dark|ดำ|night)/)) {
+					document.getElementById('toggle-dark-mode').click();
+					speak("เปลี่ยนเป็นโหมดมืดแล้ว");
+					return true;
+				}
+				
+				if (lowerText.match(/^(โหมดสว่าง|light|ขาว|day)/)) {
+					document.getElementById('toggle-dark-mode').click();
+					speak("เปลี่ยนเป็นโหมดสว่างแล้ว");
+					return true;
+				}
+				
+				// เปลี่ยนภาษา
+				if (lowerText.match(/^(ภาษาไทย|ไทย|thai)/)) {
+					setLanguage('th');
+					speak("เปลี่ยนภาษาเป็นไทยแล้ว");
+					return true;
+				}
+				
+				if (lowerText.match(/^(ภาษาอังกฤษ|อังกฤษ|english)/)) {
+					setLanguage('en');
+					speak("เปลี่ยนภาษาเป็นอังกฤษแล้ว");
+					return true;
+				}
+				
+				// ควบคุมเสียง
+				if (lowerText.match(/^(เสียงเปิด|พูด|เสียง|voice on)/)) {
+					localStorage.setItem('voiceEnabled', 'true');
+					speak("เปิดเสียงพูดแล้ว");
+					return true;
+				}
+				
+				if (lowerText.match(/^(เสียงปิด|เงียบ|mute|silent)/)) {
+					localStorage.setItem('voiceEnabled', 'false');
+					speak("ปิดเสียงพูดแล้ว");
+					return true;
+				}
+				
+				// สำรองข้อมูล
+				if (lowerText.match(/^(สำรอง|backup|export|เก็บ)/)) {
+					exportBackup();
+					speak("กำลังสำรองข้อมูล กรุณารอสักครู่");
+					return true;
+				}
+				
+				// นำเข้าข้อมูล
+				if (lowerText.match(/^(กู้คืน|restore|import|นำเข้า)/)) {
+					document.getElementById('restore-backup').click();
+					speak("เตรียมนำเข้าข้อมูล กรุณาเลือกไฟล์");
+					return true;
+				}
+				
+				return false;
+			}
+
+			// ===== ฟังก์ชันตรวจจับธุรกรรมอัตโนมัติ =====
+			function handleTransactionDetection(text, lowerText) {
+				// ตรวจจับรูปแบบเงิน
+				const amountMatch = text.match(/(\d[\d,]*\.?\d*)\s*(บาท|฿|baht|bath)?/);
+				if (!amountMatch) return false;
+				
+				const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+				
+				// ตรวจจับประเภท
+				const isExpense = lowerText.match(/(จ่าย|ซื้อ|ค่า|ชำระ|เสีย|โอนออก|ให้|ส่ง|transfer|pay)/);
+				const isIncome = lowerText.match(/(รับ|ได้|เงินเดือน|โอนเข้า|เบิก|withdraw|income)/);
+				
+				// ตรวจจับหมวดหมู่
+				let category = detectCategory(text);
+				
+				// ตรวจจับวันที่
+				let date = detectDate(text);
+				
+				// เปิดฟอร์ม
+				openModal();
+				
+				// กรอกข้อมูลอัตโนมัติ
+				setTimeout(() => {
+					if (isExpense) {
+						document.getElementById('type-expense').checked = true;
+					} else if (isIncome) {
+						document.getElementById('type-income').checked = true;
+					}
+					
+					document.getElementById('amount').value = amount;
+					
+					// ตั้งค่าหมวดหมู่ถ้าตรวจพบ
+					if (category) {
+						const categorySelect = document.getElementById('category');
+						if (categorySelect) {
+							for (let i = 0; i < categorySelect.options.length; i++) {
+								if (categorySelect.options[i].text.toLowerCase().includes(category)) {
+									categorySelect.selectedIndex = i;
+									break;
+								}
+							}
+						}
+					}
+					
+					// ตั้งค่าวันที่
+					if (date) {
+						document.getElementById('date').value = date;
+					}
+					
+					// ดึงรายละเอียด
+					let note = text
+						.replace(amountMatch[0], '')
+						.replace(/(จ่าย|ซื้อ|ค่า|รับ|ได้|โอน|ให้|ส่ง)/g, '')
+						.trim();
+					
+					if (note) {
+						document.getElementById('note').value = note;
+					}
+					
+					speak(`เตรียมบันทึกรายการ ${isExpense ? 'รายจ่าย' : 'รายรับ'} ${amount} บาท${category ? ` ในหมวดหมู่ ${category}` : ''}`);
+					
+				}, 300);
+				
+				return true;
+			}
+
+			// ===== ฟังก์ชันช่วยเหลือเมื่อไม่เข้าใจ =====
+			function handleFallbackCommand(text) {
+				console.warn("ไม่เข้าใจคำสั่ง:", text);
+				
+				// พยายามเรียนรู้คำสั่งใหม่
+				if (text.length > 3) {
+					Swal.fire({
+						title: 'ไม่เข้าใจคำสั่ง',
+						text: `"${text}"\n\nคุณต้องการทำอะไรกับคำสั่งนี้?`,
+						icon: 'question',
+						showCancelButton: true,
+						confirmButtonText: 'เพิ่มรายการ',
+						cancelButtonText: 'ค้นหา',
+						showDenyButton: true,
+						denyButtonText: 'บันทึกโน้ต',
+						buttonsStyling: false,
+						customClass: {
+							confirmButton: 'btn btn-success',
+							cancelButton: 'btn btn-info',
+							denyButton: 'btn btn-secondary'
+						}
+					}).then((result) => {
+						if (result.isConfirmed) {
+							// เพิ่มเป็นรายการ
+							openModal();
+							setTimeout(() => {
+								document.getElementById('note').value = text;
+								document.getElementById('note').focus();
+							}, 300);
+						} else if (result.isDenied) {
+							// เพิ่มเป็นโน้ต
+							openQuickDraftModal();
+							setTimeout(() => {
+								document.getElementById('draft-note').value = text;
+							}, 300);
+						} else if (result.dismiss === Swal.DismissReason.cancel) {
+							// ค้นหา
+							showPage('page-list');
+							setTimeout(() => {
+								const searchInput = document.getElementById('adv-filter-search');
+								if (searchInput) {
+									searchInput.value = text;
+									searchInput.dispatchEvent(new Event('input'));
+								}
+							}, 300);
+						}
+					});
+				} else {
+					showToast('ไม่เข้าใจคำสั่ง: ' + text, 'info');
+					speak('ขอโทษค่ะ ไม่เข้าใจคำสั่ง กรุณาพูดใหม่อีกครั้ง');
+				}
+			}
+
+			// ===== ฟังก์ชันตรวจจับหมวดหมู่ =====
+			function detectCategory(text) {
+				const categories = {
+					'อาหาร': ['ข้าว', 'อาหาร', 'กิน', 'ร้าน', 'อาหาร', 'น้ำ', 'เครื่องดื่ม', 'กาแฟ'],
+					'เดินทาง': ['รถ', 'น้ำมัน', 'แท็กซี่', 'รถเมล์', 'บีทีเอส', 'เอ็มอาร์ที', 'ทางด่วน'],
+					'ช้อปปิ้ง': ['ซื้อ', 'ช้อป', 'ของ', 'สินค้า', 'ออนไลน์', 'ลาซาด้า', 'ช้อปปี้'],
+					'บันเทิง': ['หนัง', 'คอนเสิร์ต', 'เที่ยว', 'เล่น', 'เกม', 'เน็ต', 'อินเทอร์เน็ต'],
+					'การศึกษา': ['หนังสือ', 'เรียน', 'คอร์ส', 'ติว', 'การศึกษา'],
+					'สุขภาพ': ['หมอ', 'ยา', 'โรงพยาบาล', 'ตรวจ', 'สุขภาพ', 'ออกกำลังกาย'],
+					'บิล': ['ค่าไฟ', 'ค่าน้ำ', 'อินเทอร์เน็ต', 'โทรศัพท์', 'บิล', 'ค่าใช้จ่าย'],
+					'เงินเดือน': ['เงินเดือน', 'รายได้', 'ค่าจ้าง', 'งาน'],
+					'โอน': ['โอน', 'ส่ง', 'ให้', 'รับ']
+				};
+				
+				const lowerText = text.toLowerCase();
+				for (const [category, keywords] of Object.entries(categories)) {
+					for (const keyword of keywords) {
+						if (lowerText.includes(keyword)) {
+							return category;
+						}
+					}
+				}
+				
+				return null;
+			}
+
+			// ===== ฟังก์ชันตรวจจับวันที่ =====
+			function detectDate(text) {
+				const today = new Date();
+				const tomorrow = new Date(today);
+				tomorrow.setDate(tomorrow.getDate() + 1);
+				
+				const yesterday = new Date(today);
+				yesterday.setDate(yesterday.getDate() - 1);
+				
+				const formatDate = (date) => date.toISOString().split('T')[0];
+				
+				if (text.match(/(วันนี้|today|now)/i)) {
+					return formatDate(today);
+				}
+				
+				if (text.match(/(พรุ่งนี้|tomorrow)/i)) {
+					return formatDate(tomorrow);
+				}
+				
+				if (text.match(/(เมื่อวาน|yesterday)/i)) {
+					return formatDate(yesterday);
+				}
+				
+				// พยายามตรวจจับวันที่ไทย
+				const thaiDateMatch = text.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{2,4})/);
+				if (thaiDateMatch) {
+					let [_, day, month, year] = thaiDateMatch;
+					year = year.length === 2 ? `25${year}` : year;
+					return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+				}
+				
+				return formatDate(today); // ค่าเริ่มต้นเป็นวันนี้
+			}
+
+			// ===== ฟังก์ชันปิดทุกอย่าง =====
+			function closeEverything() {
+				// ปิด modal ทั้งหมด
+				if (typeof closeModal === 'function') closeModal();
+				if (typeof closeRecurringModal === 'function') closeRecurringModal();
+				if (typeof closeQuickDraftModal === 'function') closeQuickDraftModal();
+				
+				// ปิด Swal
+				if (typeof Swal !== 'undefined') {
+					Swal.close();
+				}
+				
+				// ซ่อน dropdown ทั้งหมด
+				document.querySelectorAll('.dropdown-content').forEach(el => {
+					el.classList.add('hidden');
+				});
+			}
+
+			// ===== ฟังก์ชันคลิกปุ่มบันทึก =====
+			function clickSaveButton() {
+				let saved = false;
+				
+				// ลองหาปุ่มบันทึกในลำดับความสำคัญ
+				const saveButtons = [
+					document.querySelector('#transaction-form button[type="submit"]'),
+					document.getElementById('btn-save-custom-notify'),
+					document.querySelector('.swal2-confirm'),
+					document.querySelector('.btn-save'),
+					document.querySelector('.btn-confirm'),
+					document.querySelector('button[type="submit"]:not([disabled])')
+				];
+				
+				for (const btn of saveButtons) {
+					if (btn && !btn.disabled && window.getComputedStyle(btn).display !== 'none') {
+						btn.click();
+						saved = true;
+						break;
+					}
+				}
+				
+				return saved;
+			}
+
+			// ===== ฟังก์ชันกรองตามประเภท =====
+			function filterByType(type) {
+				showPage('page-list');
+				setTimeout(() => {
+					const typeFilter = document.getElementById('filter-type');
+					if (typeFilter) {
+						typeFilter.value = type;
+						typeFilter.dispatchEvent(new Event('change'));
+					}
+				}, 300);
+			}
+
+			// ===== ฟังก์ชันกรองตามเวลา =====
+			function applyTimeFilter(timePeriod) {
+				showPage('page-list');
+				setTimeout(() => {
+					const periodMap = {
+						'วันนี้': 'today',
+						'เมื่อวาน': 'yesterday',
+						'สัปดาห์นี้': 'this_week',
+						'เดือนนี้': 'this_month',
+						'ปีนี้': 'this_year',
+						'7วัน': 'last_7_days',
+						'30วัน': 'last_30_days'
+					};
+					
+					const timeFilter = document.getElementById('filter-period');
+					if (timeFilter && periodMap[timePeriod]) {
+						timeFilter.value = periodMap[timePeriod];
+						timeFilter.dispatchEvent(new Event('change'));
+					}
+				}, 300);
+			}
+
+			// ===== ฟังก์ชันพูด =====
+			function speak(text) {
+				if (localStorage.getItem('voiceEnabled') !== 'false' && 'speechSynthesis' in window) {
+					const utterance = new SpeechSynthesisUtterance(text);
+					utterance.lang = 'th-TH';
+					utterance.rate = 1.0;
+					utterance.pitch = 1.0;
+					window.speechSynthesis.speak(utterance);
 				}
 			}
 			
