@@ -3030,8 +3030,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn) handleDeleteFrequentItem(btn);
         });
         getEl('btn-backup').addEventListener('click', handleBackup);
-		const btnUpdate = document.getElementById('btn-system-update');
-		if (btnUpdate) btnUpdate.addEventListener('click', handleSystemUpdate);
         getEl('btn-import').addEventListener('click', () => getEl('import-file-input').click());
         getEl('import-file-input').addEventListener('change', handleImport);
         getEl('btn-clear-all').addEventListener('click', handleClearAll);
