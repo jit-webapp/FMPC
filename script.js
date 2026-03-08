@@ -13508,15 +13508,23 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 				if(container) container.classList.remove('hidden');
 
+				// ลงทะเบียน Plugin ถ้ามี (ป้องกัน error)
+				if (typeof ChartDataLabels !== 'undefined') {
+					Chart.register(ChartDataLabels);
+				}
+
 				// 1. เตรียมข้อมูล
 				// ------------------------------------------
 				const catMap = {};
+				let totalAmount = 0; // ยอดรวมทั้งหมดสำหรับหาเปอร์เซ็นต์
 				filteredData.forEach(tx => {
+					// ตามเงื่อนไขเดิม
 					if (state.advFilterType === 'all' && tx.type !== 'expense') return; 
 					if (state.advFilterType !== 'all' && tx.type !== state.advFilterType) return;
 
 					const cat = tx.category || 'อื่นๆ';
 					catMap[cat] = (catMap[cat] || 0) + tx.amount;
+					totalAmount += tx.amount;
 				});
 
 				const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
@@ -13524,8 +13532,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				const catData = [];
 				let otherSum = 0;
 				
+				// จัดการกลุ่ม "อื่นๆ" ถ้ามีหลายหมวดหมู่เกินไป (มากกว่า 6 เพื่อความสวยงาม)
 				sortedCats.forEach((item, index) => {
-					if (index < 5) {
+					if (index < 6) {
 						catLabels.push(item[0]);
 						catData.push(item[1]);
 					} else {
@@ -13537,6 +13546,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					catData.push(otherSum);
 				}
 
+				// เตรียมข้อมูลสำหรับกราฟเส้นเวลา (Time Trend)
 				const dateMap = {};
 				const sortedByDate = [...filteredData].sort((a, b) => new Date(a.date) - new Date(b.date));
 				
@@ -13544,21 +13554,33 @@ document.addEventListener('DOMContentLoaded', () => {
 					if (state.advFilterType !== 'all' && tx.type !== state.advFilterType) return;
 					
 					const d = new Date(tx.date);
-					const dateKey = `${d.getDate()}/${d.getMonth()+1}`;
+					// Format วันที่แบบสั้นๆ แต่อ่านง่าย (เช่น 01/12)
+					const dateKey = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}`;
 					dateMap[dateKey] = (dateMap[dateKey] || 0) + tx.amount;
 				});
 				const timeLabels = Object.keys(dateMap);
 				const timeData = Object.values(dateMap);
 
-
-				// 2. ตั้งค่าสี (Color Config)
+				// 2. ตั้งค่าสี (Color Config แบบพรีเมียม / ไม่ฉูดฉาด)
 				// ------------------------------------------
-				// เช็คว่ากำลังเปิด Dark Mode อยู่หรือไม่
 				const isDark = state.isDarkMode || document.body.classList.contains('dark');
-				const textColor = isDark ? '#e5e7eb' : '#4b5563';  // สีขาวเทา vs สีเทาเข้ม
-				const gridColor = isDark ? '#374151' : '#e5e7eb'; // สีเส้น Grid
+				const textColor = isDark ? '#e5e7eb' : '#6b7280';
+				const gridColor = isDark ? '#374151' : '#f3f4f6';
+				const tooltipBg = isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+				const tooltipText = isDark ? '#f9fafb' : '#111827';
+				
+				// โทนสี Pastel สบายตา 
+				const colorPalette = [
+					'#818cf8', // Indigo
+					'#34d399', // Emerald
+					'#fbbf24', // Amber
+					'#f472b6', // Pink
+					'#60a5fa', // Blue
+					'#a78bfa', // Violet
+					'#9ca3af'  // Gray (อื่นๆ)
+				];
 
-				// --- Graph 1: Doughnut ---
+				// --- Graph 1: Doughnut (หมวดหมู่) ---
 				if (chartInstanceCategory) chartInstanceCategory.destroy();
 				
 				if (ctxCat) {
@@ -13568,78 +13590,186 @@ document.addEventListener('DOMContentLoaded', () => {
 							labels: catLabels,
 							datasets: [{
 								data: catData,
-								backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#C9CBCF'],
-								borderWidth: 0,
-								hoverOffset: 10
+								backgroundColor: colorPalette.slice(0, catLabels.length),
+								borderWidth: isDark ? 2 : 3,
+								borderColor: isDark ? '#1f2937' : '#ffffff',
+								hoverOffset: 15,
+								borderRadius: 6 // ขอบมนนิดๆ
 							}]
 						},
 						options: {
 							responsive: true,
 							maintainAspectRatio: false,
-							layout: { padding: 0 },
-							cutout: '65%',
+							layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+							cutout: '70%', // รูกลางกว้างขึ้นให้ดูโมเดิร์น
 							plugins: {
 								legend: { 
-									position: 'top', 
-									align: 'start',
+									position: 'right', // ย้ายมาขวาให้ดูเป็นสัดส่วน
+									align: 'center',
 									labels: { 
-										boxWidth: 10, 
-										padding: 10, 
-										font: { size: 11, family: "'Prompt', sans-serif" },
+										boxWidth: 12, 
+										padding: 15, 
+										font: { size: 12, family: "'Prompt', sans-serif", weight: '500' },
 										usePointStyle: true,
-										color: textColor // ปรับสีตัวอักษร Legend
+										pointStyle: 'circle',
+										color: textColor 
 									} 
 								},
 								tooltip: {
+									backgroundColor: tooltipBg,
+									titleColor: tooltipText,
+									bodyColor: tooltipText,
+									borderColor: isDark ? '#4b5563' : '#e5e7eb',
+									borderWidth: 1,
+									padding: 12,
+									boxPadding: 6,
+									usePointStyle: true,
 									callbacks: {
 										label: function(context) {
-											return ' ' + context.label + ': ' + formatCurrency(context.raw);
+											const val = context.raw;
+											const percentage = totalAmount > 0 ? ((val / totalAmount) * 100).toFixed(1) : 0;
+											return ` ${context.label}: ${formatCurrency(val)} (${percentage}%)`;
 										}
 									}
+								},
+								// ตั้งค่า DataLabels (แสดงเปอร์เซ็นต์บนกราฟถ้าพื้นที่พอ)
+								datalabels: {
+									display: function(context) {
+										// ซ่อนถ้าค่าน้อยกว่า 5% เพื่อไม่ให้รก
+										const val = context.dataset.data[context.dataIndex];
+										return (val / totalAmount) > 0.05;
+									},
+									color: '#ffffff',
+									font: {
+										family: "'Prompt', sans-serif",
+										weight: 'bold',
+										size: 11
+									},
+									formatter: (value) => {
+										return ((value / totalAmount) * 100).toFixed(0) + '%';
+									},
+									textShadowBlur: 4,
+									textShadowColor: 'rgba(0,0,0,0.3)'
 								}
 							}
-						}
+						},
+						// วาดข้อความรวมตรงกลาง Doughnut
+						plugins: [{
+							id: 'centerText',
+							beforeDraw: function(chart) {
+								const width = chart.width, height = chart.height, ctx = chart.ctx;
+								ctx.restore();
+								
+								// คำนวณหาจุดกึ่งกลาง (ปรับ offset ตาม legend ทางขวา)
+								const chartArea = chart.chartArea;
+								const centerX = (chartArea.left + chartArea.right) / 2;
+								const centerY = (chartArea.top + chartArea.bottom) / 2;
+								
+								ctx.textBaseline = 'middle';
+								ctx.textAlign = 'center';
+
+								// วาดหัวข้อ "รวมทั้งหมด"
+								ctx.font = `normal 11px 'Prompt', sans-serif`;
+								ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+								ctx.fillText("ยอดรวม", centerX, centerY - 10);
+
+								// วาดจำนวนเงิน
+								let displayTotal = formatCurrency(totalAmount);
+								const fontSize = displayTotal.length > 10 ? 12 : 14;
+								ctx.font = `bold ${fontSize}px 'Prompt', sans-serif`;
+								ctx.fillStyle = isDark ? '#e5e7eb' : '#1f2937';
+								
+								ctx.fillText(displayTotal, centerX, centerY + 10);
+								ctx.save();
+							}
+						}]
 					});
 				}
 
-				// --- Graph 2: Bar ---
+				// --- Graph 2: Area / Line Chart (แนวโน้มเวลา) ---
 				if (chartInstanceTime) chartInstanceTime.destroy();
 
 				if (ctxTime) {
+					// สร้าง Gradient สวยๆ สำหรับกราฟเส้น
+					const ctx = ctxTime.getContext('2d');
+					const gradientFill = ctx.createLinearGradient(0, 0, 0, 300);
+					gradientFill.addColorStop(0, isDark ? 'rgba(129, 140, 248, 0.5)' : 'rgba(99, 102, 241, 0.25)'); // บนสุดเข้ม
+					gradientFill.addColorStop(1, isDark ? 'rgba(129, 140, 248, 0.01)' : 'rgba(99, 102, 241, 0.01)'); // ล่างสุดจาง
+
 					chartInstanceTime = new Chart(ctxTime, {
-						type: 'bar',
+						type: 'line', // เปลี่ยนจาก Bar เป็น Line + Area
 						data: {
 							labels: timeLabels,
 							datasets: [{
-								label: 'ยอดเงิน',
+								label: 'ยอดเงิน (บาท)',
 								data: timeData,
-								backgroundColor: '#8b5cf6',
-								borderRadius: 4,
-								barPercentage: 0.7,
+								borderColor: '#6366f1', // Indigo 500
+								backgroundColor: gradientFill,
+								borderWidth: 3,
+								pointBackgroundColor: '#ffffff',
+								pointBorderColor: '#6366f1',
+								pointBorderWidth: 2,
+								pointRadius: timeData.length > 15 ? 0 : 4, // ซ่อนจุดถ้าข้อมูลเยอะเกิน
+								pointHoverRadius: 6,
+								fill: true, // ทำให้เป็น Area Chart
+								tension: 0.4 // เส้นโค้งสมูท
 							}]
 						},
 						options: {
 							responsive: true,
 							maintainAspectRatio: false,
-							layout: { padding: { top: 10, bottom: 0, left: 0, right: 0 } },
+							interaction: {
+								mode: 'index',
+								intersect: false, // เอาเม้าส์ชี้แถวๆ เส้นก็ขึ้น Tooltip เลย
+							},
+							layout: { padding: { top: 10, bottom: 5, left: 0, right: 10 } },
 							plugins: {
 								legend: { display: false },
 								tooltip: {
-									callbacks: { label: (c) => formatCurrency(c.raw) }
+									backgroundColor: tooltipBg,
+									titleColor: tooltipText,
+									bodyColor: tooltipText,
+									borderColor: isDark ? '#4b5563' : '#e5e7eb',
+									borderWidth: 1,
+									padding: 12,
+									displayColors: false,
+									callbacks: { 
+										label: (c) => `ยอดเงิน: ${formatCurrency(c.raw)}` 
+									}
+								},
+								datalabels: {
+									display: false // ปิด Datalabels สำหรับกราฟเส้นเวลาเพราะจะรกเกินไป
 								}
 							},
 							scales: {
 								x: { 
-									grid: { display: false }, 
+									grid: { 
+										display: false,
+										drawBorder: false
+									}, 
 									ticks: { 
-										font: { size: 10 }, 
-										maxRotation: 0, 
+										font: { size: 11, family: "'Prompt', sans-serif" }, 
+										maxRotation: 45, 
 										autoSkip: true,
-										color: textColor // ปรับสีตัวอักษรแกน X
+										maxTicksLimit: 7, // ไม่ให้แกน x แน่นเกิน
+										color: textColor 
 									} 
 								},
 								y: { 
-									display: false, 
+									grid: { 
+										color: gridColor,
+										borderDash: [5, 5], // เส้นประบางๆ
+										drawBorder: false
+									},
+									ticks: {
+										font: { size: 10, family: "'Prompt', sans-serif" },
+										color: textColor,
+										callback: function(value) {
+											if (value >= 1000000) return (value / 1000000) + 'M';
+											if (value >= 1000) return (value / 1000) + 'k';
+											return value;
+										}
+									},
 									beginAtZero: true 
 								}
 							}

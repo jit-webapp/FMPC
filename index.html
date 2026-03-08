@@ -358,48 +358,49 @@
 							</div>
 						</div>
 
-						<div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border border-purple-100 dark:border-gray-700 rounded-lg p-3 mt-2 transition-colors duration-200">
-							<div class="flex justify-between items-center text-xs text-gray-500 mb-2">
+						<div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border border-purple-100 dark:border-gray-700 rounded-lg p-3 md:p-5 mt-2 transition-colors duration-200 w-full">
+							
+							<div class="flex justify-between items-center text-xs md:text-sm text-gray-500 mb-3">
 								<span><i class="fa-solid fa-chart-simple mr-1"></i>สรุปยอด (ตามรายการที่เห็น)</span>
-								
-								<div id="analytics-section" class="mt-4 mb-6 hidden">
-									<div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-										
-										<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-3 h-80 flex flex-col transition-colors duration-200">
-											<h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2 flex-shrink-0">
-												<i class="fa-solid fa-chart-pie text-purple-500"></i> สัดส่วนหมวดหมู่
-											</h3>
-											<div class="relative w-full flex-grow min-h-0">
-												<canvas id="chart-category"></canvas>
-											</div>
-										</div>
-
-										<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-3 h-80 flex flex-col transition-colors duration-200">
-											<h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2 flex-shrink-0">
-												<i class="fa-solid fa-chart-column text-blue-500"></i> แนวโน้มช่วงเวลา
-											</h3>
-											<div class="relative w-full flex-grow min-h-0">
-												<canvas id="chart-time"></canvas>
-											</div>
-										</div>
-
-									</div>
-								</div>
-								
-								<span id="dyn-count-display" class="bg-white px-2 py-0.5 rounded-full border border-gray-200">0 รายการ</span>
+								<span id="dyn-count-display" class="bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm font-medium">0 รายการ</span>
 							</div>
-							<div class="grid grid-cols-3 gap-2 text-center divide-x divide-gray-200">
+
+							<div id="analytics-section" class="mt-4 mb-6 hidden w-full">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full h-full">
+									
+									<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-4 min-h-[320px] md:min-h-[350px] lg:min-h-[420px] flex flex-col transition-colors duration-200 w-full">
+										<h3 class="text-sm md:text-base font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2 flex-shrink-0">
+											<i class="fa-solid fa-chart-pie text-purple-500"></i> สัดส่วนหมวดหมู่
+										</h3>
+										<div class="relative w-full flex-grow min-h-[250px]">
+											<canvas id="chart-category"></canvas>
+										</div>
+									</div>
+
+									<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-4 min-h-[320px] md:min-h-[350px] lg:min-h-[420px] flex flex-col transition-colors duration-200 w-full">
+										<h3 class="text-sm md:text-base font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2 flex-shrink-0">
+											<i class="fa-solid fa-chart-column text-blue-500"></i> แนวโน้มช่วงเวลา
+										</h3>
+										<div class="relative w-full flex-grow min-h-[250px]">
+											<canvas id="chart-time"></canvas>
+										</div>
+									</div>
+
+								</div>
+							</div>
+							
+							<div class="grid grid-cols-3 gap-2 text-center divide-x divide-gray-200 w-full bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
 								<div>
-									<div class="text-[10px] text-gray-500">รวมรายรับ</div>
-									<div id="dyn-sum-income" class="text-sm md:text-base font-bold text-green-600">0</div>
+									<div class="text-[10px] md:text-xs text-gray-500 mb-1">รวมรายรับ</div>
+									<div id="dyn-sum-income" class="text-sm md:text-lg font-bold text-green-600">0</div>
 								</div>
 								<div>
-									<div class="text-[10px] text-gray-500">รวมรายจ่าย</div>
-									<div id="dyn-sum-expense" class="text-sm md:text-base font-bold text-red-600">0</div>
+									<div class="text-[10px] md:text-xs text-gray-500 mb-1">รวมรายจ่าย</div>
+									<div id="dyn-sum-expense" class="text-sm md:text-lg font-bold text-red-600">0</div>
 								</div>
 								<div>
-									<div class="text-[10px] text-gray-500">สุทธิ</div>
-									<div id="dyn-sum-net" class="text-sm md:text-base font-bold text-blue-600">0</div>
+									<div class="text-[10px] md:text-xs text-gray-500 mb-1">สุทธิ</div>
+									<div id="dyn-sum-net" class="text-sm md:text-lg font-bold text-blue-600">0</div>
 								</div>
 							</div>
 						</div>
