@@ -5592,7 +5592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function renderPieChart(transactions) {
+   function renderPieChart(transactions) {
         // [แก้ไข] กำหนดวันปัจจุบัน (สิ้นสุดวัน)
 		const today = new Date();
 		today.setHours(23, 59, 59, 999);
@@ -5611,83 +5611,273 @@ document.addEventListener('DOMContentLoaded', () => {
 			return acc;
 		}, { income: 0, expense: 0 });
 
-        const labels = [
-            `รายรับ (${formatCurrency(summary.income)})`, 
-            `รายจ่าย (${formatCurrency(summary.expense)})`
-        ];
-        
+        const labels = ['รายรับ', 'รายจ่าย'];
         const data = [summary.income, summary.expense];
+        
         if (myChart) {
             myChart.destroy();
         }
         
         const noDataEl = document.getElementById('chart-no-data');
         if (summary.income === 0 && summary.expense === 0) {
-            noDataEl.textContent = 'ไม่มีข้อมูล';
-            noDataEl.classList.remove('hidden');
+            if(noDataEl) noDataEl.classList.remove('hidden');
             return;
         } else {
-            noDataEl.classList.add('hidden');
+            if(noDataEl) noDataEl.classList.add('hidden');
         }
 
         const ctx = document.getElementById('transaction-chart').getContext('2d');
+        const isDark = state.isDarkMode || document.body.classList.contains('dark');
+        const textColor = isDark ? '#e5e7eb' : '#6b7280';
+        const tooltipBg = isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+        const tooltipText = isDark ? '#f9fafb' : '#111827';
         
-        const isMobile = window.innerWidth < 768;
-        const textColor = state.isDarkMode ? '#e5e7eb' : '#4b5563'; 
+        const totalAmount = summary.income + summary.expense;
 
         myChart = new Chart(ctx, {
-            type: 'pie',
+            type: 'doughnut',
             plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}], 
             data: {
                 labels: labels,
                 datasets: [{
                     data: data,
-                    backgroundColor: ['#22c55e', '#ef4444'],
-                    borderWidth: 1
+                    backgroundColor: ['#34d399', '#f87171'], // Pastel Green, Pastel Red
+                    borderWidth: isDark ? 2 : 3,
+                    borderColor: isDark ? '#1f2937' : '#ffffff',
+                    hoverOffset: 10,
+                    borderRadius: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        left: isMobile ? 0 : 0,
-                        right: isMobile ? 0 : 0,
-                        top: isMobile ? 0 : 0,
-                        bottom: isMobile ? 0 : 0
-                    }
-                },
+                layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+                cutout: '70%',
                 plugins: {
-                    datalabels: {
-                        display: false, 
-                    },
                     legend: {
-                        position: 'right',
-                        align: 'center', 
+                        position: 'bottom', // เอาไว้ด้านล่างเพราะมีแค่ 2 หัวข้อ
                         labels: {
                             usePointStyle: true, 
-                            boxWidth: isMobile ? 8 : 10,
-                            padding: isMobile ? 6 : 10,
-                            font: {
-                                family: 'Prompt, sans-serif',
-                                size: isMobile ? 10 : 12,
-                                color: textColor 
-                            }
-                         }
+                            pointStyle: 'circle',
+                            boxWidth: 10,
+                            padding: 15,
+                            font: { family: "'Prompt', sans-serif", size: 12, weight: '500' },
+                            color: textColor 
+                        }
                     },
                     tooltip: {
+                        backgroundColor: tooltipBg,
+                        titleColor: tooltipText,
+                        bodyColor: tooltipText,
+                        borderColor: isDark ? '#4b5563' : '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        boxPadding: 6,
+                        usePointStyle: true,
                         callbacks: {
                             label: function(context) {
-                                return ''; 
-                            },
-                            title: function(context) {
-                                return context[0].label;
+                                const val = context.raw;
+                                const percentage = totalAmount > 0 ? ((val / totalAmount) * 100).toFixed(1) : 0;
+                                return ` ${context.label}: ${formatCurrency(val)} (${percentage}%)`;
                             }
                         }
+                    },
+                    datalabels: {
+                        display: function(context) {
+                            const val = context.dataset.data[context.dataIndex];
+                            return (val / totalAmount) > 0.05;
+                        },
+                        color: '#ffffff',
+                        font: { family: "'Prompt', sans-serif", weight: 'bold', size: 11 },
+                        formatter: (value) => ((value / totalAmount) * 100).toFixed(0) + '%',
+                        textShadowBlur: 4,
+                        textShadowColor: 'rgba(0,0,0,0.3)'
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'centerTextHome',
+                beforeDraw: function(chart) {
+                    const width = chart.width, height = chart.height, ctx = chart.ctx;
+                    ctx.restore();
+                    const chartArea = chart.chartArea;
+                    const centerX = (chartArea.left + chartArea.right) / 2;
+                    const centerY = (chartArea.top + chartArea.bottom) / 2;
+                    
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
+
+                    ctx.font = `normal 11px 'Prompt', sans-serif`;
+                    ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+                    ctx.fillText("หมุนเวียน", centerX, centerY - 10);
+
+                    let displayTotal = formatCurrency(totalAmount);
+                    const fontSize = displayTotal.length > 10 ? 12 : 14;
+                    ctx.font = `bold ${fontSize}px 'Prompt', sans-serif`;
+                    ctx.fillStyle = isDark ? '#e5e7eb' : '#1f2937';
+                    ctx.fillText(displayTotal, centerX, centerY + 10);
+                    ctx.save();
+                }
+            }]
         });
+    }
+
+    function renderExpenseByNameChart(transactions) {
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
+
+		const expenseTransactions = transactions.filter(tx => {
+			return tx.type === 'expense' && new Date(tx.date) <= today;
+		});
+		
+		const itemData = expenseTransactions.reduce((acc, tx) => {
+			const name = tx.name || 'ไม่ระบุรายการ';
+			if (!acc[name]) {
+				acc[name] = 0;
+			}
+			acc[name] += tx.amount;
+			return acc;
+		}, {});
+		let sortedItems = Object.entries(itemData).map(([name, amount]) => ({ name, amount }));
+		sortedItems.sort((a, b) => b.amount - a.amount);
+
+		const TOP_N = 9;
+		let labels = [];
+		let data = [];
+		let totalExpense = 0;
+		
+		if (sortedItems.length > (TOP_N + 1)) { 
+			const topItems = sortedItems.slice(0, TOP_N);
+			const otherItems = sortedItems.slice(TOP_N);
+			
+			topItems.forEach(item => {
+				labels.push(item.name);
+				data.push(item.amount);
+				totalExpense += item.amount;
+			});
+			const otherAmount = otherItems.reduce((sum, item) => sum + item.amount, 0);
+			labels.push('อื่นๆ');
+			data.push(otherAmount);
+			totalExpense += otherAmount;
+		} else {
+			sortedItems.forEach(item => {
+				labels.push(item.name);
+				data.push(item.amount);
+				totalExpense += item.amount;
+			});
+		}
+
+		if (myExpenseByNameChart) { 
+			myExpenseByNameChart.destroy();
+		}
+		
+		const noDataEl = document.getElementById('expense-chart-no-data');
+		if (data.length === 0) {
+			if(noDataEl) noDataEl.classList.remove('hidden');
+			return;
+		} else {
+			if(noDataEl) noDataEl.classList.add('hidden');
+		}
+
+		const ctx = document.getElementById('expense-category-chart').getContext('2d');
+		const isDark = state.isDarkMode || document.body.classList.contains('dark');
+        const textColor = isDark ? '#e5e7eb' : '#6b7280';
+        const tooltipBg = isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+        const tooltipText = isDark ? '#f9fafb' : '#111827';
+
+        // โทนสี Pastel สบายตา 
+        const colorPalette = [
+            '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', 
+            '#0ea5e9', '#3b82f6', '#8b5cf6', '#d946ef', '#9ca3af'
+        ];
+
+		myExpenseByNameChart = new Chart(ctx, { 
+			type: 'doughnut', 
+			plugins: [typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : {}],
+			data: {
+				labels: labels,
+				datasets: [{
+					data: data,
+					backgroundColor: colorPalette.slice(0, labels.length),
+					borderWidth: isDark ? 2 : 3,
+					borderColor: isDark ? '#1f2937' : '#ffffff',
+                    hoverOffset: 10,
+                    borderRadius: 6
+				}]
+			},
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'right', // ข้อมูลเยอะ ย้ายไปไว้ขวา
+                        align: 'center',
+                        labels: {
+                            usePointStyle: true, 
+                            pointStyle: 'circle',
+                            boxWidth: 10,
+                            padding: 12,
+                            font: { family: "'Prompt', sans-serif", size: 11, weight: '500' },
+                            color: textColor 
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        titleColor: tooltipText,
+                        bodyColor: tooltipText,
+                        borderColor: isDark ? '#4b5563' : '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        boxPadding: 6,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw;
+                                const percentage = totalExpense > 0 ? ((val / totalExpense) * 100).toFixed(1) : 0;
+                                return ` ${context.label}: ${formatCurrency(val)} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: function(context) {
+                            const val = context.dataset.data[context.dataIndex];
+                            return (val / totalExpense) > 0.05;
+                        },
+                        color: '#ffffff',
+                        font: { family: "'Prompt', sans-serif", weight: 'bold', size: 10 },
+                        formatter: (value) => ((value / totalExpense) * 100).toFixed(0) + '%',
+                        textShadowBlur: 4,
+                        textShadowColor: 'rgba(0,0,0,0.3)'
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerTextExpense',
+                beforeDraw: function(chart) {
+                    const width = chart.width, height = chart.height, ctx = chart.ctx;
+                    ctx.restore();
+                    const chartArea = chart.chartArea;
+                    const centerX = (chartArea.left + chartArea.right) / 2;
+                    const centerY = (chartArea.top + chartArea.bottom) / 2;
+                    
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
+
+                    ctx.font = `normal 11px 'Prompt', sans-serif`;
+                    ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+                    ctx.fillText("รวมจ่าย", centerX, centerY - 10);
+
+                    let displayTotal = formatCurrency(totalExpense);
+                    const fontSize = displayTotal.length > 10 ? 12 : 14;
+                    ctx.font = `bold ${fontSize}px 'Prompt', sans-serif`;
+                    ctx.fillStyle = isDark ? '#e5e7eb' : '#1f2937';
+                    ctx.fillText(displayTotal, centerX, centerY + 10);
+                    ctx.save();
+                }
+            }]
+		});
     }
 
     function renderExpenseByNameChart(transactions) {
