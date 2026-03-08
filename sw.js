@@ -61,7 +61,7 @@ self.addEventListener('activate', (event) => {
       }));
     })
   );
-  return self.clients.claim();
+  //return self.clients.claim();
 });
 
 // 4. Event Fetch: ดักจับการโหลดไฟล์ + Dynamic Caching

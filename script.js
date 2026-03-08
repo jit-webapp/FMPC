@@ -3837,56 +3837,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const bottomNavBtnSettings = document.querySelector('#bottom-nav button[data-page="settings"]');
         if (bottomNavBtnSettings) bottomNavBtnSettings.addEventListener('click', renderNotifyData);
 		
-		
-		// ฟังก์ชันแสดงรายการประวัติ
-		function renderNotificationHistory() {
-			const list = document.getElementById('notification-history-list');
-			if (!list) return;
-			if (state.notificationHistory.length === 0) {
-				list.innerHTML = '<p class="text-center text-gray-400 dark:text-gray-500 py-4 text-sm">ยังไม่มีประวัติกิจกรรม</p>';
-				return;
-			}
-			const sorted = [...state.notificationHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-			let html = '';
-			sorted.forEach(log => {
-				const date = new Date(log.timestamp);
-				const dateStr = date.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
-				const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-				const readClass = log.isRead ? 'opacity-50' : '';
-				// ใช้ hasReceipt แทนการตรวจสอบจากข้อความ
-				const hasReceipt = log.hasReceipt === true;
-				const receiptIcon = hasReceipt ? '<i class="fa-solid fa-image text-purple-500 text-xs ml-1" title="มีรูปแนบ"></i>' : '';
-				const deviceIcon = log.device?.icon ? `<i class="${log.device.icon} text-gray-400 text-xs ml-1" title="${log.device.label}"></i>` : '';
-				html += `
-					<div class="flex items-start gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm text-sm mb-2 transition-colors ${readClass}">
-						<div class="${log.color || 'text-gray-500 dark:text-gray-400'} mt-0.5 text-lg">
-							<i class="fa-solid ${log.icon || 'fa-bell'}"></i>
-						</div>
-						<div class="flex-1">
-							<div class="flex justify-between items-start">
-								<span class="font-bold text-gray-700 dark:text-gray-200">
-									${escapeHTML(log.action)} ${receiptIcon} ${deviceIcon}
-								</span>
-								<span class="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full whitespace-nowrap">
-									${dateStr} ${timeStr}
-								</span>
-							</div>
-							<div class="text-gray-600 dark:text-gray-400 mt-1 text-xs">${escapeHTML(log.details)}</div>
-						</div>
-						${!log.isRead ? `<button class="mark-read-btn text-blue-500 hover:text-blue-700 p-1" data-id="${log.id}" title="ทำเครื่องหมายว่าอ่านแล้ว"><i class="fa-solid fa-check-circle"></i></button>` : ''}
-					</div>
-				`;
-			});
-			list.innerHTML = html;
-			document.querySelectorAll('.mark-read-btn').forEach(btn => {
-				btn.addEventListener('click', async (e) => {
-					e.stopPropagation();
-					const id = e.currentTarget.dataset.id;
-					await markNotificationAsRead(id);
-				});
-			});
-		}
-		
 		// ============================================
 		// ฟังก์ชันสำหรับจัดการประวัติกิจกรรม (Activity Log)
 		// ============================================
@@ -6461,109 +6411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	// ============================================
 	// 2. ฟังก์ชันแสดงรายละเอียดรายวัน (Popup รายการ + ปุ่มกด)
 	// ============================================
-	async function showDailyDetails(dateStr) {
-		// 1. ดึงรายการรายรับ-รายจ่าย
-		const dailyTx = state.transactions.filter(t => t.date.slice(0, 10) === dateStr);
-		
-		// 2. ดึงรายการแจ้งเตือน
-		const dailyNotif = state.customNotifications.filter(n => n.date === dateStr);
-		
-		// สร้าง HTML สำหรับ Transactions
-		let txHtml = '';
-		if (dailyTx.length > 0) {
-			txHtml = '<ul class="space-y-2 mb-4">';
-			dailyTx.forEach(tx => {
-				const colorClass = tx.type === 'income' ? 'text-green-600' : 'text-red-600';
-				const sign = tx.type === 'income' ? '+' : '-';
-				txHtml += `
-					<li class="flex justify-between items-center text-sm border-b pb-1 border-gray-100">
-						<span class="text-gray-700 truncate w-2/3 text-left">• ${tx.name}</span>
-						<span class="${colorClass} font-bold">${sign}${formatCurrency(tx.amount)}</span>
-					</li>`;
-			});
-			txHtml += '</ul>';
-		} else {
-			txHtml = '<p class="text-gray-400 text-sm mb-4 italic text-center">- ไม่มีรายการการเงิน -</p>';
-		}
-
-		// สร้าง HTML สำหรับ Notifications
-		let notifyHtml = '';
-		if (dailyNotif.length > 0) {
-			notifyHtml = '<div class="mb-4"><h5 class="font-bold text-gray-700 text-sm mb-2 text-left">แจ้งเตือน:</h5><ul class="space-y-2">';
-			dailyNotif.forEach(n => {
-				let timeBadge = (n.isAllDay === false && n.time) 
-					? `<span class="text-[10px] bg-purple-100 text-purple-700 px-1 rounded ml-1">${n.time} น.</span>`
-					: `<span class="text-[10px] bg-gray-100 text-gray-500 px-1 rounded ml-1">ทั้งวัน</span>`;
-				
-				notifyHtml += `
-					<li class="flex justify-between items-center bg-purple-50 p-2 rounded text-sm text-gray-700">
-						<span>${n.message}</span>
-						${timeBadge}
-					</li>`;
-			});
-			notifyHtml += '</ul></div>';
-		}
-		
-		// หา imported events ในวันนี้
-		const dailyImported = state.importedEvents.filter(ev => ev.start.startsWith(dateStr));
-
-		let importedHtml = '';
-		if (dailyImported.length > 0) {
-			importedHtml = '<div class="mb-4"><h5 class="font-bold text-purple-700 text-sm mb-2 text-left">📅 กิจกรรมที่นำเข้า:</h5><ul class="space-y-2">';
-			dailyImported.forEach(ev => {
-				importedHtml += `<li class="flex justify-between items-center bg-purple-50 dark:bg-purple-900/20 p-2 rounded text-sm text-gray-700 dark:text-gray-300">${escapeHTML(ev.title)}</li>`;
-			});
-			importedHtml += '</ul></div>';
-		}
-
-		// แสดง Popup
-		await Swal.fire({
-			title: `รายละเอียด (${dateStr})`,
-			html: `
-				<div class="px-2">
-					${txHtml}
-					${notifyHtml}
-					<hr class="my-4 border-gray-200">
-					<div class="grid grid-cols-2 gap-3">
-						<button id="cal-btn-add-tx" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm flex items-center justify-center transition">
-							<i class="fa-solid fa-plus-circle mr-2"></i> รายรับ-รายจ่าย
-						</button>
-						<button id="cal-btn-add-notif" class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm flex items-center justify-center transition">
-							<i class="fa-solid fa-bell mr-2"></i> แจ้งเตือน
-						</button>
-					</div>
-				</div>
-			`,
-			showConfirmButton: false,
-			showCloseButton: true,
-			didOpen: () => {
-				// -- ปุ่มเพิ่มรายรับ-รายจ่าย --
-				document.getElementById('cal-btn-add-tx').onclick = () => {
-					Swal.close();
-					// พยายามเปิดหน้าเพิ่มรายการ (กำหนดวันที่ให้ถ้ามี input id="date")
-					const dateInput = document.getElementById('date'); // สมมติ ID ของ input วันที่
-					if (dateInput) dateInput.value = dateStr;
-					
-					// เรียกฟังก์ชันเปิด Modal (ลองเรียกชื่อมาตรฐาน)
-					const addModal = document.getElementById('add-modal');
-					if (addModal) {
-						addModal.classList.remove('hidden');
-					} else {
-						// ถ้าหาไม่เจอ ให้เลื่อนหน้าจอขึ้นบนสุด (กรณีเป็น Form หน้าหลัก)
-						window.scrollTo({ top: 0, behavior: 'smooth' });
-					}
-				};
-
-				// -- ปุ่มเพิ่มแจ้งเตือน (เรียกฟังก์ชันใหม่) --
-				document.getElementById('cal-btn-add-notif').onclick = () => {
-				Swal.close();
-				setTimeout(() => {
-					openCustomNotifyModal(dateStr);
-				}, 300);
-			};
-			}
-		});
-	}
+	
 
 	
 	function showDailyDetails(date) {
@@ -13201,42 +13049,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				);
 			};
 			
-			window.checkForUpdate = async function() {
-				try {
-					// ดึงเวอร์ชันปัจจุบันจากตัวแปร global
-					const currentVersion = APP_VERSION;
-					
-					// fetch ไฟล์ version.js จากเซิร์ฟเวอร์ (เพิ่ม timestamp เพื่อป้องกัน cache)
-					const response = await fetch('version.js?t=' + Date.now());
-					const text = await response.text();
-					
-					// ค้นหา APP_VERSION ในเนื้อหา (สมมติว่าไฟล์มีรูปแบบ const APP_VERSION = '...';)
-					const match = text.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
-					if (match) {
-						const latestVersion = match[1];
-						if (currentVersion === latestVersion) {
-							Swal.fire({
-								icon: 'info',
-								title: 'ไม่มีอัปเดต',
-								text: 'คุณกำลังใช้เวอร์ชันล่าสุด (' + currentVersion + ') อยู่แล้ว',
-								confirmButtonText: 'ตกลง'
-							});
-						} else {
-							Swal.fire({
-								icon: 'warning',
-								title: 'พบเวอร์ชันใหม่',
-								html: 'เวอร์ชันปัจจุบัน: ' + currentVersion + '<br>เวอร์ชันล่าสุด: ' + latestVersion + '<br><br>กรุณากดปุ่ม "อัปเดตระบบ" ในหน้าตั้งค่าเพื่ออัปเดต',
-								confirmButtonText: 'ตกลง'
-							});
-						}
-					} else {
-						Swal.fire('ไม่สามารถตรวจสอบเวอร์ชันได้', 'กรุณาลองอีกครั้ง', 'error');
-					}
-				} catch (err) {
-					console.error('Check update error:', err);
-					Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
-				}
-			};
+
 			
 			// ============================================
 			// ฟังก์ชัน: ล้างระบบแบบถอนรากถอนโคน (Hard Reset)
@@ -14299,287 +14112,68 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			};
 			
-			// ==========================================
-			// 1. ระบบค้นหาคำสั่ง (V.12 Ultimate AI - รองรับ บัญชี, วันที่, ค้างจ่าย)
-			// ==========================================
+			// ค้นหาคำสั่งที่ใกล้เคียงที่สุด (ใช้ similarity อย่างง่าย)
 			async function findLearnedCommand(spokenText) {
 				try {
-					const rawCommands = await dbGetAll(STORE_VOICE_COMMANDS);
-					const allCommands = (rawCommands || []).filter(cmd => !cmd.isDeleted);
-					if (allCommands.length === 0) return null;
+					const allCommands = await dbGetAll(STORE_VOICE_COMMANDS);
+					if (!allCommands || allCommands.length === 0) return null;
 
-					const normalize = (txt) => {
-						if (!txt) return '';
-						return txt.toString().toLowerCase()
-								  .replace(/คิวอาร์โค้ด|คิวอาร์/g, 'qr')
-								  .replace(/พร้อมเพย์/g, 'promptpay')
-								  .replace(/\s*จุด\s*/g, '.')
-								  .replace(/\s+/g, ' ')
-								  .trim();
-					};
+					const spokenLower = spokenText.toLowerCase().trim();
 
-					let normSpoken = normalize(spokenText);
-					
-					// --- 🌟 AI V.12: สกัดข้อมูลอัจฉริยะ (วันที่, สถานะ, บัญชี) ออกจากคำพูด ---
-					let extractedDate = null;
-					let isPending = false;
-					let extractedAccountId = null;
-					let extractedAccountName = null;
-
-					// 1. หาวันที่ (เมื่อวาน, วันนี้, พรุ่งนี้)
-					const dateKeywords = [
-						{ word: 'เมื่อวานซืน', offset: -2 },
-						{ word: 'เมื่อวาน', offset: -1 },
-						{ word: 'พรุ่งนี้', offset: 1 },
-						{ word: 'มะรืน', offset: 2 },
-						{ word: 'วันนี้', offset: 0 }
-					];
-					for (const dk of dateKeywords) {
-						if (normSpoken.includes(dk.word)) {
-							const d = new Date();
-							d.setDate(d.getDate() + dk.offset);
-							const y = d.getFullYear();
-							const m = String(d.getMonth() + 1).padStart(2, '0');
-							const day = String(d.getDate()).padStart(2, '0');
-							extractedDate = `${y}-${m}-${day}`; // รูปแบบ YYYY-MM-DD
-							normSpoken = normSpoken.replace(dk.word, '').trim();
-							break;
-						}
+					// 1. Exact match (กรณีพูดตรงกับคำสั่งที่เคยบันทึก)
+					const exactMatch = allCommands.find(cmd => cmd.command.toLowerCase() === spokenLower);
+					if (exactMatch) {
+						exactMatch.useCount = (exactMatch.useCount || 0) + 1;
+						await dbPut(STORE_VOICE_COMMANDS, exactMatch);
+						return exactMatch;
 					}
 
-					// 2. หาสถานะค้างจ่าย
-					const pendingKeywords = ['ค้างจ่าย', 'ยังไม่จ่าย', 'ติดไว้ก่อน', 'แปะไว้ก่อน', 'ลูกหนี้', 'เจ้าหนี้'];
-					for (const pk of pendingKeywords) {
-						if (normSpoken.includes(pk)) {
-							isPending = true;
-							normSpoken = normSpoken.replace(pk, '').trim();
-							break;
-						}
-					}
-
-					// 3. หาบัญชีจากที่ตั้งค่าไว้ในระบบ
-					if (typeof state !== 'undefined' && state.accounts && state.accounts.length > 0) {
-						// เรียงชื่อจากยาวไปสั้น เพื่อให้จับชื่อเต็มก่อน
-						const sortedAccounts = [...state.accounts].sort((a, b) => b.name.length - a.name.length);
-						for (const acc of sortedAccounts) {
-							const accNameLower = acc.name.toLowerCase();
-							if (normSpoken.includes(accNameLower)) {
-								extractedAccountId = acc.id;
-								extractedAccountName = acc.name;
-								normSpoken = normSpoken.replace(new RegExp(accNameLower, 'g'), '').trim();
-								break;
-							}
-						}
-						// ถ้าจับไม่เจอตรงๆ ลองดักจับคำพ้องความหมาย (Synonyms)
-						if (!extractedAccountId) {
-							if (normSpoken.includes('พร้อมเพย์') || normSpoken.includes('promptpay')) {
-								const pp = state.accounts.find(a => a.name.toLowerCase().includes('พร้อมเพย์') || a.name.toLowerCase().includes('promptpay'));
-								if (pp) { extractedAccountId = pp.id; extractedAccountName = pp.name; }
-								normSpoken = normSpoken.replace(/พร้อมเพย์|promptpay/g, '').trim();
-							} else if (normSpoken.includes('เงินสด')) {
-								const cash = state.accounts.find(a => a.type === 'cash' || a.name.includes('เงินสด'));
-								if (cash) { extractedAccountId = cash.id; extractedAccountName = cash.name; }
-								normSpoken = normSpoken.replace(/เงินสด/g, '').trim();
-							} else if (normSpoken.includes('บัตรเครดิต') || normSpoken.includes('บัตร')) {
-								const credit = state.accounts.find(a => a.type === 'credit' || a.name.includes('บัตรเครดิต'));
-								if (credit) { extractedAccountId = credit.id; extractedAccountName = credit.name; }
-								normSpoken = normSpoken.replace(/บัตรเครดิต|บัตร/g, '').trim();
-							}
-						}
-						// ล้างคำว่าบัญชีออก เพื่อความสะอาด
-						normSpoken = normSpoken.replace(/บัญชี|จากบัญชี|โอนผ่าน/g, '').trim();
-					}
-					// ----------------------------------------------------
-
-					const thaiToNumber = (text) => {
-						const unitMultiplier = { 'สิบ':10,'ร้อย':100,'พัน':1000,'หมื่น':10000,'แสน':100000,'ล้าน':1000000 };
-						let preParsed = text.replace(/([\d,]+)\s*([สิบร้อยพันหมื่นแสนล้าน]+)/g, (match, numStr, unit) => {
-							let num = parseFloat(numStr.replace(/,/g, ''));
-							if (unitMultiplier[unit]) {
-								return (num * unitMultiplier[unit]).toString();
-							}
-							return match;
-						});
-
-						const numMap = { 'ศูนย์':0,'หนึ่ง':1,'เอ็ด':1,'สอง':2,'ยี่':2,'สาม':3,'สี่':4,'ห้า':5,'หก':6,'เจ็ด':7,'แปด':8,'เก้า':9 };
-						const words = Object.keys(numMap).concat(Object.keys(unitMultiplier));
-						
-						const regex = new RegExp(`((?:${words.join('|')})+)(?:\\.((?:${words.join('|')})+))?`, 'g');
-						
-						return preParsed.replace(regex, (match, intPart, decPart) => {
-							let intTotal = 0, intCurrent = 0, i = 0;
-							while (i < intPart.length) {
-								let found = false;
-								for (let unit in unitMultiplier) {
-									if (intPart.startsWith(unit, i)) {
-										if (intCurrent === 0) intCurrent = 1; 
-										intTotal += intCurrent * unitMultiplier[unit];
-										intCurrent = 0; i += unit.length; found = true; break;
-									}
-								}
-								if (found) continue;
-								for (let num in numMap) {
-									if (intPart.startsWith(num, i)) {
-										intCurrent = numMap[num];
-										i += num.length; found = true; break;
-									}
-								}
-								if (!found) i++; 
-							}
-							intTotal += intCurrent;
-
-							if (decPart) {
-								let decValue = '', j = 0;
-								while (j < decPart.length) {
-									let found = false;
-									for (let num in numMap) {
-										if (decPart.startsWith(num, j)) {
-											decValue += numMap[num];
-											j += num.length; found = true; break;
-										}
-									}
-									if (!found) j++;
-								}
-								return intTotal + '.' + decValue;
-							}
-							return intTotal.toString();
-						});
-					};
-
-					allCommands.sort((a, b) => (b.command || '').length - (a.command || '').length);
+					// 2. Token overlap scoring (เฉพาะคำที่มีความหมาย)
+					const spokenTokens = spokenLower.split(/\s+/).filter(t => t.length > 1);
+					if (spokenTokens.length === 0) return null;
 
 					let bestMatch = null;
-					let extractedAmount = null;
-
-					const extractSmartAmount = (remainderText) => {
-						let parsedRemainder = thaiToNumber(remainderText);
-						let noCommas = parsedRemainder.replace(/,/g, '');
-						let tokens = noCommas.split(/\s+/);
-						let currentNum = null;
-
-						for (let token of tokens) {
-							let numericToken = token.replace(/[^\d.]/g, ''); 
-							if (!numericToken) continue;
-
-							if (/^\d+$/.test(numericToken)) {
-								let val = parseInt(numericToken, 10);
-								if (currentNum === null) {
-									currentNum = numericToken;
-								} else if (/^\d+$/.test(currentNum)) {
-									let trailingZeros = currentNum.match(/0+$/);
-									let numZeros = trailingZeros ? trailingZeros[0].length : 0;
-									
-									if (val > 0 && numZeros >= numericToken.length) {
-										currentNum = (parseInt(currentNum, 10) + val).toString();
-									} else {
-										currentNum += numericToken;
-									}
-								} else {
-									currentNum += numericToken;
-								}
-							} else if (numericToken === '.') {
-								if (currentNum !== null && !currentNum.includes('.')) {
-									currentNum += '.';
-								} else if (currentNum === null) {
-									currentNum = '0.';
-								}
-							} else if (numericToken.includes('.')) {
-								 if (currentNum !== null) {
-									 currentNum += numericToken;
-								 } else {
-									 currentNum = numericToken;
-								 }
-							}
-						}
-
-						if (currentNum !== null) {
-							if (currentNum.split('.').length > 2) {
-								let parts = currentNum.split('.');
-								currentNum = parts[0] + '.' + parts.slice(1).join('');
-							}
-							if (!isNaN(currentNum)) {
-								return parseFloat(currentNum);
-							}
-						}
-						return null;
-					};
+					let bestScore = 0;
 
 					for (const cmd of allCommands) {
-						const normCmd = normalize(cmd.command);
-						if (!normCmd) continue;
+						const cmdTokens = cmd.command.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+						if (cmdTokens.length === 0) continue;
 
-						if (normSpoken.includes(normCmd)) {
-							bestMatch = { ...cmd };
-							let remainder = normSpoken.replace(normCmd, '').trim();
-							if (remainder.length > 0) {
-								extractedAmount = extractSmartAmount(remainder);
-							}
-							break; 
-						}
-					}
+						// นับจำนวน token ที่ตรงกัน
+						const matchCount = spokenTokens.filter(t => cmdTokens.includes(t)).length;
+						// คะแนน = สัดส่วนของ token ที่ตรงกัน เทียบกับจำนวน token ของคำสั่งที่บันทึก
+						const score = matchCount / cmdTokens.length;
 
-					if (!bestMatch) {
-						const spokenTokens = normSpoken.split(/\s+/).filter(t => t.length > 1);
-						let bestScore = 0;
-						for (const cmd of allCommands) {
-							const normCmd = normalize(cmd.command);
-							const cmdTokens = normCmd.split(/\s+/).filter(t => t.length > 1);
-							if (cmdTokens.length === 0) continue;
-
-							const matchCount = spokenTokens.filter(t => cmdTokens.includes(t)).length;
-							const score = matchCount / cmdTokens.length;
-
-							if (score >= 0.7 && score > bestScore) {
-								bestScore = score;
-								bestMatch = { ...cmd };
-							}
-						}
-						if (bestMatch) {
-							extractedAmount = extractSmartAmount(normSpoken);
+						// ต้องมีคะแนน >= 0.7 และมากกว่าคะแนนเดิม
+						if (score >= 0.7 && score > bestScore) {
+							bestScore = score;
+							bestMatch = cmd;
 						}
 					}
 
 					if (bestMatch) {
-						const originalCmd = allCommands.find(c => c.id === bestMatch.id);
-						if (originalCmd) {
-							originalCmd.useCount = (originalCmd.useCount || 0) + 1;
-							await dbPut(STORE_VOICE_COMMANDS, originalCmd);
-						}
-						
-						// 🌟 แนบข้อมูลอัจฉริยะส่งต่อไปยังแบบฟอร์ม
-						if (extractedAmount !== null) bestMatch.dynamicAmount = extractedAmount;
-						if (extractedDate !== null) bestMatch.dynamicDate = extractedDate;
-						if (isPending) bestMatch.isPending = true;
-						if (extractedAccountId !== null) {
-							bestMatch.dynamicAccountId = extractedAccountId;
-							bestMatch.dynamicAccountName = extractedAccountName;
-						}
-						
-						console.log('✅ พบคำสั่งใช้งานได้:', bestMatch.command, 
-									'| ยอด:', extractedAmount, 
-									'| วันที่:', extractedDate, 
-									'| บัญชี:', extractedAccountName, 
-									'| ค้างจ่าย:', isPending);
-						return bestMatch;
+						bestMatch.useCount = (bestMatch.useCount || 0) + 1;
+						await dbPut(STORE_VOICE_COMMANDS, bestMatch);
 					}
 
-					return null;
+					return bestMatch;
 				} catch (err) {
 					console.error('Error finding learned command:', err);
 					return null;
 				}
 			}
-
-			// ==========================================
-			// 3. ระบบสั่งการนำไปปฏิบัติจริง (อัปเดตให้รองรับปลายทางตอนพูด)
-			// ==========================================
+			
 			async function executeLearnedCommand(cmd) {
 				console.log('Executing learned command:', cmd);
+
 				switch (cmd.action) {
-					// ... โค้ดส่วนบนปล่อยไว้เหมือนเดิม ... (เพื่อประหยัดพื้นที่ ผมดึงมาเฉพาะ addTransaction นะครับ)
 					case 'openPage':
-						if (cmd.page) { showPage(cmd.page); speak(`เปิด${getPageName(cmd.page)}แล้ว`); }
+						if (cmd.page) {
+							showPage(cmd.page);
+							speak(`เปิด${getPageName(cmd.page)}แล้ว`);
+						}
 						break;
+
 					case 'openSettingsSection':
 						showPage('page-settings');
 						setTimeout(() => {
@@ -14594,164 +14188,208 @@ document.addEventListener('DOMContentLoaded', () => {
 						}, 300);
 						speak(`เปิดหน้าการตั้งค่าส่วน${cmd.section || ''}แล้ว`);
 						break;
+
 					case 'toggleDarkMode':
 						document.getElementById('toggle-dark-mode')?.click();
-						setTimeout(() => speak(state.isDarkMode ? 'เปิดโหมดมืดแล้ว' : 'ปิดโหมดมืดแล้ว'), 50);
+						setTimeout(() => {
+							speak(state.isDarkMode ? 'เปิดโหมดมืดแล้ว' : 'ปิดโหมดมืดแล้ว');
+						}, 50);
 						break;
+
 					case 'toggleBalanceVisibility':
 						document.getElementById('toggle-show-balance')?.click();
-						setTimeout(() => speak(state.showBalanceCard ? 'แสดงยอดคงเหลือแล้ว' : 'ซ่อนยอดคงเหลือแล้ว'), 50);
+						setTimeout(() => {
+							speak(state.showBalanceCard ? 'แสดงยอดคงเหลือแล้ว' : 'ซ่อนยอดคงเหลือแล้ว');
+						}, 50);
 						break;
+
 					case 'changePassword':
-						setTimeout(() => { handleManagePassword(); setTimeout(() => speak('กำลังเปิดหน้าจัดการรหัสผ่าน'), 500); }, 500);
+						setTimeout(() => {
+							handleManagePassword();
+							// รอให้ handleManagePassword ทำงานเสร็จและ Swal แสดงเต็มที่
+							setTimeout(() => {
+								speak('กำลังเปิดหน้าจัดการรหัสผ่าน');
+							}, 500); // ให้เวลาหลังจากเปิด Swal 200ms
+						}, 500);
 						break;
+
 					case 'backupData':
-					case 'exportData':
-						setTimeout(() => { handleBackup(); setTimeout(() => speak('กำลังเปิดศูนย์สำรองข้อมูล'), 500); }, 500);
-						break;
-					case 'importData':
-						setTimeout(() => { document.getElementById('btn-import')?.click(); setTimeout(() => speak('เตรียมนำเข้าข้อมูล กรุณาเลือกไฟล์'), 500); }, 500);
-						break;
-					case 'clearAllData':
-						setTimeout(() => handleClearAll(), 500);
-						break;
-					case 'hardReset':
-						setTimeout(() => handleHardReset(), 500);
-						break;
-					case 'systemUpdate':
-						setTimeout(() => { handleSystemUpdate(); setTimeout(() => speak('กำลังตรวจสอบและอัปเดตระบบ'), 500); }, 500);
-						break;
-					case 'undo':
-						setTimeout(() => { handleUndo(); setTimeout(() => speak('ย้อนกลับรายการล่าสุด'), 500); }, 500);
-						break;
-					case 'redo':
-						setTimeout(() => { handleRedo(); setTimeout(() => speak('ทำซ้ำรายการล่าสุด'), 500); }, 500);
-						break;
-					case 'lockApp':
-						setTimeout(() => { lockApp(); speak('ล็อคแอปแล้ว'); }, 500);
-						break;
-					case 'openAccountsPage':
-						showPage('page-accounts'); speak('เปิดหน้าบัญชีแล้ว');
-						break;
-					case 'openBudgetSettings':
-						showPage('page-accounts');
 						setTimeout(() => {
-							const budgetContent = document.getElementById('settings-budget-content');
-							const budgetHeader = document.querySelector('[data-target="settings-budget-content"]');
-							if (budgetContent && budgetHeader && budgetContent.classList.contains('hidden')) budgetHeader.click();
-							if (budgetContent) budgetContent.scrollIntoView({ behavior: 'smooth' });
-							speak('เปิดหน้าการตั้งค่างบประมาณแล้ว');
-						}, 300);
-						break;
-					case 'openRecurringSettings':
-						showPage('page-accounts');
-						setTimeout(() => {
-							const recContent = document.getElementById('settings-recurring-content');
-							const recHeader = document.getElementById('btn-manage-recurring');
-							if (recContent && recHeader && recContent.classList.contains('hidden')) recHeader.click();
-							if (recContent) recContent.scrollIntoView({ behavior: 'smooth' });
-							speak('เปิดหน้าการตั้งค่ารายการประจำแล้ว');
-						}, 300);
+							handleBackup();
+							setTimeout(() => {
+								speak('กำลังเปิดศูนย์สำรองข้อมูล');
+							}, 500);
+						}, 500);
 						break;
 
 					case 'addTransaction':
 						openModal();
 						setTimeout(() => {
-							if (cmd.defaultType) {
-								const radio = document.querySelector(`input[name="tx-type"][value="${cmd.defaultType}"]`);
-								if (radio) radio.checked = true;
-								if (typeof updateFormVisibility === 'function') updateFormVisibility(); 
-								if (typeof updateCategoryDropdown === 'function') updateCategoryDropdown(cmd.defaultType); 
+							// ------------------------------
+							// 1. ตั้งค่าประเภทรายการ (ถ้ามี)
+							// ------------------------------
+							const targetType = cmd.defaultType || 'expense'; // fallback ถ้าไม่มี
+							const radio = document.querySelector(`input[name="tx-type"][value="${targetType}"]`);
+							if (radio) {
+								radio.checked = true;
+								radio.dispatchEvent(new Event('change', { bubbles: true })); // เรียก change เพื่อให้ฟอร์มอัปเดต
 							}
-							
-							if (cmd.defaultName) document.getElementById('tx-name').value = cmd.defaultName;
-							if (cmd.defaultCategory) {
-								setTimeout(() => {
+
+							// ------------------------------
+							// 2. รอให้ฟอร์มอัปเดต visibility และ dropdown หมวดหมู่
+							// ------------------------------
+							setTimeout(() => {
+								// ตั้งค่าหมวดหมู่ (ถ้ามี)
+								if (cmd.defaultCategory) {
 									const catSelect = document.getElementById('tx-category');
-									if (catSelect) catSelect.value = cmd.defaultCategory;
-								}, 200);
+									if (catSelect) {
+										catSelect.value = cmd.defaultCategory;
+									}
+								}
+
+								// ตั้งค่าบัญชีตามประเภท
+								if (targetType === 'transfer') {
+									if (cmd.defaultAccountId) {
+										const fromSelect = document.getElementById('tx-account-from');
+										if (fromSelect) fromSelect.value = cmd.defaultAccountId;
+									}
+									if (cmd.defaultToAccountId) {
+										const toSelect = document.getElementById('tx-account-to');
+										if (toSelect) toSelect.value = cmd.defaultToAccountId;
+									}
+								} else {
+									if (cmd.defaultAccountId) {
+										const accSelect = document.getElementById('tx-account');
+										if (accSelect) accSelect.value = cmd.defaultAccountId;
+									}
+								}
+							}, 150); // รอให้ DOM อัปเดตจากการ change event
+
+							// ------------------------------
+							// 3. ตั้งค่าฟิลด์อื่น ๆ (ชื่อ, จำนวน, คำอธิบาย)
+							// ------------------------------
+							if (cmd.defaultName) {
+								document.getElementById('tx-name').value = cmd.defaultName;
+							}
+							if (cmd.defaultAmount) {
+								document.getElementById('tx-amount').value = cmd.defaultAmount;
+								document.getElementById('tx-amount').dispatchEvent(new Event('keyup'));
+							}
+							if (cmd.defaultDesc) {
+								document.getElementById('tx-desc').value = cmd.defaultDesc;
 							}
 
-							// สถานะค้างจ่ายประทับลงในหมายเหตุ
-							let descText = cmd.defaultDesc || '';
-							if (cmd.isPending) {
-								descText = descText ? `${descText} [ค้างจ่าย]` : '[ค้างจ่าย]';
-							}
-							document.getElementById('tx-desc').value = descText;
-
-							// กำหนดเวลาย้อนหลัง
-							if (cmd.dynamicDate) {
-								const now = new Date();
-								const hh = String(now.getHours()).padStart(2, '0');
-								const mm = String(now.getMinutes()).padStart(2, '0');
-								document.getElementById('tx-date').value = `${cmd.dynamicDate}T${hh}:${mm}`;
-							} else {
-								const now = new Date();
-								now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-								document.getElementById('tx-date').value = now.toISOString().slice(0, 16);
-							}
-
-							// 🌟 สลับบัญชีให้อัตโนมัติ (ต้นทาง)
-							const targetAccountId = cmd.dynamicAccountId || cmd.defaultAccountId;
-							if (targetAccountId) {
-								const accountSelect = document.getElementById('tx-account');
-								if (accountSelect) accountSelect.value = targetAccountId;
-							}
-
-							// 🌟 สลับบัญชีปลายทางอัตโนมัติ (ถ้าเป็นโอนย้าย)
-							if (cmd.defaultType === 'transfer' && cmd.defaultToAccountId) {
-								const toAccountSelect = document.getElementById('tx-to-account') || document.getElementById('tx-target-account');
-								if (toAccountSelect) toAccountSelect.value = cmd.defaultToAccountId;
-							}
-
-							const finalAmount = cmd.dynamicAmount !== undefined ? cmd.dynamicAmount : cmd.defaultAmount;
-							if (finalAmount) {
-								const amountInput = document.getElementById('tx-amount');
-								amountInput.value = finalAmount;
-								amountInput.dispatchEvent(new Event('keyup')); 
-							}
-							
-							// 🤖 ระบบเสียงตอบกลับ (อัปเกรดให้ตอบเรื่องการโอนได้)
-							let speakParts = [];
-							speakParts.push(`เปิดฟอร์ม ${cmd.defaultName || 'รายการ'}`);
-							if (finalAmount) speakParts.push(`จำนวน ${finalAmount} บาท`);
-							
-							if (cmd.defaultType === 'transfer' && cmd.defaultToAccountId) {
-								 speakParts.push(`ทำรายการโอนย้ายเข้าบัญชีปลายทางเรียบร้อย`);
-							} else if (cmd.dynamicAccountName) {
-								 speakParts.push(`ผ่านบัญชี${cmd.dynamicAccountName}`);
-							}
-							
-							if (cmd.dynamicDate) speakParts.push(`ลงวันที่ที่กำหนด`);
-							if (cmd.isPending) speakParts.push(`และบันทึกว่าค้างจ่ายค่ะ`);
-
-							if (speakParts.length > 1) {
-								speak(speakParts.join(' '));
-							} else {
-								speak(`เปิดฟอร์ม ${cmd.defaultName || 'รายการ'} ตามที่สอนไว้`);
-							}
+							speak('เปิดฟอร์มเพิ่มรายการตามที่คุณสอนไว้');
 						}, 300);
 						break;
 
 					case 'quickDraft':
-						if (typeof openQuickDraftModal === 'function') openQuickDraftModal();
+						openQuickDraftModal();
 						setTimeout(() => {
-							const finalAmount = cmd.dynamicAmount !== undefined ? cmd.dynamicAmount : cmd.defaultAmount;
-							if (finalAmount) {
-								document.getElementById('draft-amount').value = finalAmount;
-							}
-							
-							let descText = cmd.defaultDesc || cmd.command;
-							if (cmd.isPending) descText += ' [ค้างจ่าย]';
-							document.getElementById('draft-note').value = descText;
-							
-							let speakMsg = `จดบันทึกด่วน`;
-							if (finalAmount) speakMsg += ` จำนวน ${finalAmount} บาท`;
-							if (cmd.isPending) speakMsg += ` ระบุว่าค้างจ่าย`;
-							speak(speakMsg);
+							if (cmd.defaultAmount) document.getElementById('draft-amount').value = cmd.defaultAmount;
+							document.getElementById('draft-note').value = cmd.defaultDesc || cmd.command;
+							speak('จดบันทึกด่วนตามที่คุณสอนไว้');
 						}, 300);
 						break;
 						
+					case 'exportData':
+						setTimeout(() => {
+							handleBackup();  // เรียกฟังก์ชันสำรองข้อมูลที่มีอยู่แล้ว
+							setTimeout(() => {
+								speak('กำลังเปิดศูนย์สำรองข้อมูล');
+							}, 500);
+						}, 500);
+						break;
+
+					case 'importData':
+						setTimeout(() => {
+							document.getElementById('btn-import').click(); // คลิกปุ่มนำเข้า
+							setTimeout(() => {
+								speak('เตรียมนำเข้าข้อมูล กรุณาเลือกไฟล์');
+							}, 500);
+						}, 500);
+						break;
+
+					case 'clearAllData':
+						setTimeout(() => {
+							handleClearAll();  // ฟังก์ชันล้างข้อมูลทั้งหมด
+							// handleClearAll จะจัดการป๊อปอัปและเสียงพูดเอง
+						}, 500);
+						break;
+
+					case 'hardReset':
+						setTimeout(() => {
+							handleHardReset(); // ฟังก์ชันรีเซ็ตระบบ
+						}, 500);
+						break;
+						
+					case 'systemUpdate':
+						setTimeout(() => {
+							handleSystemUpdate();
+							setTimeout(() => {
+								speak('กำลังตรวจสอบและอัปเดตระบบ');
+							}, 500);
+						}, 500);
+						break;
+						
+					case 'undo':
+						setTimeout(() => {
+							handleUndo();  // ฟังก์ชันย้อนกลับที่มีอยู่แล้ว
+							setTimeout(() => {
+								speak('ย้อนกลับรายการล่าสุด');
+							}, 500);
+						}, 500);
+						break;
+
+					case 'redo':
+						setTimeout(() => {
+							handleRedo();  // ฟังก์ชันทำซ้ำที่มีอยู่แล้ว
+							setTimeout(() => {
+								speak('ทำซ้ำรายการล่าสุด');
+							}, 500);
+						}, 500);
+						break;
+
+					case 'lockApp':
+						setTimeout(() => {
+							lockApp(); // ฟังก์ชันล็อคหน้าจอ
+							speak('ล็อคแอปแล้ว');
+						}, 500);
+						break;
+
+					case 'openAccountsPage':
+						showPage('page-accounts');
+						speak('เปิดหน้าบัญชีแล้ว');
+						break;
+
+					case 'openBudgetSettings':
+						showPage('page-accounts');
+						setTimeout(() => {
+							// ขยายส่วนงบประมาณ (ถ้ายังไม่เปิด)
+							const budgetContent = document.getElementById('settings-budget-content');
+							const budgetHeader = document.querySelector('[data-target="settings-budget-content"]');
+							if (budgetContent && budgetHeader && budgetContent.classList.contains('hidden')) {
+								budgetHeader.click();
+							}
+							if (budgetContent) budgetContent.scrollIntoView({ behavior: 'smooth' });
+							speak('เปิดหน้าการตั้งค่างบประมาณแล้ว');
+						}, 300);
+						break;
+
+					case 'openRecurringSettings':
+						showPage('page-accounts');
+						setTimeout(() => {
+							// ขยายส่วนรายการประจำ
+							const recContent = document.getElementById('settings-recurring-content');
+							const recHeader = document.getElementById('btn-manage-recurring');
+							if (recContent && recHeader && recContent.classList.contains('hidden')) {
+								recHeader.click();
+							}
+							if (recContent) recContent.scrollIntoView({ behavior: 'smooth' });
+							speak('เปิดหน้าการตั้งค่ารายการประจำแล้ว');
+						}, 300);
+						break;
+
 					case 'search':
 						showPage('page-list');
 						setTimeout(() => {
@@ -14768,15 +14406,15 @@ document.addEventListener('DOMContentLoaded', () => {
 						break;
 
 					case 'filterByType':
-						if (typeof filterByType === 'function') filterByType(cmd.filterType);
+						filterByType(cmd.filterType);
 						break;
 
 					case 'applyTimeFilter':
-						if (typeof applyTimeFilter === 'function') applyTimeFilter(cmd.period);
+						applyTimeFilter(cmd.period);
 						break;
 
 					default:
-						speak('เปิดระบบตามที่คุณสอนไว้เรียบร้อยแล้ว');
+						showToast('ไม่รู้จัก Action นี้', 'warning');
 				}
 			}
 
