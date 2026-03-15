@@ -1666,7 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				device: device,
 				isRead: false,
 				isClearedFromBell: false, // 💡 ตัวแปรลับ: ใช้เพื่อบอกว่าลบออกจากกระดิ่งแล้ว แต่ยังเก็บในคลังประวัติ
-				...extraProps
+				...extraProps // รวม extraProps
 			};
 
 			if (!state.notificationHistory) state.notificationHistory = [];
@@ -2285,7 +2285,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const passInput = document.getElementById('unlock-password');
                         if (passInput) passInput.focus();
                     }, 300);
-					document.getElementById('unlock-form').addEventListener('submit', handleUnlock);
 					
 					if (state.biometricId) {
 						setTimeout(async () => {
@@ -2582,32 +2581,43 @@ document.addEventListener('DOMContentLoaded', () => {
 				document.addEventListener(event, resetAutoLockTimer, true);
 			});
 			
-			const selectEl = document.getElementById('auto-lock-select');
+			const selectEl = document.getElementById('auto-lock-select'); // หรือ ID ของสวิตช์ที่คุณใช้
 			if (selectEl) {
 				selectEl.value = state.autoLockTimeout.toString();
 
 				selectEl.addEventListener('change', async (e) => {
 					const newTimeout = parseInt(e.target.value, 10);
+					
+					// +++ [เพิ่มโค้ดป้องกันตรงนี้] +++
+					// ถ้าพยายามตั้งค่ามากกว่า 0 (เปิดใช้งาน) แต่ยังไม่มีรหัสผ่าน
+					if (newTimeout > 0 && !state.password) {
+						// 1. เด้งแจ้งเตือนกลางจอ
+						Swal.fire({
+							title: 'ไม่สามารถเปิดใช้งานได้',
+							text: 'กรุณาตั้งรหัสผ่าน (PIN) ก่อนเปิดใช้งานฟังก์ชันล็อคหน้าจอ',
+							icon: 'warning',
+							confirmButtonText: 'ตกลง',
+							confirmButtonColor: '#9333ea',
+							customClass: { popup: state.isDarkMode ? 'swal2-popup' : '' },
+							background: state.isDarkMode ? '#1a1a1a' : '#fff',
+							color: state.isDarkMode ? '#e5e7eb' : '#545454',
+						});
+						
+						// 2. ดึงสวิตช์ หรือ Select กลับไปเป็น 0 (ปิด) ทันที
+						e.target.value = "0"; 
+						// หมายเหตุ: หากคุณใช้ Input แบบ Checkbox (สวิตช์) ให้เปลี่ยนเป็น -> e.target.checked = false;
+
+						// 3. หยุดการทำงาน ไม่บันทึกค่าใดๆ
+						return; 
+					}
+					// ++++++++++++++++++++++++++++++
+
 					state.autoLockTimeout = newTimeout;
 					
 					try {
 						await dbPut(STORE_CONFIG, { key: AUTOLOCK_CONFIG_KEY, value: newTimeout });
-						
-						if (newTimeout > 0 && state.password === null) {
-							Swal.fire({
-								title: 'ข้อควรทราบ', 
-								text: 'ระบบ Auto Lock จะทำงานเมื่อมีการตั้งรหัสผ่านเท่านั้น', 
-								icon: 'info',
-								customClass: { popup: state.isDarkMode ? 'swal2-popup' : '' },
-								background: state.isDarkMode ? '#1a1a1a' : '#fff',
-								color: state.isDarkMode ? '#e5e7eb' : '#545454',
-							});
-						}
-						
 						resetAutoLockTimer();
-
 						showToast("ตั้งค่า Auto Lock สำเร็จ", "success");
-
 					} catch (err) {
 						console.error("Failed to save auto lock config:", err);
 					}
@@ -2878,8 +2888,15 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 		
-		function setupEventListeners() {
+	function setupEventListeners() {
 			const getEl = (id) => document.getElementById(id);
+			
+		// +++ [เพิ่มโค้ดแก้บั๊กหน้าจอค้าง: ให้ฟอร์มรับคำสั่งปลดล็อคทำงานเสมอ] +++
+		const unlockForm = document.getElementById('unlock-form');
+		if (unlockForm) {
+			unlockForm.addEventListener('submit', handleUnlock);
+		}
+		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			
 		// +++ เพิ่มโค้ดส่วนนี้: Auto Confirm สำหรับหน้า Lock Screen +++
 					const unlockInput = document.getElementById('unlock-password');
@@ -3089,39 +3106,129 @@ document.addEventListener('DOMContentLoaded', () => {
 		function renderNotificationPopover() {
 			const listDiv = document.getElementById('popover-notification-list');
 			if (!listDiv) return;
+
 			if (!state.notificationHistory) state.notificationHistory = [];
 			const unread = state.notificationHistory.filter(log => !log.isRead);
 			if (unread.length === 0) {
 				listDiv.innerHTML = '<p class="text-center text-gray-400 dark:text-gray-500 py-4 text-sm">ไม่มีการแจ้งเตือนใหม่</p>';
 				return;
 			}
-			const recent = unread.slice(0, 20);
+
+			const recent = unread.slice(0, 20); // แสดง 20 รายการล่าสุด
 			let html = '';
+
 			recent.forEach(log => {
 				const date = new Date(log.timestamp);
 				const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-				// ใช้ hasReceipt แทนการตรวจสอบจากข้อความ
-				const hasReceipt = log.hasReceipt === true;
-				const receiptIcon = hasReceipt ? '<i class="fa-solid fa-image text-purple-500 text-xs ml-1" title="มีรูปแนบ"></i>' : '';
+
+				// ตรวจสอบว่ามีข้อมูลธุรกรรมหรือไม่
+				const hasTx = log.type && log.amount !== undefined;
+
+				let iconColorClass = '', iconName = '', amountClass = '', formattedAmount = '';
+				let accountHtml = '', categoryHtml = '', receiptIcon = '';
+
+				if (hasTx) {
+					// กำหนดสีพื้นหลังวงกลมและไอคอนตามประเภท
+					if (log.type === 'income') {
+						iconColorClass = 'bg-green-500';
+						iconName = 'fa-arrow-down';
+						amountClass = 'text-green-600';
+						formattedAmount = '+' + formatCurrency(log.amount);
+					} else if (log.type === 'expense') {
+						iconColorClass = 'bg-red-500';
+						iconName = 'fa-arrow-up';
+						amountClass = 'text-red-600';
+						formattedAmount = '-' + formatCurrency(log.amount);
+					} else if (log.type === 'transfer') {
+						iconColorClass = 'bg-blue-500';
+						iconName = 'fa-money-bill-transfer';
+						amountClass = 'text-blue-600';
+						formattedAmount = formatCurrency(log.amount);
+					} else {
+						iconColorClass = '';
+						iconName = log.icon || 'fa-bell';
+						amountClass = log.color || 'text-gray-500';
+						formattedAmount = '';
+					}
+
+					// สร้าง HTML สำหรับบัญชี
+					if (log.type === 'transfer' && log.accountName && log.toAccountName) {
+						accountHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.accountName)}</span> <i class="fa-solid fa-arrow-right text-xs text-gray-400"></i> <span class="truncate max-w-[80px]">${escapeHTML(log.toAccountName)}</span>`;
+					} else if (log.accountName) {
+						accountHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.accountName)}</span>`;
+					}
+
+					if (log.category) {
+						categoryHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.category)}</span>`;
+					}
+
+					if (log.hasReceipt) {
+						receiptIcon = `<i class="fa-solid fa-image text-purple-500 text-xs ml-1" title="มีรูปแนบ"></i>`;
+					}
+				} else {
+					// กรณีไม่ใช่ธุรกรรม ใช้รูปแบบเดิม
+					iconName = log.icon || 'fa-bell';
+					iconColorClass = '';
+					amountClass = log.color || 'text-gray-500';
+					formattedAmount = '';
+				}
+
+				// device icon (ถ้ามี)
 				const deviceIcon = log.device?.icon ? `<i class="${log.device.icon} text-gray-400 text-xs ml-1" title="${log.device.label}"></i>` : '';
-				html += `
-					<div class="notification-item flex items-start gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition cursor-pointer" data-id="${log.id}">
-						<div class="${log.color || 'text-gray-500 dark:text-gray-400'} mt-1">
-							<i class="fa-solid ${log.icon || 'fa-bell'} text-sm"></i>
-						</div>
-						<div class="flex-1 min-w-0">
-							<div class="flex justify-between items-start gap-2 flex-wrap">
-								<p class="text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
-									${escapeHTML(log.action)} ${receiptIcon} ${deviceIcon}
-								</p>
-								<span class="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">${timeStr}</span>
-							</div>
-							<p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-0.5 whitespace-pre-wrap">${escapeHTML(log.details).replace(/\n/g, '<br>')}</p>
-						</div>
-					</div>
-				`;
+
+				// เริ่มสร้าง HTML ของ notification item
+				html += `<div class="notification-item flex items-start gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition cursor-pointer" data-id="${log.id}">`;
+
+				// วงกลมไอคอน
+				if (iconColorClass) {
+					html += `<div class="w-8 h-8 rounded-full ${iconColorClass} flex items-center justify-center flex-shrink-0 text-white shadow-sm">`;
+					html += `<i class="fa-solid ${iconName} text-xs"></i>`;
+					html += `</div>`;
+				} else {
+					html += `<div class="text-${log.color || 'gray-500 dark:text-gray-400'} mt-1">`;
+					html += `<i class="fa-solid ${iconName} text-sm"></i>`;
+					html += `</div>`;
+				}
+
+				// เนื้อหา
+				html += `<div class="flex-1 min-w-0">`;
+
+				// บรรทัดแรก: ชื่อ (action) และจำนวนเงิน (ถ้ามี)
+				html += `<div class="flex justify-between items-start gap-1">`;
+				html += `<p class="text-sm font-medium text-gray-800 dark:text-gray-200 break-words">${escapeHTML(log.action)} ${receiptIcon} ${deviceIcon}</p>`;
+				if (hasTx) {
+					html += `<span class="text-xs font-bold ${amountClass} whitespace-nowrap">${formattedAmount}</span>`;
+				}
+				html += `</div>`;
+
+				// บรรทัดที่สอง: หมวดหมู่, บัญชี, เวลา
+				html += `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">`;
+				if (categoryHtml) {
+					html += categoryHtml;
+					html += `<span class="text-gray-300 dark:text-gray-600">•</span>`;
+				}
+				if (accountHtml) {
+					html += accountHtml;
+					html += `<span class="text-gray-300 dark:text-gray-600">•</span>`;
+				}
+				html += `<span>${timeStr}</span>`;
+				html += `</div>`;
+
+				// บรรทัดที่สาม: รายละเอียดเพิ่มเติม (จาก log.details) สำหรับธุรกรรม เพื่อให้ข้อมูลครบถ้วนเหมือนต้นฉบับ
+				if (hasTx && log.details) {
+					html += `<p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-1 whitespace-pre-wrap">${escapeHTML(log.details).replace(/\n/g, '<br>')}</p>`;
+				} else if (!hasTx && log.details) {
+					// สำหรับการแจ้งเตือนอื่น ๆ ที่ไม่ใช่ธุรกรรม ให้แสดงรายละเอียดตามเดิม
+					html += `<p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-0.5 whitespace-pre-wrap">${escapeHTML(log.details).replace(/\n/g, '<br>')}</p>`;
+				}
+
+				html += `</div>`; // ปิด flex-1
+				html += `</div>`; // ปิด notification-item
 			});
+
 			listDiv.innerHTML = html;
+
+			// ผูกเหตุการณ์คลิกที่แต่ละ item เพื่อ mark as read
 			listDiv.querySelectorAll('.notification-item').forEach(item => {
 				item.addEventListener('click', async (e) => {
 					const id = item.dataset.id;
@@ -4820,6 +4927,66 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 		
+		// ===========================================
+		// ดักจับการกดปุ่มลัดวันที่ (ทั้งหมด, วันนี้, สัปดาห์นี้, เดือนนี้, ปีนี้)
+		// ===========================================
+		const quickDateContainer = document.getElementById('adv-quick-dates-container');
+		if (quickDateContainer) {
+			quickDateContainer.addEventListener('click', (e) => {
+				if (e.target.classList.contains('quick-date-btn')) {
+					// +++ [เพิ่มใหม่] สั่นเมื่อกดปุ่มลัดวันที่ตัวอื่นๆ +++
+					if (window.appVibrate) window.appVibrate(20);
+
+					const range = e.target.dataset.range;
+					const startInput = document.getElementById('adv-filter-start');
+					const endInput = document.getElementById('adv-filter-end');
+					const now = new Date();
+					
+					// ฟังก์ชันช่วยจัดฟอร์แมตวันที่ให้เป็น YYYY-MM-DD
+					const formatDate = (d) => {
+						let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+						if (month.length < 2) month = '0' + month;
+						if (day.length < 2) day = '0' + day;
+						return [year, month, day].join('-');
+					};
+
+					if (range === 'all') {
+						// ถ้าเลือก "ทั้งหมด" ให้ล้างค่าวันที่ออกทั้งคู่
+						startInput.value = '';
+						endInput.value = '';
+					} else if (range === 'today') {
+						startInput.value = endInput.value = formatDate(now);
+					} else if (range === 'thisWeek') {
+						// คำนวณหาวันจันทร์ ถึง วันอาทิตย์ ของสัปดาห์นี้
+						const currentDay = now.getDay();
+						const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
+						const startOfWeek = new Date(now);
+						startOfWeek.setDate(now.getDate() - distanceToMonday);
+						const endOfWeek = new Date(startOfWeek);
+						endOfWeek.setDate(startOfWeek.getDate() + 6);
+						
+						startInput.value = formatDate(startOfWeek);
+						endInput.value = formatDate(endOfWeek);
+					} else if (range === 'thisMonth') {
+						startInput.value = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+						endInput.value = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+					} else if (range === 'thisYear') {
+						startInput.value = `${now.getFullYear()}-01-01`;
+						endInput.value = `${now.getFullYear()}-12-31`;
+					}
+
+					// อัปเดตสีปุ่มให้รู้ว่ากำลังกดเลือกปุ่มไหนอยู่
+					document.querySelectorAll('.quick-date-btn').forEach(btn => {
+						btn.className = "quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap";
+					});
+					e.target.className = "quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-purple-100 text-purple-700 font-medium border border-purple-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap";
+
+					// สั่งโหลดรายการใหม่
+					if (typeof renderListPage === 'function') renderListPage();
+				}
+			});
+		}
+		
 		// --- [NEW] Advanced Filter Event Listeners ---
 		const advStart = document.getElementById('adv-filter-start');
 		const advEnd = document.getElementById('adv-filter-end');
@@ -5060,6 +5227,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				}
 			});
+		
     }
 	
 	function applyMobileMenuStyle() {
@@ -5750,45 +5918,113 @@ document.addEventListener('DOMContentLoaded', () => {
 	// [NEW] ADVANCED RENDER LIST PAGE (อัปเกรดให้รองรับการค้นหาด้วยบัญชี)
 	// ============================================
 	function renderListPage() {
-        // อัปเดตรายชื่อบัญชีเข้า Dropdown อัตโนมัติทุกครั้งที่โหลดหน้ารายการ
-        updateAccountDropdown('adv-filter-account');
+		// อัปเดตรายชื่อบัญชีเข้า Dropdown อัตโนมัติทุกครั้งที่โหลดหน้ารายการ
+		if (typeof updateAccountDropdown === 'function') {
+			updateAccountDropdown('adv-filter-account');
+		}
 
 		const getEl = (id) => document.getElementById(id);
+
+		// ===============================================================
+		// ลอจิกดึงหมวดหมู่ทั้งหมดในระบบมาใส่ Dropdown อัตโนมัติ
+		// ===============================================================
+		const catSelectElem = getEl('adv-filter-category');
+		if (catSelectElem && typeof state !== 'undefined' && state.transactions) {
+			const uniqueCategories = [...new Set(state.transactions.map(tx => tx.category).filter(Boolean))];
+			const currentSelected = catSelectElem.value;
+			
+			let catHtml = `<option value="all">ทุกหมวดหมู่</option>`;
+			uniqueCategories.forEach(cat => {
+				catHtml += `<option value="${cat}">${cat}</option>`;
+			});
+			
+			catSelectElem.innerHTML = catHtml;
+			
+			if (uniqueCategories.includes(currentSelected)) {
+				catSelectElem.value = currentSelected;
+			} else {
+				catSelectElem.value = 'all';
+			}
+		}
+		// ===============================================================
 		
 		// 1. ดึงค่าจาก Input กรองต่างๆ
 		const startDate = getEl('adv-filter-start') ? getEl('adv-filter-start').value : '';
 		const endDate = getEl('adv-filter-end') ? getEl('adv-filter-end').value : '';
 		const filterType = getEl('adv-filter-type') ? getEl('adv-filter-type').value : 'all';
-        const filterAccount = getEl('adv-filter-account') ? getEl('adv-filter-account').value : 'all'; 
-		const searchTerm = getEl('adv-filter-search') ? getEl('adv-filter-search').value.toLowerCase().trim() : '';
+		const filterAccount = getEl('adv-filter-account') ? getEl('adv-filter-account').value : 'all'; 
+		const searchTermElem = getEl('adv-filter-search');
+		const searchTerm = searchTermElem ? searchTermElem.value.toLowerCase().trim() : '';
 
-		// ปุ่ม Clear Search
-		const btnClear = getEl('btn-clear-search');
-        if (btnClear) {
-		    if(searchTerm.length > 0) btnClear.classList.remove('hidden');
-		    else btnClear.classList.add('hidden');
-        }
+		// ดึงค่าจาก Input หมวดหมู่ และ ยอดเงิน
+		const filterCategory = catSelectElem ? catSelectElem.value : 'all';
+		
+		const minInputElem = getEl('adv-filter-min');
+		const minRawVal = minInputElem ? minInputElem.value : '';
+		const filterMin = minRawVal !== '' ? parseFloat(minRawVal) : NaN;
+		
+		const maxInputElem = getEl('adv-filter-max');
+		const maxRawVal = maxInputElem ? maxInputElem.value : '';
+		const filterMax = maxRawVal !== '' ? parseFloat(maxRawVal) : NaN;
+
+		// ===============================================================
+		// ควบคุมการแสดง/ซ่อน ปุ่ม (X) สำหรับเคลียร์ข้อมูล
+		// ===============================================================
+		const btnClearSearch = getEl('btn-clear-search');
+		if (btnClearSearch) {
+			if(searchTerm.length > 0) btnClearSearch.classList.remove('hidden');
+			else btnClearSearch.classList.add('hidden');
+		}
+
+		const btnClearMin = getEl('btn-clear-min');
+		if (btnClearMin) {
+			if(minRawVal.length > 0) btnClearMin.classList.remove('hidden');
+			else btnClearMin.classList.add('hidden');
+		}
+
+		const btnClearMax = getEl('btn-clear-max');
+		if (btnClearMax) {
+			if(maxRawVal.length > 0) btnClearMax.classList.remove('hidden');
+			else btnClearMax.classList.add('hidden');
+		}
+		// ===============================================================
+
+		if (typeof state === 'undefined' || !state || !state.transactions) return;
 
 		// 2. กรองข้อมูล (Filtering)
 		let filtered = state.transactions.filter(tx => {
 			const txDate = tx.date ? tx.date.slice(0, 10) : ''; 
 			
-			// 2.1 กรองวันที่ (Start <= Date <= End)
+			// 2.1 กรองวันที่
 			const isDateInRange = (!startDate || txDate >= startDate) && 
 								  (!endDate || txDate <= endDate);
 			if (!isDateInRange) return false;
 
-			// 2.2 กรองประเภท (Type)
+			// 2.2 กรองประเภท
 			if (filterType !== 'all' && tx.type !== filterType) return false;
 
-            // 🌟 2.3 กรองตามบัญชี (Account)
-            if (filterAccount !== 'all') {
-                if (tx.accountId !== filterAccount && tx.toAccountId !== filterAccount) {
-                    return false;
-                }
-            }
+			// 2.3 กรองตามบัญชี
+			if (filterAccount !== 'all') {
+				if (tx.accountId !== filterAccount && tx.toAccountId !== filterAccount) {
+					return false;
+				}
+			}
 
-			// 2.4 กรองคำค้นหา (Search Keyword)
+			// 2.4 กรองตามหมวดหมู่
+			if (filterCategory !== 'all' && tx.category !== filterCategory) {
+				return false;
+			}
+
+			// 2.5 กรองตามยอดเงินต่ำสุด-สูงสุด
+			if (!isNaN(filterMin) && tx.amount < filterMin) {
+				return false;
+			}
+
+			if (!isNaN(filterMax) && tx.amount > filterMax) {
+				return false;
+			}
+
+			// 2.6 กรองคำค้นหา
 			if (searchTerm) {
 				const amountStr = String(tx.amount);
 				const fromAccount = state.accounts.find(a => a.id === tx.accountId);
@@ -5812,10 +6048,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			return true;
 		});
 
-		// 3. เรียงลำดับ (วันที่ใหม่สุดขึ้นก่อน)
+		// 3. เรียงลำดับ (วันที่ใหม่สุดขึ้นก่อนเสมอ)
 		filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-		// 4. คำนวณ Dynamic Summary (สรุปยอดจากรายการที่เห็น)
+		// 4. คำนวณ Dynamic Summary
 		let sumIncome = 0;
 		let sumExpense = 0;
 		
@@ -5827,74 +6063,103 @@ document.addEventListener('DOMContentLoaded', () => {
 		const sumNet = sumIncome - sumExpense;
 
 		// อัปเดตตัวเลขบนหน้าจอ
-		if (getEl('dyn-sum-income')) getEl('dyn-sum-income').textContent = formatCurrency(sumIncome);
-		if (getEl('dyn-sum-expense')) getEl('dyn-sum-expense').textContent = formatCurrency(sumExpense);
+		if (getEl('dyn-sum-income')) getEl('dyn-sum-income').textContent = typeof formatCurrency === 'function' ? formatCurrency(sumIncome) : sumIncome;
+		if (getEl('dyn-sum-expense')) getEl('dyn-sum-expense').textContent = typeof formatCurrency === 'function' ? formatCurrency(sumExpense) : sumExpense;
 		
 		const netEl = getEl('dyn-sum-net');
-        if (netEl) {
-		    netEl.textContent = formatCurrency(sumNet);
-		    if (sumNet > 0) { netEl.className = "text-sm md:text-base font-bold text-green-600"; }
-		    else if (sumNet < 0) { netEl.className = "text-sm md:text-base font-bold text-red-600"; }
-		    else { netEl.className = "text-sm md:text-base font-bold text-gray-600"; }
-        }
+		if (netEl) {
+			netEl.textContent = typeof formatCurrency === 'function' ? formatCurrency(sumNet) : sumNet;
+			if (sumNet > 0) { netEl.className = "text-sm md:text-base font-bold text-green-600"; }
+			else if (sumNet < 0) { netEl.className = "text-sm md:text-base font-bold text-red-600"; }
+			else { netEl.className = "text-sm md:text-base font-bold text-gray-600"; }
+		}
 
 		if (getEl('dyn-count-display')) getEl('dyn-count-display').textContent = `${filtered.length} รายการ`;
 		
-		// เรียกแสดงกราฟ
-        if (typeof renderAnalyticsChart === 'function') {
-		    renderAnalyticsChart(filtered);
-        }
-		
-		if (window.applyListChartState) {
-			window.applyListChartState(state.listChartsExpanded);
+		// อัปเดตตาราง และ Pagination ให้ตรงกับสิ่งที่ค้นหา
+		if (typeof state !== 'undefined') {
+			state.filteredTransactions = filtered;
+			state.currentPage = 1;
+		}
+		if (typeof updatePaginationControls === 'function') {
+			updatePaginationControls();
 		}
 
-		// 5. แสดงผลรายการ 
-        if (typeof renderTransactionList === 'function') {
-		    renderTransactionList('transaction-list-body', filtered, 'list');
-        }
+		if (typeof renderTransactionList === 'function') {
+			renderTransactionList('transaction-list-body', filtered, 'list');
+		}
+
+		// เรียกแสดงกราฟทีหลัง เพื่อให้เฟรมเรทไม่กระตุกตอนที่ตารางกำลังโหลดใหม่
+		setTimeout(() => {
+			if (typeof renderAnalyticsChart === 'function') {
+				renderAnalyticsChart(filtered);
+			}
+			if (window.applyListChartState) {
+				window.applyListChartState(state.listChartsExpanded);
+			}
+		}, 300);
 	}
-    // สิ้นสุดฟังก์ชัน renderListPage --------------------------
+	
+	// สิ้นสุดฟังก์ชัน renderListPage --------------------------
 	
 	// ฟังก์ชันรีเซ็ตตัวกรองให้เป็นเดือนปัจจุบัน
-		function resetToCurrentMonth() {
-			const now = new Date();
-			const year = now.getFullYear();
-			const month = String(now.getMonth() + 1).padStart(2, '0');
-			
-			const firstDay = `${year}-${month}-01`;
-			const lastDay = new Date(year, now.getMonth() + 1, 0).toISOString().slice(0, 10); // วันสุดท้ายของเดือน
+	function resetToCurrentMonth() {
+		if (window.appVibrate) window.appVibrate(20);
 
-			// ตั้งค่าช่องวันที่
-			const startInput = document.getElementById('adv-filter-start');
-			const endInput = document.getElementById('adv-filter-end');
-			if (startInput) startInput.value = firstDay;
-			if (endInput) endInput.value = lastDay;
+		const now = new Date();
+		const year = now.getFullYear();
+		const month = String(now.getMonth() + 1).padStart(2, '0');
+		const firstDay = `${year}-${month}-01`;
+		const lastDay = new Date(year, now.getMonth() + 1, 0).toISOString().slice(0, 10); 
 
-			// ตั้งค่าประเภทเป็นทั้งหมด
-			const typeSelect = document.getElementById('adv-filter-type');
-			if (typeSelect) typeSelect.value = 'all';
-			state.advFilterType = 'all';
+		const startInput = document.getElementById('adv-filter-start');
+		const endInput = document.getElementById('adv-filter-end');
+		if (startInput) startInput.value = firstDay;
+		if (endInput) endInput.value = lastDay;
 
-            // +++ คืนค่าตัวกรองบัญชีกลับเป็น "ทั้งหมด" +++
-			const accountSelect = document.getElementById('adv-filter-account');
-			if (accountSelect) accountSelect.value = 'all';
+		const typeSelect = document.getElementById('adv-filter-type');
+		if (typeSelect) typeSelect.value = 'all';
+		if (typeof state !== 'undefined') state.advFilterType = 'all';
 
-			// ล้างคำค้นหา
-			const searchInput = document.getElementById('adv-filter-search');
-			if (searchInput) {
-				searchInput.value = '';
+		const accountSelect = document.getElementById('adv-filter-account');
+		if (accountSelect) accountSelect.value = 'all';
+
+		const searchInput = document.getElementById('adv-filter-search');
+		if (searchInput) searchInput.value = '';
+		if (typeof state !== 'undefined') state.advFilterSearch = '';
+
+		const categorySelect = document.getElementById('adv-filter-category');
+		if (categorySelect) categorySelect.value = 'all';
+
+		const minInput = document.getElementById('adv-filter-min');
+		if (minInput) minInput.value = '';
+
+		const maxInput = document.getElementById('adv-filter-max');
+		if (maxInput) maxInput.value = '';
+
+		// รีเซ็ตการเรียงลำดับใหม่ทั้ง 2 Dropdown
+		const sortDateSelect = document.getElementById('adv-filter-sort-date');
+		if (sortDateSelect) sortDateSelect.value = 'date-desc';
+
+		const sortAmountSelect = document.getElementById('adv-filter-sort-amount');
+		if (sortAmountSelect) sortAmountSelect.value = 'none';
+
+		document.querySelectorAll('.quick-date-btn').forEach(btn => {
+			if (btn.dataset.range === 'thisMonth') {
+				btn.className = "quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-purple-100 text-purple-700 font-medium border border-purple-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap";
+			} else {
+				btn.className = "quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap";
 			}
-			state.advFilterSearch = '';
+		});
 
-			// รีเฟรชหน้ารายการ
-			if (typeof renderListPage === 'function') {
-				renderListPage();
-			}
-
-			// แจ้งเตือนผู้ใช้ (optional)
-			showToast('คืนค่าตัวกรองเริ่มต้น', 'info'); // ปรับข้อความแจ้งเตือนให้เข้ากับชื่อปุ่ม
+		if (typeof renderListPage === 'function') {
+			renderListPage();
 		}
+
+		if (typeof showToast === 'function') {
+			showToast('คืนค่าตัวกรองเริ่มต้น', 'info');
+		}
+	}
 
 	// ============================================
 	// [แก้ไข] FUNCTION EXPORT FILTERED LIST (ตั้งชื่อไฟล์ตามสิ่งที่ค้นหา)
@@ -8972,37 +9237,50 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (txId) {
-            const tx = state.transactions.find(t => t.id === txId);
-            if (!tx) return;
-            
-            getEl('modal-title').textContent = 'แก้ไขรายการ';
-            getEl('tx-id').value = tx.id;
-            document.querySelector(`input[name="tx-type"][value="${tx.type}"]`).checked = true;
-            getEl('tx-amount').value = tx.amount;
-            getEl('tx-date').value = tx.date.slice(0, 16);
-            getEl('tx-desc').value = tx.desc;
-            getEl('tx-name').value = tx.name; 
-            
-            if (tx.receiptBase64) {
-                currentReceiptBase64 = tx.receiptBase64;
-                getEl('receipt-preview').src = currentReceiptBase64;
-                getEl('receipt-preview-container').classList.remove('hidden');
-                getEl('clear-receipt-btn').classList.remove('hidden');
-            }
+			const tx = state.transactions.find(t => t.id === txId);
+			if (!tx) return;
+			
+			getEl('modal-title').textContent = 'แก้ไขรายการ';
+			getEl('tx-id').value = tx.id;
+			document.querySelector(`input[name="tx-type"][value="${tx.type}"]`).checked = true;
+			getEl('tx-amount').value = tx.amount;
+			getEl('tx-date').value = tx.date.slice(0, 16);
+			getEl('tx-desc').value = tx.desc;
+			getEl('tx-name').value = tx.name; 
+			
+			if (tx.receiptBase64) {
+				currentReceiptBase64 = tx.receiptBase64;
+				getEl('receipt-preview').src = currentReceiptBase64;
+				getEl('receipt-preview-container').classList.remove('hidden');
+				getEl('clear-receipt-btn').classList.remove('hidden');
+			}
 
-            if(tx.type === 'transfer') {
-                getEl('tx-account-from').value = tx.accountId;
-                getEl('tx-account-to').value = tx.toAccountId;
-            } else {
-                updateCategoryDropdown(tx.type); 
-                getEl('tx-category').value = tx.category; 
-                getEl('tx-account').value = tx.accountId;
-            }
-            
-            const isFav = state.frequentItems.includes(tx.name);
-            setFavoriteState(isFav);
-            
-        } else {
+			if(tx.type === 'transfer') {
+				getEl('tx-account-from').value = tx.accountId;
+				getEl('tx-account-to').value = tx.toAccountId;
+			} else {
+				// ตั้งค่า dropdown หมวดหมู่ก่อน
+				updateCategoryDropdown(tx.type);
+				// กำหนดค่าหมวดหมู่ที่ต้องการ (อาจจะหายไปหลัง updateFormVisibility)
+				getEl('tx-category').value = tx.category;
+				getEl('tx-account').value = tx.accountId;
+			}
+			
+			const isFav = state.frequentItems.includes(tx.name);
+			setFavoriteState(isFav);
+
+			// เรียก updateFormVisibility เพื่อจัดการแสดงส่วนต่างๆ
+			updateFormVisibility();
+
+			// สำคัญ: หลังจาก updateFormVisibility แล้ว ให้กำหนดค่าหมวดหมู่อีกครั้ง (ถ้าไม่ใช่โอนย้าย)
+			if (tx.type !== 'transfer') {
+				// ใช้ setTimeout เพื่อรอให้ DOM อัปเดตเสร็จ
+				setTimeout(() => {
+					getEl('tx-category').value = tx.category;
+				}, 50);
+			}
+			
+		} else {
             getEl('modal-title').textContent = 'เพิ่มรายการใหม่';
             getEl('tx-id').value = '';
             getEl('tx-name').value = ''; 
@@ -9701,33 +9979,56 @@ document.addEventListener('DOMContentLoaded', () => {
 			await dbPut(STORE_TRANSACTIONS, transaction);
 
 			// ✅ ADD ACTIVITY LOG
-				const typeLabel = transaction.type === 'income' ? 'รายรับ' : (transaction.type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
-				
-				// [แก้ไขใหม่] ตรวจสอบว่าเป็นรายการล่วงหน้าไหม และจัดรูปแบบวันที่
-				const txDateObj = new Date(transaction.date);
-				const isFuture = txDateObj > new Date();
-				const formattedTxDate = txDateObj.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
-				const dateInfoText = isFuture ? ` | 📅 วันที่ล่วงหน้า: ${formattedTxDate}` : ` | 📅 วันที่: ${formattedTxDate}`;
+			const typeLabel = transaction.type === 'income' ? 'รายรับ' : (transaction.type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
+			
+			// [แก้ไขใหม่] ตรวจสอบว่าเป็นรายการล่วงหน้าไหม และจัดรูปแบบวันที่
+			const txDateObj = new Date(transaction.date);
+			const isFuture = txDateObj > new Date();
+			const formattedTxDate = txDateObj.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
+			const dateInfoText = isFuture ? ` | 📅 วันที่ล่วงหน้า: ${formattedTxDate}` : ` | 📅 วันที่: ${formattedTxDate}`;
 
-				if (txId) {
-					const oldTx = state.transactions.find(t => t.id === txId);
-					const actionTitle = isFuture ? '📝 แก้ไขรายการล่วงหน้า' : '✏️ แก้ไขรายการ';
-					addActivityLog(
-						actionTitle,
-						`${oldTx.name} → ${transaction.name} (${formatCurrency(transaction.amount)} ${typeLabel})${dateInfoText}`,
-						'fa-pencil',
-						'text-blue-600'
-					);
-				} else {
-					const actionTitle = isFuture ? '📅 เพิ่มรายการล่วงหน้า' : '➕ เพิ่มรายการ';
-					addActivityLog(
-						actionTitle,
-						`${transaction.name} ${formatCurrency(transaction.amount)} (${typeLabel})${transaction.desc ? ' – ' + transaction.desc : ''}${dateInfoText}`,
-						isFuture ? 'fa-clock' : 'fa-plus-circle',
-						isFuture ? 'text-yellow-600' : 'text-green-600',
-						{ hasReceipt: !!transaction.receiptBase64 } 
-					);
-				}
+			// คำนวณชื่อบัญชี
+			const fromAccount = state.accounts.find(a => a.id === transaction.accountId);
+			const toAccount = transaction.toAccountId ? state.accounts.find(a => a.id === transaction.toAccountId) : null;
+
+			if (txId) {
+				const oldTx = state.transactions.find(t => t.id === txId);
+				const actionTitle = isFuture ? '📝 แก้ไขรายการล่วงหน้า' : '✏️ แก้ไขรายการ';
+				addActivityLog(
+					actionTitle,
+					`${oldTx.name} → ${transaction.name} ${formatCurrency(transaction.amount)}${dateInfoText}`,
+					'fa-pencil',
+					'text-blue-600',
+					{
+						type: transaction.type,
+						amount: transaction.amount,
+						name: transaction.name,
+						category: transaction.category,
+						accountName: fromAccount?.name,
+						toAccountName: toAccount?.name,
+						date: transaction.date,
+						hasReceipt: !!transaction.receiptBase64
+					}
+				);
+			} else {
+				const actionTitle = isFuture ? '📅 เพิ่มรายการล่วงหน้า' : '➕ เพิ่มรายการ';
+				addActivityLog(
+					actionTitle,
+					`${transaction.name} ${formatCurrency(transaction.amount)}${transaction.desc ? ' – ' + transaction.desc : ''}${dateInfoText}`,
+					isFuture ? 'fa-clock' : 'fa-plus-circle',
+					isFuture ? 'text-yellow-600' : 'text-green-600',
+					{
+						type: transaction.type,
+						amount: transaction.amount,
+						name: transaction.name,
+						category: transaction.category,
+						accountName: fromAccount?.name,
+						toAccountName: toAccount?.name,
+						date: transaction.date,
+						hasReceipt: !!transaction.receiptBase64
+					}
+				);
+			}
 
 			// เช็ค draft
 			const hiddenDraftInput = document.getElementById('hidden-draft-id');
@@ -10085,15 +10386,25 @@ document.addEventListener('DOMContentLoaded', () => {
 					setLastUndoAction({ type: 'tx-delete', data: JSON.parse(JSON.stringify(oldTx)) });
 
 					// ✅ ADD ACTIVITY LOG
-						const oldTxDateObj = new Date(oldTx.date);
-						const formattedOldTxDate = oldTxDateObj.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
-						
-						addActivityLog(
-							'🗑️ ลบรายการ',
-							`${oldTx.name} ${formatCurrency(oldTx.amount)} (${oldTx.type === 'income' ? 'รายรับ' : oldTx.type === 'expense' ? 'รายจ่าย' : 'โอนย้าย'}) | 📅 วันที่: ${formattedOldTxDate}`,
-							'fa-trash',
-							'text-red-600'
-						);
+					const oldTxDateObj = new Date(oldTx.date);
+					const formattedOldTxDate = oldTxDateObj.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' });
+
+					addActivityLog(
+						'🗑️ ลบรายการ',
+						`${oldTx.name} ${formatCurrency(oldTx.amount)} (${oldTx.type === 'income' ? 'รายรับ' : oldTx.type === 'expense' ? 'รายจ่าย' : 'โอนย้าย'}) | 📅 วันที่: ${formattedOldTxDate}`,
+						'fa-trash',
+						'text-red-600',
+						{
+							type: oldTx.type,
+							amount: oldTx.amount,
+							name: oldTx.name,
+							category: oldTx.category,
+							accountName: state.accounts.find(a => a.id === oldTx.accountId)?.name,
+							toAccountName: oldTx.toAccountId ? state.accounts.find(a => a.id === oldTx.toAccountId)?.name : null,
+							date: oldTx.date,
+							hasReceipt: !!oldTx.receiptBase64
+						}
+					);
 
 					if (currentPage === 'home') renderAll();
 					if (currentPage === 'list') renderListPage();
@@ -10637,6 +10948,22 @@ document.addEventListener('DOMContentLoaded', () => {
 						await dbDelete(STORE_CONFIG, 'passwordType');
 						state.password = null;
 						state.passwordType = 'text';
+
+						// +++ [เพิ่มโค้ดป้องกันบัค: ปิดฟังก์ชันล็อคหน้าจอทั้งหมด] +++
+						
+						// 1. ปิดระบบ Auto-Lock (ตั้งค่ากลับเป็น 0)
+						state.autoLockTimeout = 0;
+						await dbPut(STORE_CONFIG, { key: AUTOLOCK_CONFIG_KEY, value: 0 });
+						const autoLockSelect = document.getElementById('auto-lock-select');
+						if (autoLockSelect) autoLockSelect.value = "0";
+
+						// 2. ปิดระบบเคาะ 2 ครั้งเพื่อล็อค (Double Tap)
+						localStorage.setItem('fmpro_double_tap_lock', 'false');
+						const toggleDoubleTap = document.getElementById('toggle-double-tap-lock');
+						if (toggleDoubleTap) toggleDoubleTap.checked = false;
+
+						// +++++++++++++++++++++++++++++++++++++++++++++++
+
 						Swal.fire('สำเร็จ!', 'ลบรหัสผ่านเรียบร้อย', 'success');
 						addActivityLog('🔓 ลบรหัสผ่าน', 'ปิดการใช้รหัสผ่าน', 'fa-unlock', 'text-red-600');
 						resetAutoLockTimer();
@@ -12000,120 +12327,207 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             async function handleUndo() {
-                if (!lastUndoAction) return;
-                const action = lastUndoAction;
+				if (!lastUndoAction) return;
+				const action = lastUndoAction;
 
-                const { title, html } = getActionDescription(action, true);
-                const { isConfirmed } = await Swal.fire({
-                    title: title,
-                    html: html,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'ใช่, ย้อนกลับ',
-                    cancelButtonText: 'ยกเลิก'
-                });
-                if (!isConfirmed) {
-                    return;
-                }
+				const { title, html } = getActionDescription(action, true);
+				const { isConfirmed } = await Swal.fire({
+					title: title,
+					html: html,
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonColor: '#3085d6',
+					cancelButtonColor: '#d33',
+					confirmButtonText: 'ใช่, ย้อนกลับ',
+					cancelButtonText: 'ยกเลิก'
+				});
+				if (!isConfirmed) {
+					return;
+				}
 
-                const confirmedAction = lastUndoAction;
-                lastUndoAction = null;
-                let redoAction;
+				const confirmedAction = lastUndoAction;
+				lastUndoAction = null;
+				let redoAction;
 
-                try {
-                    switch (confirmedAction.type) {
-                        case 'tx-add':
-                            await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
-                            state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
-                            // ✅ แจ้งเตือน: ย้อนกลับการเพิ่ม = ลบรายการ
-                            sendLineAlert(confirmedAction.data, 'delete'); 
-                            redoAction = { type: 'tx-add', data: confirmedAction.data };
-                            break;
-                        case 'tx-delete':
-                            await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
-                            state.transactions.push(confirmedAction.data);
-                            // ✅ แจ้งเตือน: ย้อนกลับการลบ = เพิ่มรายการคืน
-                            sendLineAlert(confirmedAction.data, 'add');
-                            redoAction = { type: 'tx-delete', data: confirmedAction.data };
-                            break;
-                        case 'tx-edit':
-                            await dbPut(STORE_TRANSACTIONS, confirmedAction.oldData);
-                            state.transactions = state.transactions.map(tx => tx.id === confirmedAction.oldData.id ? confirmedAction.oldData : tx);
-                            // ✅ แจ้งเตือน: ย้อนกลับการแก้ไข = แก้ไขกลับเป็นค่าเดิม
-                            sendLineAlert(confirmedAction.oldData, 'edit');
-                            redoAction = confirmedAction;
-                            break;
-                        // ... (เคสอื่นๆ cat-add, item-add ฯลฯ ปล่อยไว้เหมือนเดิม เพราะเราไม่แจ้งเตือนพวกนี้) ...
-                        case 'cat-add':
-                            state.categories[confirmedAction.catType] = state.categories[confirmedAction.catType].filter(cat => cat !== confirmedAction.name);
-                            await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
-                            redoAction = { type: 'cat-add', catType: confirmedAction.catType, name: confirmedAction.name };
-                            break;
-                        case 'cat-delete':
-                            state.categories[confirmedAction.catType].push(confirmedAction.name);
-                            await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
-                            redoAction = { type: 'cat-delete', catType: confirmedAction.catType, name: confirmedAction.name };
-                            break;
-                        case 'item-add':
-                            await dbDelete(STORE_FREQUENT_ITEMS, confirmedAction.name);
-                            state.frequentItems = state.frequentItems.filter(item => item !== confirmedAction.name);
-                            redoAction = { type: 'item-add', name: confirmedAction.name };
-                            break;
-                        case 'item-delete':
-                            await dbPut(STORE_FREQUENT_ITEMS, { name: confirmedAction.name });
-                            state.frequentItems.push(confirmedAction.name);
-                            redoAction = { type: 'item-delete', name: confirmedAction.name };
-                            break;
-                        case 'account-add':
-                            await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
-                            state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
-                            redoAction = { type: 'account-add', data: confirmedAction.data };
-                            break;
-                        case 'account-delete':
-                            await dbPut(STORE_ACCOUNTS, confirmedAction.data);
-                            state.accounts.push(confirmedAction.data);
-                            redoAction = { type: 'account-delete', data: confirmedAction.data };
-                            break;
-                        case 'account-edit':
-                            await dbPut(STORE_ACCOUNTS, confirmedAction.oldData);
-                            state.accounts = state.accounts.map(acc => acc.id === confirmedAction.oldData.id ? confirmedAction.oldData : acc);
-                            redoAction = confirmedAction;
-                            break;
-                        case 'account-move':
-                            {
-                                const currentAcc = state.accounts.find(a => a.id === confirmedAction.currentAccountId);
-                                const targetAcc = state.accounts.find(a => a.id === confirmedAction.targetAccountId);
-                                currentAcc.displayOrder = confirmedAction.oldCurrentOrder;
-                                targetAcc.displayOrder = confirmedAction.oldTargetOrder;
-                                await Promise.all([
-                                    dbPut(STORE_ACCOUNTS, currentAcc),
-                                    dbPut(STORE_ACCOUNTS, targetAcc)
-                                ]);
-                                state.accounts = state.accounts.map(acc => {
-                                    if (acc.id === currentAcc.id) return currentAcc;
-                                    if (acc.id === targetAcc.id) return targetAcc;
-                                    return acc;
-                                });
-                                redoAction = confirmedAction;
-                            }
-                            break;
-                    }
+				try {
+					switch (confirmedAction.type) {
+						case 'tx-add':
+							await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
+							state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
+							sendLineAlert(confirmedAction.data, 'delete');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↩️ ย้อนกลับ (เพิ่มรายการ)',
+								`${confirmedAction.data.name} ${formatCurrency(confirmedAction.data.amount)}`,
+								'fa-undo',
+								'text-purple-600',
+								{
+									type: confirmedAction.data.type,
+									amount: confirmedAction.data.amount,
+									name: confirmedAction.data.name,
+									category: confirmedAction.data.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.data.accountId)?.name,
+									toAccountName: confirmedAction.data.toAccountId ? state.accounts.find(a => a.id === confirmedAction.data.toAccountId)?.name : null,
+									date: confirmedAction.data.date,
+									hasReceipt: !!confirmedAction.data.receiptBase64
+								}
+							);
+							
+							redoAction = { type: 'tx-add', data: confirmedAction.data };
+							break;
 
-                    if (redoAction) {
-                        lastRedoAction = redoAction;
-                    }
-                } catch (err) {
-                    console.error("Undo failed:", err);
-                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถย้อนกลับได้', 'error');
-                    lastUndoAction = confirmedAction;
-                }
+						case 'tx-delete':
+							await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
+							state.transactions.push(confirmedAction.data);
+							sendLineAlert(confirmedAction.data, 'add');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↩️ กู้คืนรายการที่ถูกลบ',
+								`${confirmedAction.data.name} ${formatCurrency(confirmedAction.data.amount)}`,
+								'fa-undo',
+								'text-purple-600',
+								{
+									type: confirmedAction.data.type,
+									amount: confirmedAction.data.amount,
+									name: confirmedAction.data.name,
+									category: confirmedAction.data.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.data.accountId)?.name,
+									toAccountName: confirmedAction.data.toAccountId ? state.accounts.find(a => a.id === confirmedAction.data.toAccountId)?.name : null,
+									date: confirmedAction.data.date,
+									hasReceipt: !!confirmedAction.data.receiptBase64
+								}
+							);
+							
+							redoAction = { type: 'tx-delete', data: confirmedAction.data };
+							break;
 
-                updateUndoRedoButtons();
-                await refreshAllUI();
-                await refreshAccountDetailModalIfOpen();
-            }
+						case 'tx-edit':
+							await dbPut(STORE_TRANSACTIONS, confirmedAction.oldData);
+							state.transactions = state.transactions.map(tx => tx.id === confirmedAction.oldData.id ? confirmedAction.oldData : tx);
+							sendLineAlert(confirmedAction.oldData, 'edit');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↩️ ย้อนกลับการแก้ไข',
+								`${confirmedAction.oldData.name} ${formatCurrency(confirmedAction.oldData.amount)}`,
+								'fa-undo',
+								'text-purple-600',
+								{
+									type: confirmedAction.oldData.type,
+									amount: confirmedAction.oldData.amount,
+									name: confirmedAction.oldData.name,
+									category: confirmedAction.oldData.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.oldData.accountId)?.name,
+									toAccountName: confirmedAction.oldData.toAccountId ? state.accounts.find(a => a.id === confirmedAction.oldData.toAccountId)?.name : null,
+									date: confirmedAction.oldData.date,
+									hasReceipt: !!confirmedAction.oldData.receiptBase64
+								}
+							);
+							
+							redoAction = confirmedAction;
+							break;
+
+						case 'cat-add':
+							state.categories[confirmedAction.catType] = state.categories[confirmedAction.catType].filter(cat => cat !== confirmedAction.name);
+							await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
+							
+							addActivityLog('↩️ ย้อนกลับ (เพิ่มหมวดหมู่)', confirmedAction.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'cat-add', catType: confirmedAction.catType, name: confirmedAction.name };
+							break;
+
+						case 'cat-delete':
+							state.categories[confirmedAction.catType].push(confirmedAction.name);
+							await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
+							
+							addActivityLog('↩️ กู้คืนหมวดหมู่', confirmedAction.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'cat-delete', catType: confirmedAction.catType, name: confirmedAction.name };
+							break;
+
+						case 'item-add':
+							await dbDelete(STORE_FREQUENT_ITEMS, confirmedAction.name);
+							state.frequentItems = state.frequentItems.filter(item => item !== confirmedAction.name);
+							
+							addActivityLog('↩️ ย้อนกลับ (เพิ่มรายการใช้บ่อย)', confirmedAction.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'item-add', name: confirmedAction.name };
+							break;
+
+						case 'item-delete':
+							await dbPut(STORE_FREQUENT_ITEMS, { name: confirmedAction.name });
+							state.frequentItems.push(confirmedAction.name);
+							
+							addActivityLog('↩️ กู้คืนรายการใช้บ่อย', confirmedAction.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'item-delete', name: confirmedAction.name };
+							break;
+
+						case 'account-add':
+							await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
+							state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
+							
+							addActivityLog('↩️ ย้อนกลับ (เพิ่มบัญชี)', confirmedAction.data.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'account-add', data: confirmedAction.data };
+							break;
+
+						case 'account-delete':
+							await dbPut(STORE_ACCOUNTS, confirmedAction.data);
+							state.accounts.push(confirmedAction.data);
+							
+							addActivityLog('↩️ กู้คืนบัญชี', confirmedAction.data.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = { type: 'account-delete', data: confirmedAction.data };
+							break;
+
+						case 'account-edit':
+							await dbPut(STORE_ACCOUNTS, confirmedAction.oldData);
+							state.accounts = state.accounts.map(acc => acc.id === confirmedAction.oldData.id ? confirmedAction.oldData : acc);
+							
+							addActivityLog('↩️ ย้อนกลับการแก้ไขบัญชี', confirmedAction.oldData.name, 'fa-undo', 'text-purple-600');
+							
+							redoAction = confirmedAction;
+							break;
+
+						case 'account-move':
+							{
+								const currentAcc = state.accounts.find(a => a.id === confirmedAction.currentAccountId);
+								const targetAcc = state.accounts.find(a => a.id === confirmedAction.targetAccountId);
+								currentAcc.displayOrder = confirmedAction.oldCurrentOrder;
+								targetAcc.displayOrder = confirmedAction.oldTargetOrder;
+								await Promise.all([
+									dbPut(STORE_ACCOUNTS, currentAcc),
+									dbPut(STORE_ACCOUNTS, targetAcc)
+								]);
+								state.accounts = state.accounts.map(acc => {
+									if (acc.id === currentAcc.id) return currentAcc;
+									if (acc.id === targetAcc.id) return targetAcc;
+									return acc;
+								});
+								
+								addActivityLog('↩️ ย้อนกลับการสลับลำดับบัญชี', `${currentAcc.name} ↔ ${targetAcc.name}`, 'fa-undo', 'text-purple-600');
+								
+								redoAction = confirmedAction;
+							}
+							break;
+					}
+
+					if (redoAction) {
+						lastRedoAction = redoAction;
+					}
+				} catch (err) {
+					console.error("Undo failed:", err);
+					Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถย้อนกลับได้', 'error');
+					lastUndoAction = confirmedAction;
+				}
+
+				updateUndoRedoButtons();
+				await refreshAllUI();
+				await refreshAccountDetailModalIfOpen();
+			}
 			
 			// ============================================
 			// ฟังก์ชัน: บังคับส่งข้อมูลทั้งหมดขึ้น Cloud (Manual Force Sync)
@@ -12183,128 +12597,215 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 
 			async function handleRedo() {
-                if (!lastRedoAction) return;
-                const action = lastRedoAction;
+				if (!lastRedoAction) return;
+				const action = lastRedoAction;
 
-                const { title, html } = getActionDescription(action, false);
-                const { isConfirmed } = await Swal.fire({
-                    title: title,
-                    html: html,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'ใช่, ทำซ้ำ',
-                    cancelButtonText: 'ยกเลิก'
-                });
-                if (!isConfirmed) {
-                    return;
-                }
+				const { title, html } = getActionDescription(action, false);
+				const { isConfirmed } = await Swal.fire({
+					title: title,
+					html: html,
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonColor: '#3085d6',
+					cancelButtonColor: '#d33',
+					confirmButtonText: 'ใช่, ทำซ้ำ',
+					cancelButtonText: 'ยกเลิก'
+				});
+				if (!isConfirmed) {
+					return;
+				}
 
-                const confirmedAction = lastRedoAction;
-                lastRedoAction = null;
-                let undoAction;
+				const confirmedAction = lastRedoAction;
+				lastRedoAction = null;
+				let undoAction;
 
-                try {
-                    switch (confirmedAction.type) {
-                        case 'tx-add':
-                            await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
-                            state.transactions.push(confirmedAction.data);
-                            // ✅ แจ้งเตือน: ทำซ้ำการเพิ่ม = เพิ่มรายการใหม่
-                            sendLineAlert(confirmedAction.data, 'add');
-                            undoAction = { type: 'tx-delete', data: confirmedAction.data };
-                            break;
-                        case 'tx-delete':
-                            await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
-                            state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
-                            // ✅ แจ้งเตือน: ทำซ้ำการลบ = ลบรายการอีกครั้ง
-                            sendLineAlert(confirmedAction.data, 'delete');
-                            undoAction = { type: 'tx-add', data: confirmedAction.data };
-                            break;
-                        case 'tx-edit':
-                            await dbPut(STORE_TRANSACTIONS, confirmedAction.newData);
-                            state.transactions = state.transactions.map(tx => tx.id === confirmedAction.newData.id ? confirmedAction.newData : tx);
-                            // ✅ แจ้งเตือน: ทำซ้ำการแก้ไข = แก้ไขรายการอีกครั้ง
-                            sendLineAlert(confirmedAction.newData, 'edit');
-                            undoAction = confirmedAction;
-                            break;
-                        // ... (เคสอื่นๆ cat, item, account ปล่อยไว้เหมือนเดิม) ...
-                        case 'cat-add':
-                            state.categories[confirmedAction.catType].push(confirmedAction.name);
-                            await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
-                            undoAction = { type: 'cat-delete', catType: confirmedAction.catType, name: confirmedAction.name };
-                            break;
-                        case 'cat-delete':
-                            state.categories[confirmedAction.catType] = state.categories[confirmedAction.catType].filter(cat => cat !== confirmedAction.name);
-                            await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
-                            undoAction = { type: 'cat-add', catType: confirmedAction.catType, name: confirmedAction.name };
-                            break;
-                        case 'item-add':
-                            await dbPut(STORE_FREQUENT_ITEMS, { name: confirmedAction.name });
-                            state.frequentItems.push(confirmedAction.name);
-                            undoAction = { type: 'item-delete', name: confirmedAction.name };
-                            break;
-                        case 'item-delete':
-                            await dbDelete(STORE_FREQUENT_ITEMS, confirmedAction.name);
-                            state.frequentItems = state.frequentItems.filter(item => item !== confirmedAction.name);
-                            undoAction = { type: 'item-add', name: confirmedAction.name };
-                            break;
-                        case 'account-add':
-                            await dbPut(STORE_ACCOUNTS, confirmedAction.data);
-                            state.accounts.push(confirmedAction.data);
-                            undoAction = { type: 'account-delete', data: confirmedAction.data };
-                            break;
-                        case 'account-delete':
-                            await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
-                            state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
-                            undoAction = { type: 'account-add', data: confirmedAction.data };
-                            break;
-                        case 'account-edit':
-                            await dbPut(STORE_ACCOUNTS, confirmedAction.newData);
-                            state.accounts = state.accounts.map(acc => acc.id === confirmedAction.newData.id ? confirmedAction.newData : acc);
-                            undoAction = confirmedAction;
-                            break;
-                        case 'account-move':
-                            {
-                                const currentAcc = state.accounts.find(a => a.id === confirmedAction.currentAccountId);
-                                const targetAcc = state.accounts.find(a => a.id === confirmedAction.targetAccountId);
-                                currentAcc.displayOrder = confirmedAction.newCurrentOrder;
-                                targetAcc.displayOrder = confirmedAction.newTargetOrder;
-                                await Promise.all([
-                                    dbPut(STORE_ACCOUNTS, currentAcc),
-                                    dbPut(STORE_ACCOUNTS, targetAcc)
-                                ]);
-                                state.accounts = state.accounts.map(acc => {
-                                    if (acc.id === currentAcc.id) return currentAcc;
-                                    if (acc.id === targetAcc.id) return targetAcc;
-                                    return acc;
-                                });
-                                undoAction = {
-                                    type: 'account-move',
-                                    currentAccountId: confirmedAction.currentAccountId,
-                                    newCurrentOrder: confirmedAction.oldCurrentOrder,
-                                    oldCurrentOrder: confirmedAction.newCurrentOrder,
-                                    targetAccountId: confirmedAction.targetAccountId,
-                                    newTargetOrder: confirmedAction.oldTargetOrder,
-                                    oldTargetOrder: confirmedAction.newTargetOrder
-                                };
-                            }
-                            break;
-                    }
+				try {
+					switch (confirmedAction.type) {
+						case 'tx-add':
+							await dbPut(STORE_TRANSACTIONS, confirmedAction.data);
+							state.transactions.push(confirmedAction.data);
+							sendLineAlert(confirmedAction.data, 'add');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↪️ ทำซ้ำ (เพิ่มรายการ)',
+								`${confirmedAction.data.name} ${formatCurrency(confirmedAction.data.amount)}`,
+								'fa-rotate-right',
+								'text-blue-600',
+								{
+									type: confirmedAction.data.type,
+									amount: confirmedAction.data.amount,
+									name: confirmedAction.data.name,
+									category: confirmedAction.data.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.data.accountId)?.name,
+									toAccountName: confirmedAction.data.toAccountId ? state.accounts.find(a => a.id === confirmedAction.data.toAccountId)?.name : null,
+									date: confirmedAction.data.date,
+									hasReceipt: !!confirmedAction.data.receiptBase64
+								}
+							);
+							
+							undoAction = { type: 'tx-delete', data: confirmedAction.data };
+							break;
 
-                    if (undoAction) {
-                        lastUndoAction = undoAction;
-                    }
-                } catch (err) {
-                    console.error("Redo failed:", err);
-                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถทำซ้ำได้', 'error');
-                    lastRedoAction = confirmedAction;
-                }
+						case 'tx-delete':
+							await dbDelete(STORE_TRANSACTIONS, confirmedAction.data.id);
+							state.transactions = state.transactions.filter(tx => tx.id !== confirmedAction.data.id);
+							sendLineAlert(confirmedAction.data, 'delete');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↪️ ทำซ้ำ (ลบรายการ)',
+								`${confirmedAction.data.name} ${formatCurrency(confirmedAction.data.amount)}`,
+								'fa-rotate-right',
+								'text-blue-600',
+								{
+									type: confirmedAction.data.type,
+									amount: confirmedAction.data.amount,
+									name: confirmedAction.data.name,
+									category: confirmedAction.data.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.data.accountId)?.name,
+									toAccountName: confirmedAction.data.toAccountId ? state.accounts.find(a => a.id === confirmedAction.data.toAccountId)?.name : null,
+									date: confirmedAction.data.date,
+									hasReceipt: !!confirmedAction.data.receiptBase64
+								}
+							);
+							
+							undoAction = { type: 'tx-add', data: confirmedAction.data };
+							break;
 
-                updateUndoRedoButtons();
-                await refreshAllUI();
-                await refreshAccountDetailModalIfOpen();
-            }
+						case 'tx-edit':
+							await dbPut(STORE_TRANSACTIONS, confirmedAction.newData);
+							state.transactions = state.transactions.map(tx => tx.id === confirmedAction.newData.id ? confirmedAction.newData : tx);
+							sendLineAlert(confirmedAction.newData, 'edit');
+							
+							// ✅ เพิ่มการแจ้งเตือน
+							addActivityLog(
+								'↪️ ทำซ้ำการแก้ไข',
+								`${confirmedAction.newData.name} ${formatCurrency(confirmedAction.newData.amount)}`,
+								'fa-rotate-right',
+								'text-blue-600',
+								{
+									type: confirmedAction.newData.type,
+									amount: confirmedAction.newData.amount,
+									name: confirmedAction.newData.name,
+									category: confirmedAction.newData.category,
+									accountName: state.accounts.find(a => a.id === confirmedAction.newData.accountId)?.name,
+									toAccountName: confirmedAction.newData.toAccountId ? state.accounts.find(a => a.id === confirmedAction.newData.toAccountId)?.name : null,
+									date: confirmedAction.newData.date,
+									hasReceipt: !!confirmedAction.newData.receiptBase64
+								}
+							);
+							
+							undoAction = confirmedAction;
+							break;
+
+						case 'cat-add':
+							state.categories[confirmedAction.catType].push(confirmedAction.name);
+							await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
+							
+							addActivityLog('↪️ ทำซ้ำ (เพิ่มหมวดหมู่)', confirmedAction.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'cat-delete', catType: confirmedAction.catType, name: confirmedAction.name };
+							break;
+
+						case 'cat-delete':
+							state.categories[confirmedAction.catType] = state.categories[confirmedAction.catType].filter(cat => cat !== confirmedAction.name);
+							await dbPut(STORE_CATEGORIES, { type: confirmedAction.catType, items: state.categories[confirmedAction.catType] });
+							
+							addActivityLog('↪️ ทำซ้ำ (ลบหมวดหมู่)', confirmedAction.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'cat-add', catType: confirmedAction.catType, name: confirmedAction.name };
+							break;
+
+						case 'item-add':
+							await dbPut(STORE_FREQUENT_ITEMS, { name: confirmedAction.name });
+							state.frequentItems.push(confirmedAction.name);
+							
+							addActivityLog('↪️ ทำซ้ำ (เพิ่มรายการใช้บ่อย)', confirmedAction.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'item-delete', name: confirmedAction.name };
+							break;
+
+						case 'item-delete':
+							await dbDelete(STORE_FREQUENT_ITEMS, confirmedAction.name);
+							state.frequentItems = state.frequentItems.filter(item => item !== confirmedAction.name);
+							
+							addActivityLog('↪️ ทำซ้ำ (ลบรายการใช้บ่อย)', confirmedAction.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'item-add', name: confirmedAction.name };
+							break;
+
+						case 'account-add':
+							await dbPut(STORE_ACCOUNTS, confirmedAction.data);
+							state.accounts.push(confirmedAction.data);
+							
+							addActivityLog('↪️ ทำซ้ำ (เพิ่มบัญชี)', confirmedAction.data.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'account-delete', data: confirmedAction.data };
+							break;
+
+						case 'account-delete':
+							await dbDelete(STORE_ACCOUNTS, confirmedAction.data.id);
+							state.accounts = state.accounts.filter(acc => acc.id !== confirmedAction.data.id);
+							
+							addActivityLog('↪️ ทำซ้ำ (ลบบัญชี)', confirmedAction.data.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = { type: 'account-add', data: confirmedAction.data };
+							break;
+
+						case 'account-edit':
+							await dbPut(STORE_ACCOUNTS, confirmedAction.newData);
+							state.accounts = state.accounts.map(acc => acc.id === confirmedAction.newData.id ? confirmedAction.newData : acc);
+							
+							addActivityLog('↪️ ทำซ้ำการแก้ไขบัญชี', confirmedAction.newData.name, 'fa-rotate-right', 'text-blue-600');
+							
+							undoAction = confirmedAction;
+							break;
+
+						case 'account-move':
+							{
+								const currentAcc = state.accounts.find(a => a.id === confirmedAction.currentAccountId);
+								const targetAcc = state.accounts.find(a => a.id === confirmedAction.targetAccountId);
+								currentAcc.displayOrder = confirmedAction.newCurrentOrder;
+								targetAcc.displayOrder = confirmedAction.newTargetOrder;
+								await Promise.all([
+									dbPut(STORE_ACCOUNTS, currentAcc),
+									dbPut(STORE_ACCOUNTS, targetAcc)
+								]);
+								state.accounts = state.accounts.map(acc => {
+									if (acc.id === currentAcc.id) return currentAcc;
+									if (acc.id === targetAcc.id) return targetAcc;
+									return acc;
+								});
+								
+								addActivityLog('↪️ ทำซ้ำการสลับลำดับบัญชี', `${currentAcc.name} ↔ ${targetAcc.name}`, 'fa-rotate-right', 'text-blue-600');
+								
+								undoAction = {
+									type: 'account-move',
+									currentAccountId: confirmedAction.currentAccountId,
+									newCurrentOrder: confirmedAction.oldCurrentOrder,
+									oldCurrentOrder: confirmedAction.newCurrentOrder,
+									targetAccountId: confirmedAction.targetAccountId,
+									newTargetOrder: confirmedAction.oldTargetOrder,
+									oldTargetOrder: confirmedAction.newTargetOrder
+								};
+							}
+							break;
+					}
+
+					if (undoAction) {
+						lastUndoAction = undoAction;
+					}
+				} catch (err) {
+					console.error("Redo failed:", err);
+					Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถทำซ้ำได้', 'error');
+					lastRedoAction = confirmedAction;
+				}
+
+				updateUndoRedoButtons();
+				await refreshAllUI();
+				await refreshAccountDetailModalIfOpen();
+			}
 
             function parseVoiceInput(text) {
                 
@@ -16061,6 +16562,11 @@ document.addEventListener('DOMContentLoaded', () => {
 					return;
 				}
 				
+				// ===== 1.2 คำสั่งที่ซับซ้อน (ช่วงวันที่, ช่วงเงิน, หมวดหมู่+เงื่อนไข) =====
+				if (handleComplexCommand(text, lowerText)) {
+					return;
+				}
+				
 				    // ===== 1.5 คำสั่งกรองตามประเภท + ช่วงเวลา (รายจ่ายวันนี้, รายรับเดือนนี้, โอนย้ายปีนี้) =====
 				if (handlePeriodFilterCommand(text, lowerText)) {
 					return;
@@ -17807,6 +18313,268 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				return true;
 			}
+			
+			// ============================================
+			// ฟังก์ชันช่วยสำหรับ Complex Command
+			// ============================================
+
+			// แปลงปี พ.ศ. เป็น ค.ศ.
+			function normalizeYear(yStr) {
+				let y = parseInt(yStr);
+				if (isNaN(y)) return new Date().getFullYear();
+				if (y > 2400) return y - 543;          // พ.ศ. เต็ม
+				if (y > 100) return y;                  // ค.ศ. เต็ม (2025)
+				if (y > 40) return 1900 + y;             // 41-99 => 1941-1999
+				return 2000 + y;                         // 1-40 => 2001-2040
+			}
+
+			// แปลงประเภทภาษาไทยเป็น internal code
+			function mapThaiTypeToInternal(typeThai) {
+				if (typeThai.includes('รายรับ')) return 'income';
+				if (typeThai.includes('รายจ่าย')) return 'expense';
+				if (typeThai.includes('โอนย้าย')) return 'transfer';
+				return 'all';
+			}
+
+			// ดึงรายการที่กรองอยู่ ณ ปัจจุบัน (ต้องอัปเดตให้รองรับ min/max และหมวดหมู่)
+			function getCurrentFilteredTransactions() {
+				const startDate = document.getElementById('adv-filter-start')?.value || '';
+				const endDate = document.getElementById('adv-filter-end')?.value || '';
+				const filterType = document.getElementById('adv-filter-type')?.value || 'all';
+				const searchTerm = document.getElementById('adv-filter-search')?.value.toLowerCase().trim() || '';
+				const minVal = parseFloat(document.getElementById('adv-filter-min')?.value) || null;
+				const maxVal = parseFloat(document.getElementById('adv-filter-max')?.value) || null;
+				const categoryVal = document.getElementById('adv-filter-category')?.value || 'all';
+
+				return state.transactions.filter(tx => {
+					const txDate = tx.date.slice(0, 10);
+					if (startDate && txDate < startDate) return false;
+					if (endDate && txDate > endDate) return false;
+					if (filterType !== 'all' && tx.type !== filterType) return false;
+					if (categoryVal !== 'all' && tx.category !== categoryVal) return false;
+					
+					if (minVal !== null && tx.amount < minVal) return false;
+					if (maxVal !== null && tx.amount > maxVal) return false;
+					
+					if (searchTerm) {
+						const amountStr = String(tx.amount);
+						const fromAcc = state.accounts.find(a => a.id === tx.accountId);
+						const toAcc = state.accounts.find(a => a.id === tx.toAccountId);
+						const fromName = fromAcc ? fromAcc.name.toLowerCase() : '';
+						const toName = toAcc ? toAcc.name.toLowerCase() : '';
+						const cat = (tx.category || '').toLowerCase();
+						const name = (tx.name || '').toLowerCase();
+						const desc = (tx.desc || '').toLowerCase();
+						const matches = name.includes(searchTerm) || cat.includes(searchTerm) || desc.includes(searchTerm) || fromName.includes(searchTerm) || toName.includes(searchTerm) || amountStr.includes(searchTerm);
+						if (!matches) return false;
+					}
+					return true;
+				});
+			}
+
+			// ============================================
+			// handleComplexCommand - จัดการคำสั่งที่ซับซ้อน
+			// ============================================
+			function handleComplexCommand(text, lowerText) {
+				// ===== 1. ตรวจจับช่วงวันที่แบบกำหนดเอง =====
+				// รูปแบบ ISO (YYYY-MM-DD)
+				const isoDateRangeRegex = /^(รายจ่าย|รายรับ|โอนย้าย|รายการ)?\s*(?:ระหว่าง|ตั้งแต่)\s*(\d{4}-\d{2}-\d{2})\s*(?:ถึง|-)+\s*(\d{4}-\d{2}-\d{2})/i;
+				let match = lowerText.match(isoDateRangeRegex);
+				if (match) {
+					const typeThai = match[1] || 'รายการ';
+					const startDate = match[2];
+					const endDate = match[3];
+					const type = mapThaiTypeToInternal(typeThai);
+					
+					showPage('page-list');
+					if (type !== 'all') {
+						state.advFilterType = type;
+						const typeSelect = document.getElementById('adv-filter-type');
+						if (typeSelect) typeSelect.value = type;
+					}
+					document.getElementById('adv-filter-start').value = startDate;
+					document.getElementById('adv-filter-end').value = endDate;
+					document.getElementById('adv-filter-search').value = '';
+					state.advFilterSearch = '';
+					renderListPage();
+					
+					setTimeout(() => {
+						const filtered = getCurrentFilteredTransactions();
+						const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
+						const typeName = type === 'income' ? 'รายรับ' : (type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
+						speak(`ในช่วง${startDate} ถึง ${endDate} มี${typeName}ทั้งหมด ${formatCurrency(total)}`);
+					}, 600);
+					return true;
+				}
+
+				// รูปแบบ DD/MM/YYYY
+				const slashDateRangeRegex = /^(รายจ่าย|รายรับ|โอนย้าย|รายการ)?\s*(?:ระหว่าง|ตั้งแต่)\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*(?:ถึง|-)+\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i;
+				match = lowerText.match(slashDateRangeRegex);
+				if (match) {
+					const typeThai = match[1] || 'รายการ';
+					const day1 = match[2].padStart(2, '0');
+					const month1 = match[3].padStart(2, '0');
+					let year1 = match[4];
+					const day2 = match[5].padStart(2, '0');
+					const month2 = match[6].padStart(2, '0');
+					let year2 = match[7];
+					
+					year1 = normalizeYear(year1);
+					year2 = normalizeYear(year2);
+					const startDate = `${year1}-${month1}-${day1}`;
+					const endDate = `${year2}-${month2}-${day2}`;
+					const type = mapThaiTypeToInternal(typeThai);
+					
+					showPage('page-list');
+					if (type !== 'all') {
+						state.advFilterType = type;
+						const typeSelect = document.getElementById('adv-filter-type');
+						if (typeSelect) typeSelect.value = type;
+					}
+					document.getElementById('adv-filter-start').value = startDate;
+					document.getElementById('adv-filter-end').value = endDate;
+					document.getElementById('adv-filter-search').value = '';
+					state.advFilterSearch = '';
+					renderListPage();
+					
+					setTimeout(() => {
+						const filtered = getCurrentFilteredTransactions();
+						const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
+						const typeName = type === 'income' ? 'รายรับ' : (type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
+						speak(`ในช่วงวันที่ ${day1}/${month1}/${parseInt(year1)+543} ถึง ${day2}/${month2}/${parseInt(year2)+543} มี${typeName}ทั้งหมด ${formatCurrency(total)}`);
+					}, 600);
+					return true;
+				}
+
+				// รูปแบบภาษาไทย (ตั้งแต่วันที่ x ถึง y) ไม่ระบุเดือนปี
+				const dateRangeThaiRegex = /^(รายจ่าย|รายรับ|โอนย้าย|รายการ)?\s*(?:ตั้งแต่|ระหว่าง)\s*(\d{1,2})\s*(?:เดือน)?\s*(\d{0,2})?\s*(?:พ\.ศ\.)?\s*(\d{2,4})?\s*(?:ถึง|-)+\s*(\d{1,2})\s*(?:เดือน)?\s*(\d{0,2})?\s*(?:พ\.ศ\.)?\s*(\d{2,4})?/i;
+				match = lowerText.match(dateRangeThaiRegex);
+				if (match) {
+					const typeThai = match[1] || 'รายการ';
+					const startDay = match[2].padStart(2, '0');
+					const startMonthRaw = match[3];
+					const startYearRaw = match[4];
+					const endDay = match[5].padStart(2, '0');
+					const endMonthRaw = match[6];
+					const endYearRaw = match[7];
+					
+					const now = new Date();
+					let year = now.getFullYear();
+					let month = now.getMonth() + 1;
+					if (startYearRaw) year = normalizeYear(startYearRaw);
+					if (startMonthRaw) month = parseInt(startMonthRaw, 10);
+					
+					const startDate = `${year}-${month.toString().padStart(2,'0')}-${startDay}`;
+					
+					let endMonth = month;
+					let endYear = year;
+					if (endMonthRaw) endMonth = parseInt(endMonthRaw, 10);
+					if (endYearRaw) endYear = normalizeYear(endYearRaw);
+					
+					// หาวันสุดท้ายของเดือน endMonth
+					const lastDay = new Date(endYear, endMonth, 0).getDate(); // month index: endMonth คือ 1-12, ต้องส่งเป็น endMonth-1? new Date(year, month, 0) ได้วันสุดท้ายของเดือนที่แล้ว ดังนั้นต้องใช้ endMonth
+					const endDate = `${endYear}-${endMonth.toString().padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+					
+					const type = mapThaiTypeToInternal(typeThai);
+					
+					showPage('page-list');
+					if (type !== 'all') {
+						state.advFilterType = type;
+						const typeSelect = document.getElementById('adv-filter-type');
+						if (typeSelect) typeSelect.value = type;
+					}
+					document.getElementById('adv-filter-start').value = startDate;
+					document.getElementById('adv-filter-end').value = endDate;
+					document.getElementById('adv-filter-search').value = '';
+					state.advFilterSearch = '';
+					renderListPage();
+					
+					setTimeout(() => {
+						const filtered = getCurrentFilteredTransactions();
+						const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
+						const typeName = type === 'income' ? 'รายรับ' : (type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
+						speak(`ในช่วงวันที่ ${startDay} ถึง ${endDay} เดือน ${endMonth} ปี ${endYear+543} มี${typeName}ทั้งหมด ${formatCurrency(total)}`);
+					}, 600);
+					return true;
+				}
+
+				// ===== 2. เปรียบเทียบจำนวนเงิน =====
+				const amountCompareRegex = /^(รายจ่าย|รายรับ|โอนย้าย)?\s*(มากกว่า|น้อยกว่า|>=|<=|>|<|ตั้งแต่)\s*(\d+(?:\.\d+)?)\s*(?:บาท)?(?:\s*(?:ถึง|-)\s*(\d+(?:\.\d+)?))?/i;
+				match = lowerText.match(amountCompareRegex);
+				if (match) {
+					const typeThai = match[1] || 'รายการ';
+					const operatorThai = match[2];
+					const val1 = parseFloat(match[3]);
+					const val2 = match[4] ? parseFloat(match[4]) : null;
+					
+					let minVal = null;
+					let maxVal = null;
+					if (operatorThai === 'มากกว่า' || operatorThai === '>') {
+						minVal = val1;
+					} else if (operatorThai === 'น้อยกว่า' || operatorThai === '<') {
+						maxVal = val1;
+					} else if (operatorThai === 'ตั้งแต่' && val2) {
+						minVal = Math.min(val1, val2);
+						maxVal = Math.max(val1, val2);
+					} else if (operatorThai === 'ตั้งแต่' && !val2) {
+						minVal = val1;
+					} else if (operatorThai === '>=') {
+						minVal = val1;
+					} else if (operatorThai === '<=') {
+						maxVal = val1;
+					}
+					
+					const type = mapThaiTypeToInternal(typeThai);
+					
+					showPage('page-list');
+					if (type !== 'all') {
+						state.advFilterType = type;
+						const typeSelect = document.getElementById('adv-filter-type');
+						if (typeSelect) typeSelect.value = type;
+					}
+					const minInput = document.getElementById('adv-filter-min');
+					const maxInput = document.getElementById('adv-filter-max');
+					if (minInput) minInput.value = minVal !== null ? minVal : '';
+					if (maxInput) maxInput.value = maxVal !== null ? maxVal : '';
+					document.getElementById('adv-filter-search').value = '';
+					state.advFilterSearch = '';
+					renderListPage();
+					
+					setTimeout(() => {
+						const filtered = getCurrentFilteredTransactions();
+						const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
+						const typeName = type === 'income' ? 'รายรับ' : (type === 'expense' ? 'รายจ่าย' : 'โอนย้าย');
+						let conditionText = '';
+						if (minVal !== null && maxVal !== null) conditionText = `ระหว่าง ${minVal} ถึง ${maxVal} บาท`;
+						else if (minVal !== null) conditionText = `${operatorThai} ${minVal} บาท`;
+						else if (maxVal !== null) conditionText = `${operatorThai} ${maxVal} บาท`;
+						speak(`พบ ${filtered.length} รายการ${typeName} ${conditionText} รวม ${formatCurrency(total)}`);
+					}, 600);
+					return true;
+				}
+
+				// ===== 3. กรณีรวมหมวดหมู่ + เงื่อนไขอื่น ๆ =====
+				const categoryRegex = /หมวด\s*(.+?)(?=\s*(?:มากกว่า|น้อยกว่า|ตั้งแต่|ระหว่าง|วันที่|เดือน))/i;
+				const catMatch = lowerText.match(categoryRegex);
+				if (catMatch) {
+					const category = catMatch[1].trim();
+					const remainingText = lowerText.replace(catMatch[0], '').trim();
+					if (handleComplexCommand(text, remainingText)) {
+						setTimeout(() => {
+							const categorySelect = document.getElementById('adv-filter-category');
+							if (categorySelect && categorySelect.querySelector(`option[value="${category}"]`)) {
+								categorySelect.value = category;
+								renderListPage();
+							}
+						}, 300);
+						return true;
+					}
+				}
+
+				return false;
+			}
+			
+			// ============================================
 
 			// ฟังก์ชันสำหรับคำสั่งค้นหาคำ + ช่วงเวลา (เช่น "เติมเงินมกราปีนี้")
 			function handleKeywordPeriodCommand(text, lowerText) {
@@ -19245,11 +20013,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				toggleDoubleTap.addEventListener('change', (e) => {
 					const isEnabled = e.target.checked;
+					
+					// +++ [เพิ่มเงื่อนไขตรวจสอบรหัสผ่านตรงนี้] +++
+					if (isEnabled && !state.password) {
+						// เด้งแจ้งเตือนกลางจอด้วย SweetAlert2
+						Swal.fire({
+							title: 'ไม่สามารถเปิดใช้งานได้',
+							text: 'กรุณาตั้งรหัสผ่าน (PIN) ก่อนเปิดใช้งานฟังก์ชันเคาะหน้าจอเพื่อล็อค',
+							icon: 'warning',
+							confirmButtonText: 'ตกลง',
+							confirmButtonColor: '#9333ea',
+							customClass: { popup: state.isDarkMode ? 'swal2-popup' : '' },
+							background: state.isDarkMode ? '#1a1a1a' : '#fff',
+							color: state.isDarkMode ? '#e5e7eb' : '#545454',
+						});
+						
+						// ดึงสวิตช์กลับเป็นปิดทันที
+						e.target.checked = false;
+						
+						// หยุดการทำงาน ไม่บันทึกค่าใดๆ ด้านล่างต่อ
+						return; 
+					}
+					// +++++++++++++++++++++++++++++++++++++++++
+
+					// หากมีรหัสผ่านแล้ว หรือเป็นการสั่ง "ปิด" สวิตช์ โค้ดด้านล่างถึงจะทำงาน
 					localStorage.setItem('fmpro_double_tap_lock', isEnabled);
 					
 					if (isEnabled) {
 						// +++ สั่น 1 ครั้ง และแจ้งเตือนเมื่อเปิดสวิตช์ +++
-						window.appVibrate(50);
+						if (window.appVibrate) window.appVibrate(50);
 						if (typeof showToast === 'function') {
 							showToast('เปิดใช้งาน เคาะ 2 ครั้งเพื่อล็อค', 'success');
 						}
@@ -19293,6 +20085,61 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 				lastTapTime = currentTime;
 			});
+			
+			// ===========================================
+			// ดักจับการกดปุ่มลัดวันที่ (วันนี้, สัปดาห์นี้, เดือนนี้, ปีนี้)
+			// ===========================================
+			const quickDateContainer = document.getElementById('adv-quick-dates-container');
+			if (quickDateContainer) {
+				quickDateContainer.addEventListener('click', (e) => {
+					if (e.target.classList.contains('quick-date-btn')) {
+						const range = e.target.dataset.range;
+						const startInput = document.getElementById('adv-filter-start');
+						const endInput = document.getElementById('adv-filter-end');
+						const now = new Date();
+						
+						// ฟังก์ชันช่วยจัดฟอร์แมตวันที่ให้เป็น YYYY-MM-DD
+						const formatDate = (d) => {
+							let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+							if (month.length < 2) month = '0' + month;
+							if (day.length < 2) day = '0' + day;
+							return [year, month, day].join('-');
+						};
+
+						if (range === 'today') {
+							startInput.value = endInput.value = formatDate(now);
+						} else if (range === 'thisWeek') {
+							// คำนวณหาวันจันทร์ ถึง วันอาทิตย์ ของสัปดาห์นี้
+							const currentDay = now.getDay();
+							const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
+							const startOfWeek = new Date(now);
+							startOfWeek.setDate(now.getDate() - distanceToMonday);
+							const endOfWeek = new Date(startOfWeek);
+							endOfWeek.setDate(startOfWeek.getDate() + 6);
+							
+							startInput.value = formatDate(startOfWeek);
+							endInput.value = formatDate(endOfWeek);
+						} else if (range === 'thisMonth') {
+							startInput.value = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+							endInput.value = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+						} else if (range === 'thisYear') {
+							startInput.value = `${now.getFullYear()}-01-01`;
+							endInput.value = `${now.getFullYear()}-12-31`;
+						}
+
+						// อัปเดตสีปุ่มให้รู้ว่ากำลังกดเลือกปุ่มไหนอยู่
+						// อัปเดต 2 บรรทัดนี้ในส่วนของการคลิก quickDateContainer
+						document.querySelectorAll('.quick-date-btn').forEach(btn => {
+							btn.className = "quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap";
+						});
+						e.target.className = "quick-date-btn flex-1 shrink-0 justify-center text-xs bg-purple-100 text-purple-700 font-medium border border-purple-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap";
+						
+						// สั่นเล็กน้อย และสั่งโหลดรายการใหม่
+						if (window.appVibrate) window.appVibrate(20);
+						if (typeof renderListPage === 'function') renderListPage();
+					}
+				});
+			}
 			
 			// ============================================
 			// DUMMY FUNCTIONS สำหรับ legacy calls (ป้องกัน error)
