@@ -10844,6 +10844,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!newName) return;
 
 		const trimmedNew = newName.trim();
+		const oldNameForUndo = oldName;
+		const newNameForUndo = trimmedNew;
 
 		try {
 			// 1. อัปเดตใน state.frequentItems
@@ -10891,6 +10893,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			// รีเฟรช dropdown ในฟอร์มเพิ่มรายการ (ถ้าเปิดอยู่)
 			renderDropdownList();
+			
+			setLastUndoAction({
+				type: 'item-edit',
+				oldName: oldNameForUndo,
+				newName: newNameForUndo
+			});
 
 			// บันทึก activity log
 			addActivityLog(
@@ -10941,6 +10949,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (!newName) return;
 
 		const trimmedNew = newName.trim();
+		const oldNameForUndo = oldName;
+		const newNameForUndo = trimmedNew;
 
 		try {
 			// 1. อัปเดตใน state.categories
@@ -10999,6 +11009,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			// รีเฟรช dropdown ในฟอร์มเพิ่มรายการ (ถ้าเปิดอยู่)
 			const modalType = document.querySelector('input[name="tx-type"]:checked')?.value;
 			if (modalType) updateCategoryDropdown(modalType);
+			
+			setLastUndoAction({
+				type: 'cat-edit',
+				catType: type,
+				oldName: oldNameForUndo,
+				newName: newNameForUndo
+			});
 
 			// บันทึก activity log
 			addActivityLog(
@@ -12594,6 +12611,44 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             `;
                             break;
+							
+						case 'cat-edit':
+							actionDescription = isUndo ?
+								'คุณกำลังจะย้อนกลับการ <strong class="text-blue-600">แก้ไข</strong> หมวดหมู่นี้:' :
+								'คุณกำลังจะทำซ้ำการ <strong class="text-blue-600">แก้ไข</strong> หมวดหมู่นี้:';
+							htmlContent = `
+								<div class="mb-3">${actionDescription}</div>
+								<div class="text-center w-full max-w-md mx-auto space-y-3">
+									<div>
+										<strong class="text-sm font-medium text-gray-700">จาก:</strong>
+										<div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(action.newName)}</b></div>
+									</div>
+									<div>
+										<strong class="text-sm font-medium text-gray-700">เป็น:</strong>
+										<div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(action.oldName)}</b></div>
+									</div>
+								</div>
+							`;
+							break;
+
+						case 'item-edit':
+							actionDescription = isUndo ?
+								'คุณกำลังจะย้อนกลับการ <strong class="text-blue-600">แก้ไข</strong> รายการที่ใช้บ่อย:' :
+								'คุณกำลังจะทำซ้ำการ <strong class="text-blue-600">แก้ไข</strong> รายการที่ใช้บ่อย:';
+							htmlContent = `
+								<div class="mb-3">${actionDescription}</div>
+								<div class="text-center w-full max-w-md mx-auto space-y-3">
+									<div>
+										<strong class="text-sm font-medium text-gray-700">จาก:</strong>
+										<div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(action.newName)}</b></div>
+									</div>
+									<div>
+										<strong class="text-sm font-medium text-gray-700">เป็น:</strong>
+										<div class="p-3 bg-gray-100 border rounded-lg mt-1"><b class="text-purple-600 text-lg">${escapeHTML(action.oldName)}</b></div>
+									</div>
+								</div>
+							`;
+							break;
                             
                         default:
                             return { title: 'ยืนยัน?', html: 'คุณต้องการดำเนินการนี้ใช่หรือไม่?'
@@ -12805,6 +12860,122 @@ document.addEventListener('DOMContentLoaded', () => {
 								redoAction = confirmedAction;
 							}
 							break;
+							
+						case 'cat-edit':
+							// สลับชื่อหมวดหมู่กลับไปเป็น oldName
+							const catType = confirmedAction.catType;
+							const oldCatName = confirmedAction.oldName;
+							const newCatName = confirmedAction.newName;
+
+							// 1. อัปเดตใน state.categories
+							const catIndex = state.categories[catType].indexOf(newCatName);
+							if (catIndex !== -1) {
+								state.categories[catType][catIndex] = oldCatName;
+								await dbPut(STORE_CATEGORIES, { type: catType, items: state.categories[catType] });
+							}
+
+							// 2. อัปเดต transactions
+							const affectedTxs = state.transactions.filter(tx => tx.category === newCatName);
+							for (const tx of affectedTxs) {
+								tx.category = oldCatName;
+								await dbPut(STORE_TRANSACTIONS, tx);
+							}
+
+							// 3. อัปเดต autoCompleteList
+							for (const item of state.autoCompleteList) {
+								if (item.categories && item.categories[newCatName] !== undefined) {
+									item.categories[oldCatName] = item.categories[newCatName];
+									delete item.categories[newCatName];
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								} else if (item.category === newCatName) {
+									item.category = oldCatName;
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								}
+							}
+
+							// 4. อัปเดต budgets
+							const budget = state.budgets.find(b => b.category === newCatName);
+							if (budget) {
+								budget.category = oldCatName;
+								await dbPut(STORE_BUDGETS, budget);
+							}
+
+							// 5. อัปเดต recurring rules
+							for (const rule of state.recurringRules) {
+								if (rule.category === newCatName) {
+									rule.category = oldCatName;
+									await dbPut(STORE_RECURRING, rule);
+								}
+							}
+							
+							// ✅ เพิ่ม activity log
+							addActivityLog(
+								'↩️ ย้อนกลับการแก้ไขหมวดหมู่',
+								`${confirmedAction.newName} → ${confirmedAction.oldName}`,
+								'fa-undo',
+								'text-purple-600'
+							);
+
+							// สร้าง redoAction (เพื่อให้กด Redo ได้)
+							redoAction = {
+								type: 'cat-edit',
+								catType: catType,
+								oldName: newCatName,   // สลับค่า
+								newName: oldCatName
+							};
+							break;
+
+						case 'item-edit':
+							// สลับชื่อรายการที่ใช้บ่อยกลับไปเป็น oldName
+							const oldItemName = confirmedAction.oldName;
+							const newItemName = confirmedAction.newName;
+
+							// 1. อัปเดต state.frequentItems
+							const itemIndex = state.frequentItems.indexOf(newItemName);
+							if (itemIndex !== -1) {
+								state.frequentItems[itemIndex] = oldItemName;
+								await dbDelete(STORE_FREQUENT_ITEMS, newItemName);
+								await dbPut(STORE_FREQUENT_ITEMS, { name: oldItemName });
+							}
+
+							// 2. อัปเดต transactions
+							const affectedItemTxs = state.transactions.filter(tx => tx.name === newItemName);
+							for (const tx of affectedItemTxs) {
+								tx.name = oldItemName;
+								await dbPut(STORE_TRANSACTIONS, tx);
+							}
+
+							// 3. อัปเดต autoCompleteList
+							for (const item of state.autoCompleteList) {
+								if (item.name === newItemName) {
+									item.name = oldItemName;
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								}
+							}
+
+							// 4. อัปเดต recurring rules
+							for (const rule of state.recurringRules) {
+								if (rule.name === newItemName) {
+									rule.name = oldItemName;
+									await dbPut(STORE_RECURRING, rule);
+								}
+							}
+							
+							// ✅ เพิ่ม activity log
+							addActivityLog(
+								'↩️ ย้อนกลับการแก้ไขรายการใช้บ่อย',
+								`${confirmedAction.newName} → ${confirmedAction.oldName}`,
+								'fa-undo',
+								'text-purple-600'
+							);
+
+							redoAction = {
+								type: 'item-edit',
+								oldName: newItemName,
+								newName: oldItemName
+							};
+							break;
+						
 					}
 
 					if (redoAction) {
@@ -13083,6 +13254,111 @@ document.addEventListener('DOMContentLoaded', () => {
 								};
 							}
 							break;
+							
+						case 'cat-edit':
+							const catType = confirmedAction.catType;
+							const oldCatName = confirmedAction.oldName;   // อันนี้คือชื่อที่จะถูกเปลี่ยนกลับ
+							const newCatName = confirmedAction.newName;   // อันนี้คือชื่อที่ต้องการให้เป็น
+
+							// เปลี่ยนจาก oldCatName → newCatName (เหมือนตอนแก้ไขครั้งแรก)
+							const catIndex = state.categories[catType].indexOf(oldCatName);
+							if (catIndex !== -1) {
+								state.categories[catType][catIndex] = newCatName;
+								await dbPut(STORE_CATEGORIES, { type: catType, items: state.categories[catType] });
+							}
+
+							const affectedTxs = state.transactions.filter(tx => tx.category === oldCatName);
+							for (const tx of affectedTxs) {
+								tx.category = newCatName;
+								await dbPut(STORE_TRANSACTIONS, tx);
+							}
+
+							for (const item of state.autoCompleteList) {
+								if (item.categories && item.categories[oldCatName] !== undefined) {
+									item.categories[newCatName] = item.categories[oldCatName];
+									delete item.categories[oldCatName];
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								} else if (item.category === oldCatName) {
+									item.category = newCatName;
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								}
+							}
+
+							const budget = state.budgets.find(b => b.category === oldCatName);
+							if (budget) {
+								budget.category = newCatName;
+								await dbPut(STORE_BUDGETS, budget);
+							}
+
+							for (const rule of state.recurringRules) {
+								if (rule.category === oldCatName) {
+									rule.category = newCatName;
+									await dbPut(STORE_RECURRING, rule);
+								}
+							}
+							
+							// ✅ เพิ่ม activity log
+							addActivityLog(
+								'↪️ ทำซ้ำการแก้ไขหมวดหมู่',
+								`${confirmedAction.oldName} → ${confirmedAction.newName}`,
+								'fa-rotate-right',
+								'text-blue-600'
+							);
+
+							undoAction = {
+								type: 'cat-edit',
+								catType: catType,
+								oldName: newCatName,
+								newName: oldCatName
+							};
+							break;
+
+						case 'item-edit':
+							const oldItemName = confirmedAction.oldName;
+							const newItemName = confirmedAction.newName;
+
+							const itemIndex = state.frequentItems.indexOf(oldItemName);
+							if (itemIndex !== -1) {
+								state.frequentItems[itemIndex] = newItemName;
+								await dbDelete(STORE_FREQUENT_ITEMS, oldItemName);
+								await dbPut(STORE_FREQUENT_ITEMS, { name: newItemName });
+							}
+
+							const affectedItemTxs = state.transactions.filter(tx => tx.name === oldItemName);
+							for (const tx of affectedItemTxs) {
+								tx.name = newItemName;
+								await dbPut(STORE_TRANSACTIONS, tx);
+							}
+
+							for (const item of state.autoCompleteList) {
+								if (item.name === oldItemName) {
+									item.name = newItemName;
+									await dbPut(STORE_AUTO_COMPLETE, item);
+								}
+							}
+
+							for (const rule of state.recurringRules) {
+								if (rule.name === oldItemName) {
+									rule.name = newItemName;
+									await dbPut(STORE_RECURRING, rule);
+								}
+							}
+							
+							// ✅ เพิ่ม activity log
+							addActivityLog(
+								'↪️ ทำซ้ำการแก้ไขรายการใช้บ่อย',
+								`${confirmedAction.oldName} → ${confirmedAction.newName}`,
+								'fa-rotate-right',
+								'text-blue-600'
+							);
+
+							undoAction = {
+								type: 'item-edit',
+								oldName: newItemName,
+								newName: oldItemName
+							};
+							break;
+							
 					}
 
 					if (undoAction) {
