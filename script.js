@@ -1717,7 +1717,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (modal) modal.classList.add('hidden');
 		};
 
-		// ฟังก์ชันวาด UI คลังประวัติ (ดึงจากตัวแปรหลัก รายละเอียดครบ ซิงค์และกู้คืนมาแน่นอน)
 		// ฟังก์ชันวาด UI คลังประวัติ (แบบจัดกลุ่มตามวัน)
 		window.renderPersistentLogs = function() {
 			const listContainer = document.getElementById('persistent-log-list');
@@ -1767,16 +1766,14 @@ document.addEventListener('DOMContentLoaded', () => {
 				grouped[groupKey].items.push(log);
 			});
 
-			// เรียงกลุ่มตามวันที่ (groupKey ที่เป็นตัวเลขจะเรียงตามตัวอักษรได้ถ้าเป็น YYYY-MM-DD)
-			// แต่ต้องจัดการ special groups: today, yesterday ให้อยู่บนสุด
+			// เรียงกลุ่มตามวันที่ (กลุ่มพิเศษ today, yesterday อยู่บนสุด)
 			const groupOrder = [];
 			if (grouped.today) groupOrder.push({ key: 'today', ...grouped.today });
 			if (grouped.yesterday) groupOrder.push({ key: 'yesterday', ...grouped.yesterday });
 
-			// กลุ่มอื่นๆ เรียงตามวันที่จากใหม่ไปเก่า
 			const otherGroups = Object.keys(grouped)
 				.filter(key => key !== 'today' && key !== 'yesterday')
-				.sort((a, b) => b.localeCompare(a)); // เรียงจากปี-เดือน-วัน มากไปน้อย (ใหม่ไปเก่า)
+				.sort((a, b) => b.localeCompare(a)); // เรียงจากใหม่ไปเก่า
 
 			otherGroups.forEach(key => {
 				groupOrder.push({ key, ...grouped[key] });
@@ -1801,45 +1798,116 @@ document.addEventListener('DOMContentLoaded', () => {
 					const date = new Date(log.timestamp);
 					const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-					let deviceText = '';
-					if (log.device && log.device !== 'Unknown') {
-						deviceText = typeof log.device === 'object' ? (log.device.os || log.device.browser || log.device.type || log.device.name || 'อุปกรณ์') : log.device;
-						deviceText = `<span class="ml-2 pl-2 border-l border-gray-300 dark:border-gray-600 text-gray-400"><i class="fa-solid fa-mobile-screen mr-1"></i> ${deviceText}</span>`;
+					// ตรวจสอบว่ามีข้อมูลธุรกรรมหรือไม่
+					const hasTx = log.type && log.amount !== undefined;
+
+					let iconColorClass = '', iconName = '', amountClass = '', formattedAmount = '';
+					let accountHtml = '', categoryHtml = '', receiptIcon = '';
+
+					if (hasTx) {
+						// กำหนดสีพื้นหลังวงกลมและไอคอนตามประเภท
+						if (log.type === 'income') {
+							iconColorClass = 'bg-green-500';
+							iconName = 'fa-arrow-down';
+							amountClass = 'text-green-600';
+							formattedAmount = '+' + formatCurrency(log.amount);
+						} else if (log.type === 'expense') {
+							iconColorClass = 'bg-red-500';
+							iconName = 'fa-arrow-up';
+							amountClass = 'text-red-600';
+							formattedAmount = '-' + formatCurrency(log.amount);
+						} else if (log.type === 'transfer') {
+							iconColorClass = 'bg-blue-500';
+							iconName = 'fa-money-bill-transfer';
+							amountClass = 'text-blue-600';
+							formattedAmount = formatCurrency(log.amount);
+						} else {
+							iconColorClass = '';
+							iconName = log.icon || 'fa-bell';
+							amountClass = log.color || 'text-gray-500';
+							formattedAmount = '';
+						}
+
+						// สร้าง HTML สำหรับบัญชี
+						if (log.type === 'transfer' && log.accountName && log.toAccountName) {
+							accountHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.accountName)}</span> <i class="fa-solid fa-arrow-right text-xs text-gray-400"></i> <span class="truncate max-w-[80px]">${escapeHTML(log.toAccountName)}</span>`;
+						} else if (log.accountName) {
+							accountHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.accountName)}</span>`;
+						}
+
+						if (log.category) {
+							categoryHtml = `<span class="truncate max-w-[80px]">${escapeHTML(log.category)}</span>`;
+						}
+
+						if (log.hasReceipt) {
+							receiptIcon = `<i class="fa-solid fa-image text-purple-500 text-xs ml-1" title="มีรูปแนบ"></i>`;
+						}
+					} else {
+						// กรณีไม่ใช่ธุรกรรม ใช้รูปแบบเดิม
+						iconName = log.icon || 'fa-bell';
+						iconColorClass = '';
+						amountClass = log.color || 'text-gray-500';
+						formattedAmount = '';
 					}
 
-					let extraHtml = '';
-					if (log.amount !== undefined) {
-						const amountNum = parseFloat(log.amount);
-						const colorAmt = log.type === 'expense' ? 'text-red-500' : (log.type === 'income' ? 'text-green-500' : 'text-blue-500');
-						const signAmt = log.type === 'expense' ? '-' : (log.type === 'income' ? '+' : '');
-						extraHtml += `<div class="mt-2 text-sm font-bold ${colorAmt}">${signAmt}${amountNum.toLocaleString('th-TH', {minimumFractionDigits: 2})} ฿</div>`;
-					}
-					if (log.accountName || log.accountId) {
-						extraHtml += `<div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400"><i class="fa-solid fa-wallet mr-1"></i> ${log.accountName || log.accountId}</div>`;
-					}
-					if (log.hasReceipt || log.receiptImage) {
-						extraHtml += `<div class="mt-1.5 inline-block bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] px-2 py-0.5 rounded border border-blue-100 dark:border-blue-800"><i class="fa-solid fa-receipt mr-1"></i> มีสลิปแนบ</div>`;
-					}
+					// device icon (ถ้ามี)
+					const deviceIcon = log.device?.icon ? `<i class="${log.device.icon} text-gray-400 text-xs ml-1" title="${log.device.label}"></i>` : '';
 
+					// เริ่มสร้าง HTML ของรายการ
 					html += `
 						<div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-4 items-start transition-all mb-2">
-							<div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-100 dark:border-gray-600">
-								<i class="fa-solid ${log.icon} ${log.color} text-lg"></i>
-							</div>
-							<div class="flex-1 min-w-0">
-								<div class="flex justify-between items-start">
-									<h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">${log.action}</h4>
-									<span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full whitespace-nowrap ml-2">${timeStr}</span>
-								</div>
-								<p class="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">${log.details.replace(/\n/g, '<br>')}</p>
-								${extraHtml}
-								<span class="text-[11px] font-medium text-gray-400 dark:text-gray-500 mt-2 flex items-center flex-wrap gap-y-1">
-									<i class="fa-regular fa-clock mr-1"></i> ${timeStr}
-									${deviceText}
-								</span>
-							</div>
-						</div>
 					`;
+
+					// วงกลมไอคอน
+					if (iconColorClass) {
+						html += `<div class="flex-shrink-0 w-10 h-10 rounded-full ${iconColorClass} flex items-center justify-center text-white shadow-sm">`;
+						html += `<i class="fa-solid ${iconName} text-lg"></i>`;
+						html += `</div>`;
+					} else {
+						html += `<div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-100 dark:border-gray-600">`;
+						html += `<i class="fa-solid ${iconName} ${amountClass} text-lg"></i>`;
+						html += `</div>`;
+					}
+
+					// เนื้อหา
+					html += `<div class="flex-1 min-w-0">`;
+
+					// บรรทัดแรก: ชื่อ (action) และเวลา (สำหรับทุกกรณี) และจำนวนเงิน (ถ้ามี)
+					html += `<div class="flex justify-between items-start">`;
+					html += `<h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">${escapeHTML(log.action)} ${receiptIcon} ${deviceIcon}</h4>`;
+					// แสดง badge เวลาทางขวาเสมอ
+					html += `<span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full whitespace-nowrap ml-2">${timeStr}</span>`;
+					html += `</div>`;
+
+					// ถ้ามีธุรกรรม แสดงจำนวนเงินในบรรทัดถัดไป (แทนที่จะแสดงในบรรทัดแรก)
+					if (hasTx) {
+						html += `<div class="mt-1 text-sm font-bold ${amountClass}">${formattedAmount}</div>`;
+					}
+
+					// บรรทัดที่สอง: หมวดหมู่, บัญชี (ถ้ามี)
+					if (hasTx && (categoryHtml || accountHtml)) {
+						html += `<div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">`;
+						if (categoryHtml) {
+							html += categoryHtml;
+							html += `<span class="text-gray-300 dark:text-gray-600">•</span>`;
+						}
+						if (accountHtml) {
+							html += accountHtml;
+						}
+						html += `</div>`;
+					}
+
+					// บรรทัดรายละเอียดเพิ่มเติม (log.details) สำหรับธุรกรรม
+					if (hasTx && log.details) {
+						// ลบส่วน (รายรับ/รายจ่าย/โอนย้าย) ที่อยู่ใน details ถ้ามี
+						let detailsClean = log.details.replace(/\(รายรับ\)|\(รายจ่าย\)|\(โอนย้าย\)/g, '');
+						html += `<p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-1 whitespace-pre-wrap">${escapeHTML(detailsClean).replace(/\n/g, '<br>')}</p>`;
+					} else if (!hasTx && log.details) {
+						html += `<p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-0.5 whitespace-pre-wrap">${escapeHTML(log.details).replace(/\n/g, '<br>')}</p>`;
+					}
+
+					html += `</div>`; // ปิด flex-1
+					html += `</div>`; // ปิดรายการ
 				});
 			});
 
