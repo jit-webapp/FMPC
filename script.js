@@ -5295,6 +5295,20 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				}
 			});
+			
+			// ============================================
+			// Event Delegation สำหรับปุ่มแก้ไข (เพิ่มใหม่)
+			// ============================================
+			document.addEventListener('click', (e) => {
+				// แก้ไขรายการที่ใช้บ่อย
+				if (e.target.closest('.edit-item-btn')) {
+					handleEditFrequentItem(e);
+				}
+				// แก้ไขหมวดหมู่ (รายรับ/รายจ่าย)
+				if (e.target.closest('.edit-cat-btn')) {
+					handleEditCategory(e);
+				}
+			});
 		
     }
 	
@@ -7830,11 +7844,16 @@ document.addEventListener('DOMContentLoaded', () => {
 					const li = `
 						<li class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
 							<span class="text-lg text-gray-700">${escapeHTML(cat)}</span>
-							<button class="delete-cat-btn text-red-500 hover:text-red-700 p-3" data-type="income" data-name="${escapeHTML(cat)}">
-								<i class="fa-solid fa-trash-alt"></i>
-							</button>
+							<div class="flex gap-2">
+								<button class="edit-cat-btn text-blue-500 hover:text-blue-700 p-3" data-type="income" data-name="${escapeHTML(cat)}" title="แก้ไข">
+									<i class="fa-solid fa-pencil"></i>
+								</button>
+								<button class="delete-cat-btn text-red-500 hover:text-red-700 p-3" data-type="income" data-name="${escapeHTML(cat)}">
+									<i class="fa-solid fa-trash-alt"></i>
+								</button>
+							</div>
 						</li>`;
-					 incomeList.insertAdjacentHTML('beforeend', li);
+					incomeList.insertAdjacentHTML('beforeend', li);
 				});
 			} else {
 				incomeList.innerHTML = '<li class="text-gray-500 text-center p-2">ไม่มีหมวดหมู่รายรับ</li>';
@@ -7850,11 +7869,16 @@ document.addEventListener('DOMContentLoaded', () => {
 					const li = `
 						<li class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
 							<span class="text-lg text-gray-700">${escapeHTML(cat)}</span>
-							<button class="delete-cat-btn text-red-500 hover:text-red-700 p-3" data-type="expense" data-name="${escapeHTML(cat)}">
-								<i class="fa-solid fa-trash-alt"></i>
-							</button>
+							<div class="flex gap-2">
+								<button class="edit-cat-btn text-blue-500 hover:text-blue-700 p-3" data-type="expense" data-name="${escapeHTML(cat)}" title="แก้ไข">
+									<i class="fa-solid fa-pencil"></i>
+								</button>
+								<button class="delete-cat-btn text-red-500 hover:text-red-700 p-3" data-type="expense" data-name="${escapeHTML(cat)}">
+									<i class="fa-solid fa-trash-alt"></i>
+								</button>
+							</div>
 						</li>`;
-					 expenseList.insertAdjacentHTML('beforeend', li);
+					expenseList.insertAdjacentHTML('beforeend', li);
 				});
 			} else {
 				expenseList.innerHTML = '<li class="text-gray-500 text-center p-2">ไม่มีหมวดหมู่รายจ่าย</li>';
@@ -7871,25 +7895,21 @@ document.addEventListener('DOMContentLoaded', () => {
 				state.frequentItems.forEach(item => {
 					const li = `
 						<li class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-							 <span class="text-lg text-gray-700">${escapeHTML(item)}</span>
-							<button class="delete-item-btn text-red-500 hover:text-red-700 p-3" data-name="${escapeHTML(item)}">
-								<i class="fa-solid fa-trash-alt"></i>
-							 </button>
+							<span class="text-lg text-gray-700">${escapeHTML(item)}</span>
+							<div class="flex gap-2">
+								<button class="edit-item-btn text-blue-500 hover:text-blue-700 p-3" data-name="${escapeHTML(item)}" title="แก้ไข">
+									<i class="fa-solid fa-pencil"></i>
+								</button>
+								<button class="delete-item-btn text-red-500 hover:text-red-700 p-3" data-name="${escapeHTML(item)}">
+									<i class="fa-solid fa-trash-alt"></i>
+								</button>
+							</div>
 						</li>`;
 					frequentList.insertAdjacentHTML('beforeend', li);
 					datalist.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(item)}"></option>`);
 				});
 			} else {
 				frequentList.innerHTML = '<li class="text-gray-500 text-center p-2">ไม่มีรายการที่ใช้บ่อย</li>';
-			}
-
-			// Auto Complete Datalist
-			if (state.autoCompleteList && state.autoCompleteList.length > 0) {
-				 state.autoCompleteList.forEach(item => {
-					 if (!state.frequentItems.includes(item.name)) {
-						 datalist.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(item.name)}"></option>`);
-					 }
-				});
 			}
 		}
 		
@@ -10789,6 +10809,210 @@ document.addEventListener('DOMContentLoaded', () => {
 			Swal.fire('ข้อผิดพลาด', 'กรุณาใส่ชื่อรายการ', 'warning');
 		} else {
 			Swal.fire('ข้อผิดพลาด', 'มีรายการนี้อยู่แล้ว', 'error');
+		}
+	}
+	
+	// ============================================
+	// แก้ไขรายการที่ใช้บ่อย (Frequent Items)
+	// ============================================
+	async function handleEditFrequentItem(e) {
+		const btn = e.target.closest('.edit-item-btn');
+		if (!btn) return;
+
+		const oldName = btn.dataset.name;
+
+		// ตรวจสอบรหัสผ่าน (ถ้ามี)
+		const hasPermission = await promptForPassword('ป้อนรหัสผ่านเพื่อแก้ไขรายการ');
+		if (!hasPermission) return;
+
+		const { value: newName } = await Swal.fire({
+			title: 'แก้ไขรายการที่ใช้บ่อย',
+			input: 'text',
+			inputLabel: 'ชื่อรายการใหม่',
+			inputValue: oldName,
+			showCancelButton: true,
+			confirmButtonColor: '#3b82f6',
+			confirmButtonText: 'บันทึก',
+			cancelButtonText: 'ยกเลิก',
+			inputValidator: (value) => {
+				if (!value || !value.trim()) return 'กรุณาระบุชื่อรายการ';
+				if (value.trim() === oldName) return 'ชื่อใหม่ต้องแตกต่างจากชื่อเดิม';
+				if (state.frequentItems.includes(value.trim())) return 'มีรายการนี้อยู่แล้ว';
+			}
+		});
+
+		if (!newName) return;
+
+		const trimmedNew = newName.trim();
+
+		try {
+			// 1. อัปเดตใน state.frequentItems
+			const index = state.frequentItems.indexOf(oldName);
+			if (index === -1) {
+				Swal.fire('ผิดพลาด', 'ไม่พบรายการนี้ในระบบ', 'error');
+				return;
+			}
+			state.frequentItems[index] = trimmedNew;
+
+			// 2. อัปเดตในฐานข้อมูล frequentItems (ลบของเก่า เพิ่มของใหม่)
+			await dbDelete(STORE_FREQUENT_ITEMS, oldName);
+			await dbPut(STORE_FREQUENT_ITEMS, { name: trimmedNew });
+
+			// 3. อัปเดต transactions ทั้งหมดที่มีชื่อรายการเก่า (name field)
+			const affectedTxs = state.transactions.filter(tx => tx.name === oldName);
+			for (const tx of affectedTxs) {
+				tx.name = trimmedNew;
+				await dbPut(STORE_TRANSACTIONS, tx);
+			}
+
+			// 4. อัปเดต autoCompleteList (ถ้ามี) เพื่อเปลี่ยนชื่อรายการ
+			for (const item of state.autoCompleteList) {
+				if (item.name === oldName) {
+					item.name = trimmedNew;
+					await dbPut(STORE_AUTO_COMPLETE, item);
+				}
+			}
+
+			// 5. อัปเดต recurring rules (ถ้ามี)
+			for (const rule of state.recurringRules) {
+				if (rule.name === oldName) {
+					rule.name = trimmedNew;
+					await dbPut(STORE_RECURRING, rule);
+				}
+			}
+
+			// 6. รีเฟรชหน้าจอที่เกี่ยวข้อง
+			if (currentPage === 'accounts') {
+				renderAccountsPage(); // render รายการใหม่
+			} else if (currentPage === 'home') {
+				renderAll(); // เพื่ออัปเดต dropdown
+			} else if (currentPage === 'list') {
+				renderListPage(); // เพื่ออัปเดตตัวกรอง
+			}
+			// รีเฟรช dropdown ในฟอร์มเพิ่มรายการ (ถ้าเปิดอยู่)
+			renderDropdownList();
+
+			// บันทึก activity log
+			addActivityLog(
+				'✏️ แก้ไขรายการใช้บ่อย',
+				`${oldName} → ${trimmedNew}`,
+				'fa-pen',
+				'text-blue-600'
+			);
+
+			Swal.fire('สำเร็จ', 'แก้ไขรายการเรียบร้อย', 'success');
+
+		} catch (err) {
+			console.error('Edit frequent item error:', err);
+			Swal.fire('ผิดพลาด', 'ไม่สามารถแก้ไขรายการได้', 'error');
+		}
+	}
+	
+	// ============================================
+	// แก้ไขหมวดหมู่ (รายรับ/รายจ่าย)
+	// ============================================
+	async function handleEditCategory(e) {
+		const btn = e.target.closest('.edit-cat-btn');
+		if (!btn) return;
+
+		const type = btn.dataset.type; // 'income' หรือ 'expense'
+		const oldName = btn.dataset.name;
+
+		// ตรวจสอบรหัสผ่าน (ถ้ามี)
+		const hasPermission = await promptForPassword('ป้อนรหัสผ่านเพื่อแก้ไขหมวดหมู่');
+		if (!hasPermission) return;
+
+		const { value: newName } = await Swal.fire({
+			title: 'แก้ไขหมวดหมู่',
+			input: 'text',
+			inputLabel: 'ชื่อหมวดหมู่ใหม่',
+			inputValue: oldName,
+			showCancelButton: true,
+			confirmButtonColor: '#3b82f6',
+			confirmButtonText: 'บันทึก',
+			cancelButtonText: 'ยกเลิก',
+			inputValidator: (value) => {
+				if (!value || !value.trim()) return 'กรุณาระบุชื่อหมวดหมู่';
+				if (value.trim() === oldName) return 'ชื่อใหม่ต้องแตกต่างจากชื่อเดิม';
+				if (state.categories[type].includes(value.trim())) return 'มีหมวดหมู่นี้อยู่แล้ว';
+			}
+		});
+
+		if (!newName) return;
+
+		const trimmedNew = newName.trim();
+
+		try {
+			// 1. อัปเดตใน state.categories
+			const index = state.categories[type].indexOf(oldName);
+			if (index === -1) {
+				Swal.fire('ผิดพลาด', 'ไม่พบหมวดหมู่นี้ในระบบ', 'error');
+				return;
+			}
+			state.categories[type][index] = trimmedNew;
+
+			// 2. อัปเดตในฐานข้อมูล categories
+			await dbPut(STORE_CATEGORIES, { type: type, items: state.categories[type] });
+
+			// 3. อัปเดต transactions ทั้งหมดที่มี category เดิม (ไม่จำกัด type เพราะหมวดหมู่อาจถูกใช้ข้ามประเภท)
+			const affectedTxs = state.transactions.filter(tx => tx.category === oldName);
+			for (const tx of affectedTxs) {
+				tx.category = trimmedNew;
+				await dbPut(STORE_TRANSACTIONS, tx);
+			}
+
+			// 4. อัปเดต autoCompleteList (ถ้ามี) เพื่อเปลี่ยนชื่อ category ใน categories object
+			for (const item of state.autoCompleteList) {
+				if (item.categories && item.categories[oldName] !== undefined) {
+					item.categories[trimmedNew] = item.categories[oldName];
+					delete item.categories[oldName];
+					await dbPut(STORE_AUTO_COMPLETE, item);
+				} else if (item.category === oldName) { // fallback สำหรับข้อมูลเก่า
+					item.category = trimmedNew;
+					await dbPut(STORE_AUTO_COMPLETE, item);
+				}
+			}
+
+			// 5. อัปเดต budgets (ถ้ามี)
+			const budget = state.budgets.find(b => b.category === oldName);
+			if (budget) {
+				budget.category = trimmedNew;
+				await dbPut(STORE_BUDGETS, budget);
+			}
+
+			// 6. อัปเดต recurring rules (ถ้ามี)
+			for (const rule of state.recurringRules) {
+				if (rule.category === oldName) {
+					rule.category = trimmedNew;
+					await dbPut(STORE_RECURRING, rule);
+				}
+			}
+
+			// 7. รีเฟรชหน้าจอที่เกี่ยวข้อง
+			if (currentPage === 'accounts') {
+				renderAccountsPage(); // render หมวดหมู่ใหม่
+			} else if (currentPage === 'home') {
+				renderAll(); // เพื่ออัปเดต dropdown และกราฟ
+			} else if (currentPage === 'list') {
+				renderListPage(); // เพื่ออัปเดต dropdown ตัวกรอง
+			}
+			// รีเฟรช dropdown ในฟอร์มเพิ่มรายการ (ถ้าเปิดอยู่)
+			const modalType = document.querySelector('input[name="tx-type"]:checked')?.value;
+			if (modalType) updateCategoryDropdown(modalType);
+
+			// บันทึก activity log
+			addActivityLog(
+				'✏️ แก้ไขหมวดหมู่',
+				`${type === 'income' ? 'รายรับ' : 'รายจ่าย'}: ${oldName} → ${trimmedNew}`,
+				'fa-tag',
+				'text-blue-600'
+			);
+
+			Swal.fire('สำเร็จ', 'แก้ไขหมวดหมู่เรียบร้อย', 'success');
+
+		} catch (err) {
+			console.error('Edit category error:', err);
+			Swal.fire('ผิดพลาด', 'ไม่สามารถแก้ไขหมวดหมู่ได้', 'error');
 		}
 	}
 
