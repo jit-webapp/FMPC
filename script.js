@@ -2809,7 +2809,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)];
             }
             
-            // ฟังก์ชันผสมสีกับขาวหรือดำ (w = สัดส่วนสีหลัก 0.0 - 1.0)
+            // คำนวณความสว่าง (Luminance)
+            const rgbArray = hexToRgbArray(hex);
+            const luminance = (0.299 * rgbArray[0] + 0.587 * rgbArray[1] + 0.114 * rgbArray[2]);
+            const isLightColor = luminance > 160; 
+            const themeTextColor = isLightColor ? '#1f2937' : '#ffffff'; 
+            
+            // ฟังก์ชันผสมสี
             function mix(c1, isWhite, w) {
                 const rgb1 = hexToRgbArray(c1);
                 const rgb2 = isWhite ? [255, 255, 255] : [0, 0, 0];
@@ -2819,17 +2825,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `${r} ${g} ${b}`; 
             }
 
+            // NEW: สีตัวอักษรบนพื้นขาว (ถ้าสีหลักสว่างเกินไป ให้ผสมสีดำ 60% เพื่อให้อ่านข้อความออก)
+            const safeTextRGB = isLightColor ? mix(hex, false, 0.4) : rgbArray.join(' ');
+
             // ตั้งค่า CSS Variables
             root.style.setProperty('--theme-50', mix(hex, true, 0.1));
             root.style.setProperty('--theme-100', mix(hex, true, 0.2));
             root.style.setProperty('--theme-200', mix(hex, true, 0.4));
             root.style.setProperty('--theme-300', mix(hex, true, 0.6));
             root.style.setProperty('--theme-400', mix(hex, true, 0.8));
-            root.style.setProperty('--theme-500', hexToRgbArray(hex).join(' '));
+            root.style.setProperty('--theme-500', rgbArray.join(' '));
             root.style.setProperty('--theme-600', mix(hex, false, 0.8));
             root.style.setProperty('--theme-700', mix(hex, false, 0.6));
             root.style.setProperty('--theme-800', mix(hex, false, 0.4));
             root.style.setProperty('--theme-900', mix(hex, false, 0.2));
+            
+            // ส่งค่าสีไปให้ CSS ใช้งาน
+            root.style.setProperty('--theme-text-color', themeTextColor); 
+            root.style.setProperty('--theme-text-safe', safeTextRGB); 
             
             // อัปเดต UI Selection
             const themeBtns = document.querySelectorAll('.theme-color-btn');
@@ -2856,7 +2869,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (customWrapper) {
-                // ให้สีวงกลมแสดงสี Custom ล่าสุดเสมอ (ถ้าเคยเลือก)
                 if (state.lastCustomColor) {
                     customWrapper.style.background = state.lastCustomColor;
                     if (customIcon) customIcon.style.display = 'none';
@@ -2865,12 +2877,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (customIcon) customIcon.style.display = 'block';
                 }
 
-                // ถ้ากำลัง "ใช้งาน" สี Custom สีนั้นอยู่ ให้ใส่กรอบเด่น
                 if (state.themeColor === state.lastCustomColor && state.lastCustomColor) {
                     customWrapper.classList.add('border-gray-800', 'dark:border-gray-200', 'scale-110');
                     customWrapper.classList.remove('border-gray-300', 'dark:border-gray-500');
                 } else {
-                    // ถ้าเปลี่ยนไปจิ้มสีอื่น ให้เอากรอบเด่นออก
                     customWrapper.classList.remove('border-gray-800', 'dark:border-gray-200', 'scale-110');
                     customWrapper.classList.add('border-gray-300', 'dark:border-gray-500');
                 }
@@ -2940,14 +2950,31 @@ document.addEventListener('DOMContentLoaded', () => {
             let pendingCustomColor = null;
 
             if (customPicker && confirmArea) {
+                // 1. ตรวจจับตอนลากเลือกสี (เปลี่ยนสีตัวอย่างและคำนวณความสว่าง)
                 customPicker.addEventListener('input', (e) => {
                     pendingCustomColor = e.target.value;
                     if (previewDiv) previewDiv.style.backgroundColor = pendingCustomColor;
-                    if (btnConfirm) btnConfirm.style.backgroundColor = pendingCustomColor;
+                    
+                    if (btnConfirm) {
+                        btnConfirm.style.backgroundColor = pendingCustomColor;
+                        
+                        // คำนวณความสว่างแบบ Real-time ให้ปุ่ม "ยืนยัน"
+                        let h = pendingCustomColor.replace('#', '');
+                        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+                        const r = parseInt(h.substring(0,2),16);
+                        const g = parseInt(h.substring(2,4),16);
+                        const b = parseInt(h.substring(4,6),16);
+                        const lum = (0.299 * r + 0.587 * g + 0.114 * b);
+                        
+                        // ถ้าสีสว่าง ตัวอักษรเป็นสีเทาเข้ม(ดำ) ถ้าสีมืดตัวอักษรเป็นสีขาว
+                        btnConfirm.style.color = lum > 160 ? '#1f2937' : '#ffffff';
+                    }
+                    
                     confirmArea.classList.remove('hidden');
                     confirmArea.classList.add('flex');
                 });
 
+                // 2. คำสั่งกดยืนยัน (ส่วนที่หายไป ทำให้เซฟไม่ได้)
                 if (btnConfirm) {
                     btnConfirm.addEventListener('click', async () => {
                         if (pendingCustomColor) {
@@ -2970,6 +2997,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
+                // 3. คำสั่งกดยกเลิก
                 if (btnCancel) {
                     btnCancel.addEventListener('click', () => {
                         pendingCustomColor = null;
@@ -8620,6 +8648,10 @@ document.addEventListener('DOMContentLoaded', () => {
 				password,
 				autoLockTimeout,
 				isDarkMode,
+                // --- NEW THEME VARIABLES FOR BACKUP ---
+                themeColor: state.themeColor || '#9333ea',
+                lastCustomColor: state.lastCustomColor || null,
+                // --------------------------------------
 				autoConfirmPassword,
 				// Metadata
 				backupVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'unknown',
@@ -11708,6 +11740,8 @@ document.addEventListener('DOMContentLoaded', () => {
 						password: (await dbGet(STORE_CONFIG, 'password'))?.value || null,
 						autoLockTimeout: (await dbGet(STORE_CONFIG, AUTOLOCK_CONFIG_KEY))?.value || 0, 
 						isDarkMode: (await dbGet(STORE_CONFIG, DARK_MODE_CONFIG_KEY))?.value || false,
+						themeColor: state.themeColor || '#9333ea',
+						lastCustomColor: state.lastCustomColor || null,
 						autoConfirmPassword: (await dbGet(STORE_CONFIG, AUTO_CONFIRM_CONFIG_KEY))?.value || false
 					};
 					
@@ -12274,6 +12308,17 @@ document.addEventListener('DOMContentLoaded', () => {
 						await dbPut(STORE_CONFIG, { key: 'mobileMenuStyle', value: importedState.mobileMenuStyle ?? 'bottom' });
 						await dbPut(STORE_CONFIG, { key: 'lineUserIds_List', value: importedState.lineUserIdsList ?? [] });
 
+                        // --- NEW THEME VARIABLES FOR RESTORE ---
+                        if (importedState.themeColor !== undefined) {
+                            state.themeColor = importedState.themeColor;
+                            await dbPut(STORE_CONFIG, { key: 'themeColor', value: importedState.themeColor });
+                        }
+                        if (importedState.lastCustomColor !== undefined) {
+                            state.lastCustomColor = importedState.lastCustomColor;
+                            await dbPut(STORE_CONFIG, { key: 'lastCustomColor', value: importedState.lastCustomColor });
+                        }
+                        // ---------------------------------------
+
                         fileInput.value = null;
                         Swal.fire({
                             title: 'นำเข้าข้อมูลสำเร็จ!',
@@ -12282,7 +12327,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }).then(async () => {
                             await loadStateFromDB();
                             resetAutoLockTimer();
+                            
+                            // บังคับเปลี่ยนสีหลังจากอิมพอร์ต
+                            if (typeof applyThemeColor === 'function') {
+                                applyThemeColor();
+                            }
                             applyDarkModePreference();
+                            
                             renderSettings();
                             showPage('page-home'); 
                             // ปิด Modal ถ้าเปิดอยู่
