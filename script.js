@@ -82,6 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const DARK_MODE_CONFIG_KEY = 'isDarkMode'; 
     // *********************************************
 	
+	// ********** NEW THEME COLOR VARIABLE **********
+    const THEME_COLOR_CONFIG_KEY = 'themeColor';
+	const LAST_CUSTOM_COLOR_CONFIG_KEY = 'lastCustomColor';
+    // *********************************************
+	
 	// +++ เพิ่มส่วนนี้ +++
     const AUTO_CONFIRM_CONFIG_KEY = 'autoConfirmPassword';
     // ++++++++++++++++++
@@ -1078,7 +1083,8 @@ document.addEventListener('DOMContentLoaded', () => {
         listChartMode: 'items',
         listGroupBy: 'none', 
         showBalanceCard: false, 
-        isDarkMode: false, 
+        isDarkMode: false,
+		themeColor: '#9333ea', // *** [NEW] ค่าเริ่มต้นของ Theme ***
 		activeModalId: null, // เช่น 'form-modal', 'quick-draft-modal', null
 		pendingCommandToLearn: null,
 		lineNotifyActions: { add: true, edit: true, delete: true }, // ค่าเริ่มต้น
@@ -1401,6 +1407,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const darkModeConfig = await dbGet(STORE_CONFIG, DARK_MODE_CONFIG_KEY);
             state.isDarkMode = darkModeConfig ? darkModeConfig.value : false;
+
+            // โหลดสี Theme หลัก และสี Custom ล่าสุด (ช่วยให้จำค่าจากการ Sync/Backup)
+            const themeColorConfig = await dbGet(STORE_CONFIG, THEME_COLOR_CONFIG_KEY);
+            if (themeColorConfig) {
+                state.themeColor = themeColorConfig.value;
+            }
+
+            const lastCustomColorConfig = await dbGet(STORE_CONFIG, LAST_CUSTOM_COLOR_CONFIG_KEY);
+            if (lastCustomColorConfig) {
+                state.lastCustomColor = lastCustomColorConfig.value;
+            }
 			
 			const autoBackupConfig = await dbGet(STORE_CONFIG, 'autoBackup');
 			if (autoBackupConfig) {
@@ -2269,6 +2286,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				await checkAndProcessRecurring(); // 5. เช็ครายการประจำ
 				processRepeatingNotifications();  // เช็คการแจ้งเตือนซ้ำ (Notifications)
 				
+				applyThemeColor();        // [NEW] ประยุกต์สี Theme ตอนเปิดแอป
+				setupThemeListener();     // [NEW] เตรียมตัวดักจับการตั้งค่าสีใหม่
+				
 
 				setupSwipeNavigation(); 
 				setupAutoLockListener(); 
@@ -2385,10 +2405,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		function onAppStart() {
 			const getEl = (id) => document.getElementById(id);
-			getEl('nav-home').classList.add('text-purple-600');
-			getEl('nav-home').classList.remove('text-gray-600');
-			getEl('nav-home-mobile').classList.add('text-purple-600'); 
-			getEl('nav-home-mobile').classList.remove('text-gray-600');
+			getEl('nav-home').classList.add('text-primary-600');
+			getEl('nav-home').classList.remove('text-gray-600', 'text-purple-600');
+			getEl('nav-home-mobile').classList.add('text-primary-600'); 
+			getEl('nav-home-mobile').classList.remove('text-gray-600', 'text-purple-600');
 			
 			// ตั้งค่า dropdown ในหน้าแรก
 			const homeSelect = document.getElementById('home-items-per-page-select');
@@ -2456,7 +2476,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					];
 					navButtons.forEach(btn => {
 						if(btn) {
-							btn.classList.remove('text-purple-600');
+							btn.classList.remove('text-purple-600', 'text-primary-600');
 							btn.classList.add('text-gray-600');
 						}
 					});
@@ -2467,20 +2487,20 @@ document.addEventListener('DOMContentLoaded', () => {
 					};
 					Object.values(mobileNavButtons).forEach(btn => {
 						if(btn) {
-							btn.classList.remove('text-purple-600');
+							btn.classList.remove('text-purple-600', 'text-primary-600');
 							btn.classList.add('text-gray-600');
 						}
 					});
 
 					const currentNavEl = getEl('nav-' + currentPage);
 					if (currentNavEl) {
-						currentNavEl.classList.add('text-purple-600');
-						currentNavEl.classList.remove('text-gray-600');
+						currentNavEl.classList.add('text-primary-600');
+						currentNavEl.classList.remove('text-gray-600', 'text-purple-600');
 					}
 					const currentMobileNavEl = mobileNavButtons['page-' + currentPage];
 					if (currentMobileNavEl) {
-						currentMobileNavEl.classList.add('text-purple-600');
-						currentMobileNavEl.classList.remove('text-gray-600');
+						currentMobileNavEl.classList.add('text-primary-600');
+						currentMobileNavEl.classList.remove('text-gray-600', 'text-purple-600');
 					}
 				}
 				
@@ -2698,27 +2718,35 @@ document.addEventListener('DOMContentLoaded', () => {
 			const body = document.body;
 			const getEl = (id) => document.getElementById(id);
 			const toggleDarkModeBtn = getEl('toggle-dark-mode');
+			
+			// ดึงสี Theme ปัจจุบันมาใช้
+			const currentThemeColor = state.themeColor || '#9333ea';
 
 			if (state.isDarkMode) {
 				body.classList.add('dark');
 				Swal.fire.defaults = {
 					customClass: {
 						popup: 'swal2-popup',
-						confirmButton: 'bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-xl shadow-lg text-lg',
-						cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-xl text-lg'
+						// ลบ bg-purple-600 ทิ้ง เพื่อให้ปุ่มรับสีจาก Theme แบบ Dynamic
+						confirmButton: 'text-white font-medium py-2 px-4 rounded-xl shadow-lg text-lg border-none',
+						cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-xl text-lg border-none'
 					},
 					background: '#1a1a1a',
 					color: '#e5e7eb',
-					confirmButtonColor: '#a78bfa',
+					confirmButtonColor: currentThemeColor,
 					cancelButtonColor: '#374151',
 				};
 			} else {
 				body.classList.remove('dark');
 				Swal.fire.defaults = {
-					customClass: { popup: '' },
+					customClass: { 
+						popup: '',
+						confirmButton: 'text-white font-medium py-2 px-4 rounded-xl shadow-lg text-lg border-none',
+						cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-xl text-lg border-none'
+					},
 					background: '#fff',
 					color: '#545454',
-					confirmButtonColor: '#3085d6',
+					confirmButtonColor: currentThemeColor,
 					cancelButtonColor: '#d33',
 				};
 			}
@@ -2732,7 +2760,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (myExpenseByNameChart) { myExpenseByNameChart.destroy(); myExpenseByNameChart = null; }
 			if (myListPageBarChart) { myListPageBarChart.destroy(); myListPageBarChart = null; }
 
-			// ✅ แก้ไขตรงนี้: ใช้ตัวแปรใหม่
 			if (moneyCalendar) {
 				moneyCalendar.destroy();
 				moneyCalendar = null;
@@ -2769,6 +2796,191 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 			}
 		}
+		
+		// ********** NEW THEME LOGIC **********
+        function applyThemeColor() {
+            const hex = state.themeColor || '#9333ea';
+            const root = document.documentElement;
+            
+            // ฟังก์ชันแปลง Hex เป็น RGB Array
+            function hexToRgbArray(h) {
+                h = h.replace('#', '');
+                if (h.length === 3) return [parseInt(h[0]+h[0],16), parseInt(h[1]+h[1],16), parseInt(h[2]+h[2],16)];
+                return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)];
+            }
+            
+            // ฟังก์ชันผสมสีกับขาวหรือดำ (w = สัดส่วนสีหลัก 0.0 - 1.0)
+            function mix(c1, isWhite, w) {
+                const rgb1 = hexToRgbArray(c1);
+                const rgb2 = isWhite ? [255, 255, 255] : [0, 0, 0];
+                const r = Math.round(rgb1[0] * w + rgb2[0] * (1 - w));
+                const g = Math.round(rgb1[1] * w + rgb2[1] * (1 - w));
+                const b = Math.round(rgb1[2] * w + rgb2[2] * (1 - w));
+                return `${r} ${g} ${b}`; 
+            }
+
+            // ตั้งค่า CSS Variables
+            root.style.setProperty('--theme-50', mix(hex, true, 0.1));
+            root.style.setProperty('--theme-100', mix(hex, true, 0.2));
+            root.style.setProperty('--theme-200', mix(hex, true, 0.4));
+            root.style.setProperty('--theme-300', mix(hex, true, 0.6));
+            root.style.setProperty('--theme-400', mix(hex, true, 0.8));
+            root.style.setProperty('--theme-500', hexToRgbArray(hex).join(' '));
+            root.style.setProperty('--theme-600', mix(hex, false, 0.8));
+            root.style.setProperty('--theme-700', mix(hex, false, 0.6));
+            root.style.setProperty('--theme-800', mix(hex, false, 0.4));
+            root.style.setProperty('--theme-900', mix(hex, false, 0.2));
+            
+            // อัปเดต UI Selection
+            const themeBtns = document.querySelectorAll('.theme-color-btn');
+            let isStandardColor = false;
+            
+            themeBtns.forEach(btn => {
+                if (btn.dataset.color.toLowerCase() === hex.toLowerCase()) {
+                    btn.classList.add('border-gray-800', 'dark:border-gray-200', 'scale-110');
+                    btn.classList.remove('border-transparent');
+                    isStandardColor = true;
+                } else {
+                    btn.classList.remove('border-gray-800', 'dark:border-gray-200', 'scale-110');
+                    btn.classList.add('border-transparent');
+                }
+            });
+            
+            // อัปเดตวงกลมเลือกสีเอง
+            const customWrapper = document.getElementById('custom-color-wrapper');
+            const customPicker = document.getElementById('custom-theme-picker');
+            const customIcon = document.getElementById('custom-color-icon');
+            
+            if (customPicker) {
+                customPicker.value = state.lastCustomColor || hex;
+            }
+            
+            if (customWrapper) {
+                // ให้สีวงกลมแสดงสี Custom ล่าสุดเสมอ (ถ้าเคยเลือก)
+                if (state.lastCustomColor) {
+                    customWrapper.style.background = state.lastCustomColor;
+                    if (customIcon) customIcon.style.display = 'none';
+                } else {
+                    customWrapper.style.background = '';
+                    if (customIcon) customIcon.style.display = 'block';
+                }
+
+                // ถ้ากำลัง "ใช้งาน" สี Custom สีนั้นอยู่ ให้ใส่กรอบเด่น
+                if (state.themeColor === state.lastCustomColor && state.lastCustomColor) {
+                    customWrapper.classList.add('border-gray-800', 'dark:border-gray-200', 'scale-110');
+                    customWrapper.classList.remove('border-gray-300', 'dark:border-gray-500');
+                } else {
+                    // ถ้าเปลี่ยนไปจิ้มสีอื่น ให้เอากรอบเด่นออก
+                    customWrapper.classList.remove('border-gray-800', 'dark:border-gray-200', 'scale-110');
+                    customWrapper.classList.add('border-gray-300', 'dark:border-gray-500');
+                }
+            }
+
+            // อัปเดตสีของ SweetAlert
+            if (typeof applyDarkModePreference === 'function') {
+                applyDarkModePreference();
+            }
+
+            // อัปเดตสีแถบบนของมือถือ (Status Bar)
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute('content', state.isDarkMode ? '#1f2937' : hex); 
+            }
+        }
+        
+        function setupThemeListener() {
+            const container = document.getElementById('theme-color-selector');
+            if (!container) return;
+            
+            // Event Delegation สำหรับปุ่มสีที่กำหนดไว้ล่วงหน้า 5 สี
+            container.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.theme-color-btn');
+                if (btn) {
+                    const newColor = btn.dataset.color;
+                    state.themeColor = newColor;
+                    applyThemeColor();
+                    if (window.appVibrate) window.appVibrate(50);
+                    try {
+                        await dbPut(STORE_CONFIG, { key: THEME_COLOR_CONFIG_KEY, value: newColor });
+                    } catch (err) {
+                        console.error('Failed to save theme color', err);
+                    }
+                }
+            });
+
+            // การคลิกที่วงกลม Custom เพื่อเรียกใช้สีที่ตั้งไว้กลับมา
+            const customWrapper = document.getElementById('custom-color-wrapper');
+            const customPicker = document.getElementById('custom-theme-picker');
+            
+            if (customWrapper) {
+                customWrapper.addEventListener('click', async () => {
+                    if (state.lastCustomColor) {
+                        // ถ้าเคยเลือกสีไว้แล้ว ให้ใช้สีนั้นทันที (ไม่ต้องเปิดหน้าต่างกดยืนยันใหม่)
+                        state.themeColor = state.lastCustomColor;
+                        applyThemeColor();
+                        if (window.appVibrate) window.appVibrate(50);
+                        try {
+                            await dbPut(STORE_CONFIG, { key: THEME_COLOR_CONFIG_KEY, value: state.lastCustomColor });
+                        } catch (err) {
+                            console.error('Failed to save custom theme color', err);
+                        }
+                    } else {
+                        // ถ้ายังไม่เคยตั้งค่า ให้เปิดหน้าต่างเลือกสีขึ้นมา
+                        if (customPicker) customPicker.click();
+                    }
+                });
+            }
+            
+            // สำหรับ Color Picker (แก้ไขสี Custom) พร้อมระบบยืนยัน
+            const confirmArea = document.getElementById('custom-color-confirm-area');
+            const previewDiv = document.getElementById('custom-color-preview');
+            const btnConfirm = document.getElementById('btn-confirm-custom-color');
+            const btnCancel = document.getElementById('btn-cancel-custom-color');
+            
+            let pendingCustomColor = null;
+
+            if (customPicker && confirmArea) {
+                customPicker.addEventListener('input', (e) => {
+                    pendingCustomColor = e.target.value;
+                    if (previewDiv) previewDiv.style.backgroundColor = pendingCustomColor;
+                    if (btnConfirm) btnConfirm.style.backgroundColor = pendingCustomColor;
+                    confirmArea.classList.remove('hidden');
+                    confirmArea.classList.add('flex');
+                });
+
+                if (btnConfirm) {
+                    btnConfirm.addEventListener('click', async () => {
+                        if (pendingCustomColor) {
+                            state.themeColor = pendingCustomColor;
+                            state.lastCustomColor = pendingCustomColor; 
+                            applyThemeColor(); 
+                            
+                            if (window.appVibrate) window.appVibrate(50);
+                            
+                            try {
+                                await dbPut(STORE_CONFIG, { key: THEME_COLOR_CONFIG_KEY, value: pendingCustomColor });
+                                await dbPut(STORE_CONFIG, { key: LAST_CUSTOM_COLOR_CONFIG_KEY, value: pendingCustomColor });
+                            } catch (err) {
+                                console.error('Failed to save custom theme color', err);
+                            }
+                            
+                            confirmArea.classList.add('hidden');
+                            confirmArea.classList.remove('flex');
+                        }
+                    });
+                }
+
+                if (btnCancel) {
+                    btnCancel.addEventListener('click', () => {
+                        pendingCustomColor = null;
+                        confirmArea.classList.add('hidden');
+                        confirmArea.classList.remove('flex');
+                        customPicker.value = state.lastCustomColor || state.themeColor || '#9333ea';
+                    });
+                }
+            }
+        }
+        // ********************************************
 		
 		window.updateCloudStatusIcon = function(user = null) {
 			const cloudMobile = document.getElementById('status-cloud-mobile');
@@ -5345,11 +5557,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		const pageName = pageId.replace('page-', '');
 		bottomNav.querySelectorAll('button').forEach(btn => {
 			const btnPage = btn.dataset.page;
+			// ล้างคลาสสีเก่าออกให้หมดเพื่อป้องกันสีค้าง
+			btn.classList.remove('text-purple-600', 'text-primary-600', 'text-gray-600');
 			if (btnPage === pageName) {
-				btn.classList.remove('text-gray-600');
-				btn.classList.add('text-purple-600');
+				btn.classList.add('text-primary-600');
 			} else {
-				btn.classList.remove('text-purple-600');
 				btn.classList.add('text-gray-600');
 			}
 		});
@@ -5550,43 +5762,39 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPage = pageName;
             isTransitioning = false; 
 
-            // อัปเดตปุ่ม Nav (โค้ดเดิม)
-            const navButtons = [
-                getEl('nav-home'), getEl('nav-list'), getEl('nav-calendar'), 
-                getEl('nav-accounts'), getEl('nav-settings'), getEl('nav-guide')
-            ];
-            navButtons.forEach(btn => {
-                if(btn) { // เพิ่ม check null กัน error
-                    btn.classList.remove('text-purple-600');
-                    btn.classList.add('text-gray-600');
-                }
-            });
+			// อัปเดตปุ่ม Nav (โค้ดเดิม)
+					const navButtons = [
+						getEl('nav-home'), getEl('nav-list'), getEl('nav-calendar'), getEl('nav-accounts'), getEl('nav-settings'), getEl('nav-guide')
+					];
+					navButtons.forEach(btn => {
+						if(btn) { 
+							btn.classList.remove('text-purple-600', 'text-primary-600');
+							btn.classList.add('text-gray-600');
+						}
+					});
 
-            // อัปเดตปุ่ม Mobile Nav (โค้ดเดิม)
-            const mobileNavButtons = {
-                'page-home': getEl('nav-home-mobile'),
-                'page-list': getEl('nav-list-mobile'),
-                'page-calendar': getEl('nav-calendar-mobile'), 
-                'page-accounts': getEl('nav-accounts-mobile'),
-                'page-settings': getEl('nav-settings-mobile'),
-                'page-guide': getEl('nav-guide-mobile')
-            };
-            Object.values(mobileNavButtons).forEach(btn => {
-                if(btn) {
-                    btn.classList.remove('text-purple-600');
-                    btn.classList.add('text-gray-600');
-                }
-            });
-            const currentNavEl = getEl('nav-' + currentPage);
-            if (currentNavEl) {
-                currentNavEl.classList.add('text-purple-600');
-                currentNavEl.classList.remove('text-gray-600');
-            }
-            const currentMobileNavEl = mobileNavButtons[pageId];
-            if (currentMobileNavEl) {
-                currentMobileNavEl.classList.add('text-purple-600');
-                currentMobileNavEl.classList.remove('text-gray-600');
-            }
+					// อัปเดตปุ่ม Mobile Nav (โค้ดเดิม)
+					const mobileNavButtons = {
+						'page-home': getEl('nav-home-mobile'), 'page-list': getEl('nav-list-mobile'), 'page-calendar': getEl('nav-calendar-mobile'),
+						'page-accounts': getEl('nav-accounts-mobile'), 'page-settings': getEl('nav-settings-mobile'), 'page-guide': getEl('nav-guide-mobile')
+					};
+					Object.values(mobileNavButtons).forEach(btn => {
+						if(btn) {
+							btn.classList.remove('text-purple-600', 'text-primary-600');
+							btn.classList.add('text-gray-600');
+						}
+					});
+
+					const currentNavEl = getEl('nav-' + currentPage);
+					if (currentNavEl) {
+						currentNavEl.classList.add('text-primary-600');
+						currentNavEl.classList.remove('text-gray-600');
+					}
+					const currentMobileNavEl = mobileNavButtons[pageId];
+					if (currentMobileNavEl) {
+						currentMobileNavEl.classList.add('text-primary-600');
+						currentMobileNavEl.classList.remove('text-gray-600');
+					}
 			
 			    // อัปเดต Bottom Navigation ถ้าอยู่ในโหมด bottom
 			if (state.mobileMenuStyle === 'bottom') {

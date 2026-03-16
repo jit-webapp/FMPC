@@ -158,7 +158,7 @@ body.dark .form-textarea {
 body.dark .form-input:focus, 
 body.dark .form-select:focus, 
 body.dark .form-textarea:focus {
-    box-shadow: 0 0 0 0.2rem rgba(167, 139, 250, 0.5);
+    box-shadow: 0 0 0 0.2rem rgb(var(--theme-400) / 0.5);
 }
 
 /* Specific Color Overrides (ปรับสีพื้นหลังให้อ่อนลงเมื่ออยู่ในโหมดมืด) */
@@ -173,22 +173,22 @@ body.dark .text-red-700 { color: #ef4444 !important; }
 body.dark .bg-blue-100 { background-color: #162438 !important; }
 body.dark .text-blue-800 { color: #60a5fa !important; }
 
-body.dark .bg-purple-100 { background-color: #2a1f49 !important; }
-body.dark .text-purple-600 { color: #a78bfa !important; }
-body.dark .text-purple-700 { color: #c4b5fd !important; }
-body.dark .text-purple-800 { color: #d8b4fe !important; }
-
+/* เปลี่ยนสีม่วงเดิมเป็นแบบ Dynamic Variable ตาม Theme ใหม่ */
+body.dark .bg-purple-100, body.dark .bg-primary-100 { background-color: rgb(var(--theme-900)) !important; }
+body.dark .text-purple-600, body.dark .text-primary-600 { color: rgb(var(--theme-400)) !important; }
+body.dark .text-purple-700, body.dark .text-primary-700 { color: rgb(var(--theme-300)) !important; }
+body.dark .text-purple-800, body.dark .text-primary-800 { color: rgb(var(--theme-200)) !important; }
 body.dark .bg-gray-200 { background-color: #374151 !important; }
-body.dark .hover\:bg-purple-100:hover { background-color: #4c377a !important; }
-body.dark .bg-purple-50 { background-color: #2a1f49 !important; }
-body.dark .border-purple-100 { border-color: #4c377a !important; }
+body.dark .hover\:bg-purple-100:hover, body.dark .hover\:bg-primary-100:hover { background-color: rgb(var(--theme-800)) !important; }
+body.dark .bg-purple-50, body.dark .bg-primary-50 { background-color: rgb(var(--theme-900) / 0.5) !important; }
+body.dark .border-purple-100, body.dark .border-primary-100 { border-color: rgb(var(--theme-800)) !important; }
 
 body.dark .balance-zero { color: #9ca3af !important; } 
 
 /* --- Dark Mode for FullCalendar --- */
 body.dark .fc {
-    --fc-bg-event-color: #4c377a;
-    --fc-event-border-color: #a78bfa;
+    --fc-bg-event-color: rgb(var(--theme-800));
+    --fc-event-border-color: rgb(var(--theme-400));
     --fc-event-text-color: #e5e7eb;
     --fc-today-bg-color: #1f2937;
     --fc-border-color: #374151;
@@ -220,7 +220,7 @@ body.dark .fc-button {
 body.dark .fc-button:hover {
     background-color: #4b5563 !important;
 }
-body.dark .hover\:bg-purple-50:hover {
+body.dark .hover\:bg-purple-50:hover, body.dark .hover\:bg-primary-50:hover {
     background-color: #374151 !important;
 }
 
@@ -239,11 +239,11 @@ body.dark .swal2-actions button {
     font-family: 'Prompt', sans-serif !important;
 }
 body.dark .swal2-confirm {
-    background-color: #a78bfa !important;
-    color: #1a1a1a !important;
+    background-color: rgb(var(--theme-500)) !important;
+    color: #ffffff !important;
 }
 body.dark .swal2-confirm:hover {
-    background-color: #c4b5fd !important;
+    background-color: rgb(var(--theme-400)) !important;
 }
 body.dark .swal2-cancel {
     background-color: #374151 !important;
@@ -369,8 +369,8 @@ body.dark #bottom-nav {
 body.dark #bottom-nav button.text-gray-600 {
     color: #9ca3af;
 }
-body.dark #bottom-nav button.text-purple-600 {
-    color: #c4b5fd;
+body.dark #bottom-nav button.text-purple-600, body.dark #bottom-nav button.text-primary-600 {
+    color: rgb(var(--theme-300));
 }
 
 #bottom-nav {
@@ -459,14 +459,14 @@ body.dark #notification-popover {
     --font-size-2xl: 1.875rem; /* หัวข้อหลัก (Title) */
     --font-size-3xl: 2.25rem;  /* ตัวเลขยอดเงิน */
     --font-size-4xl: 3rem;     /* ตัวเลขเน้นพิเศษ (ขยายเพิ่ม) */
-	@media (max-width: 640px) {
-		:root {
-			--font-size-base: 1rem;  /* ลดลงบนมือถือ */
-			--font-size-lg: 1.125rem;
-			/* ... */
-		}
-	}
-	
+    @media (max-width: 640px) {
+        :root {
+            --font-size-base: 1rem;  /* ลดลงบนมือถือ */
+            --font-size-lg: 1.125rem;
+            /* ... */
+        }
+    }
+    
 }
 
 /* บังคับคลาสข้อความทั้งหมดในแอป ให้ดึงค่าจากศูนย์กลางควบคุม (Override คลาสเดิม) */
@@ -579,47 +579,79 @@ body.dark [id$="-close-btn"], body.dark [id$="-close"], body.dark button[onclick
     white-space: pre-line;
 }
 
-<style>
-    /* =========================================
-       ระบบแถบเลื่อนแบบเร็ว (Fast Scrollbar) สำหรับประวัติกิจกรรม
-       ========================================= */
-       
-    /* 1. กำหนดให้คอนเทนเนอร์เลื่อนได้ลื่นไหล (Smooth Scrolling) บนมือถือ */
-    #persistent-log-list, 
-    #notification-history-list,
-    #persistent-log-modal .overflow-y-auto {
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-        /* บังคับให้แสดง Scrollbar เสมอในบางเบราว์เซอร์ */
-        overflow-y: overlay; 
-    }
+/* =========================================
+   ระบบแถบเลื่อนแบบเร็ว (Fast Scrollbar) สำหรับประวัติกิจกรรม
+   ========================================= */
+   
+/* 1. กำหนดให้คอนเทนเนอร์เลื่อนได้ลื่นไหล (Smooth Scrolling) บนมือถือ */
+#persistent-log-list, 
+#notification-history-list,
+#persistent-log-modal .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    /* บังคับให้แสดง Scrollbar เสมอในบางเบราว์เซอร์ */
+    overflow-y: overlay; 
+}
 
-    /* 2. ขยายขนาดความกว้างของแกนเลื่อน (Track) ให้แตะง่ายขึ้น */
-    #persistent-log-list::-webkit-scrollbar,
-    #notification-history-list::-webkit-scrollbar,
-    #persistent-log-modal .overflow-y-auto::-webkit-scrollbar {
-        width: 10px; /* ความกว้างที่เหมาะกับปลายนิ้ว */
-        background-color: transparent;
-    }
+/* 2. ขยายขนาดความกว้างของแกนเลื่อน (Track) ให้แตะง่ายขึ้น */
+#persistent-log-list::-webkit-scrollbar,
+#notification-history-list::-webkit-scrollbar,
+#persistent-log-modal .overflow-y-auto::-webkit-scrollbar {
+    width: 10px; /* ความกว้างที่เหมาะกับปลายนิ้ว */
+    background-color: transparent;
+}
 
-    /* 3. ปรับแต่งตัวจับ (Thumb) ให้เห็นชัดเจนและจับลากได้ */
-    #persistent-log-list::-webkit-scrollbar-thumb,
-    #notification-history-list::-webkit-scrollbar-thumb,
-    #persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb {
-        background-color: #d8b4fe; /* สีม่วงอ่อน ให้เข้ากับธีมแอป */
-        border-radius: 10px;
-        border: 2px solid transparent; 
-        background-clip: padding-box; /* ทำให้ดูมีขอบใสๆ */
-    }
+/* 3. ปรับแต่งตัวจับ (Thumb) ให้เห็นชัดเจนและจับลากได้ */
+#persistent-log-list::-webkit-scrollbar-thumb,
+#notification-history-list::-webkit-scrollbar-thumb,
+#persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--theme-300)); /* ใช้สีอ่อนของธีมปัจจุบัน */
+    border-radius: 10px;
+    border: 2px solid transparent; 
+    background-clip: padding-box; /* ทำให้ดูมีขอบใสๆ */
+}
 
-    /* 4. เมื่อเอานิ้วแตะค้าง (Active) หรือใช้เมาส์ชี้ ให้แถบเข้มขึ้นเต็มเส้น */
-    #persistent-log-list::-webkit-scrollbar-thumb:hover,
-    #persistent-log-list::-webkit-scrollbar-thumb:active,
-    #notification-history-list::-webkit-scrollbar-thumb:hover,
-    #notification-history-list::-webkit-scrollbar-thumb:active,
-    #persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
-    #persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb:active {
-        background-color: #9333ea; /* สีม่วงเข้มขึ้นเมื่อแตะลาก */
-        border: none; /* ขยายให้เต็มร่องเพื่อจับลากง่ายที่สุด */
-    }
-</style>
+/* 4. เมื่อเอานิ้วแตะค้าง (Active) หรือใช้เมาส์ชี้ ให้แถบเข้มขึ้นเต็มเส้น */
+#persistent-log-list::-webkit-scrollbar-thumb:hover,
+#persistent-log-list::-webkit-scrollbar-thumb:active,
+#notification-history-list::-webkit-scrollbar-thumb:hover,
+#notification-history-list::-webkit-scrollbar-thumb:active,
+#persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#persistent-log-modal .overflow-y-auto::-webkit-scrollbar-thumb:active {
+    background-color: rgb(var(--theme-400)); /* สีเข้มขึ้นตามธีมปัจจุบันเมื่อแตะ/ชี้ */
+}
+
+/* =========================================
+   บังคับสีปุ่มแจ้งเตือน (SweetAlert) และสีหลงเหลือให้เป็นสี Theme เสมอ
+   ========================================= */
+
+/* บังคับปุ่มตกลง (Confirm) ให้เป็นสีธีม (ยกเว้นปุ่มลบสีแดง) */
+.swal2-confirm:not([style*="rgb(211, 51, 51)"]):not([style*="#d33"]):not([style*="#ef4444"]):not(.bg-red-500) {
+    background-color: rgb(var(--theme-500)) !important;
+    border-color: rgb(var(--theme-500)) !important;
+    color: #ffffff !important;
+    background-image: none !important;
+}
+.swal2-confirm:not([style*="rgb(211, 51, 51)"]):not([style*="#d33"]):not([style*="#ef4444"]):not(.bg-red-500):hover {
+    background-color: rgb(var(--theme-600)) !important;
+    border-color: rgb(var(--theme-600)) !important;
+}
+
+/* เปลี่ยนคลาสสีม่วงที่อาจตกค้างในหน้า HTML ให้เป็นสีธีมปัจจุบันโดยอัตโนมัติ */
+.bg-purple-600, .bg-primary-600 { background-color: rgb(var(--theme-500)) !important; }
+.hover\:bg-purple-700:hover, .hover\:bg-primary-700:hover { background-color: rgb(var(--theme-600)) !important; }
+.bg-purple-500, .bg-primary-500 { background-color: rgb(var(--theme-500)) !important; }
+.hover\:bg-purple-600:hover, .hover\:bg-primary-600:hover { background-color: rgb(var(--theme-600)) !important; }
+
+.bg-purple-100, .bg-primary-100 { background-color: rgb(var(--theme-100)) !important; }
+.hover\:bg-purple-100:hover, .hover\:bg-primary-100:hover { background-color: rgb(var(--theme-200)) !important; }
+.bg-purple-50, .bg-primary-50 { background-color: rgb(var(--theme-50)) !important; }
+
+.text-purple-600, .text-primary-600 { color: rgb(var(--theme-500)) !important; }
+.hover\:text-purple-700:hover, .hover\:text-primary-700:hover { color: rgb(var(--theme-600)) !important; }
+.text-purple-700, .text-primary-700 { color: rgb(var(--theme-600)) !important; }
+.text-purple-500, .text-primary-500 { color: rgb(var(--theme-500)) !important; }
+
+.border-purple-200, .border-primary-200 { border-color: rgb(var(--theme-200)) !important; }
+.border-t-purple-400, .border-t-primary-400 { border-top-color: rgb(var(--theme-400)) !important; }
+.ring-purple-500, .ring-primary-500 { --tw-ring-color: rgb(var(--theme-500)) !important; }

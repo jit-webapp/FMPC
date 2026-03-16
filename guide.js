@@ -1,7 +1,7 @@
 window.guideHTML = `
 	<div id="page-guide" class="app-page pb-20">
 		<!-- ปกคู่มือ -->
-		<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-10 mb-12 shadow-2xl">
+		<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-primary-600 to-pink-500 text-white p-10 mb-12 shadow-2xl">
 			<div class="absolute inset-0 bg-black opacity-10"></div>
 			<div class="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
 			<div class="absolute -bottom-20 -left-20 w-80 h-80 bg-yellow-300 opacity-20 rounded-full blur-3xl"></div>
@@ -29,60 +29,60 @@ window.guideHTML = `
 
 		<div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 mb-12 border border-gray-100 dark:border-gray-700 transition-colors">
 			<div class="flex justify-between items-center mb-6">
-				<h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center gap-3">
-					<i class="fa-solid fa-list-ul text-3xl text-purple-600"></i>
+				<h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600 flex items-center gap-3">
+					<i class="fa-solid fa-list-ul text-3xl text-primary-600"></i>
 					สารบัญ
 				</h2>
-				<button class="speak-btn bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800 p-3 rounded-full transition-colors" 
+				<button class="speak-btn bg-primary-100 hover:bg-primary-200 dark:bg-primary-900/40 dark:hover:bg-primary-800 p-3 rounded-full transition-colors" 
 					data-speak="สารบัญมีทั้งหมด 8 หัวข้อ คุณสามารถกดที่ลิงก์เพื่อเลื่อนไปยังส่วนนั้น ๆ หรือกดปุ่มลำโพงเพื่อฟังคำอธิบายแต่ละหัวข้อได้ หัวข้อได้แก่: เริ่มต้นใช้งาน (หน้าจอตอนรับผู้ใช้ใหม่, การติดตั้ง PWA, รหัสผ่าน, Biometric), หน้าแรกศูนย์ควบคุม (การ์ดสรุป, งบประมาณ, บัญชีทั้งหมด, ปุ่มเพิ่มรายการด่วน, กราฟ), รายการและวิเคราะห์เชิงลึก (ตัวกรองขั้นสูง, สรุปยอดไดนามิก, กราฟหมวดหมู่และแนวโน้ม, การจัดการรายการ), ปฏิทินการเงิน (แสดงวันหยุด วันพระ ยอดเงิน คลิกวันที่เพื่อดูสรุป), จัดการบัญชีและหมวดหมู่ (เพิ่ม/แก้ไข/เรียงบัญชี, เปลี่ยนไอคอน, ซ่อน/แสดง, ปรับปรุงยอด, จัดการหมวดหมู่, รายการที่ใช้บ่อย, รายการประจำ, งบประมาณ), ตั้งค่าและจัดการข้อมูล (ทั่วไป, ความปลอดภัย, LINE Notify, จัดการข้อมูล), ฟีเจอร์อัจฉริยะพิเศษ (สั่งงานด้วยเสียง, สแกนใบเสร็จ, เครื่องคิดเลข, ผู้ช่วยอัจฉริยะ), แก้ไขปัญหาเบื้องต้น">
-					<i class="fa-solid fa-volume-high text-purple-600 dark:text-purple-400"></i>
+					<i class="fa-solid fa-volume-high text-primary-600 dark:text-primary-400"></i>
 				</button>
 			</div>
 			
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				<a href="#start" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
-					<div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 text-2xl group-hover:scale-110 transition">
+				<a href="#start" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
+					<div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/40 rounded-xl flex items-center justify-center text-primary-600 dark:text-primary-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-rocket"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">เริ่มต้นใช้งาน</span>
 				</a>
-				<a href="#dashboard" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#dashboard" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-chart-pie"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">หน้าแรก – ศูนย์ควบคุม</span>
 				</a>
-				<a href="#list" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#list" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-table"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">รายการและวิเคราะห์เชิงลึก</span>
 				</a>
-				<a href="#calendar" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#calendar" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-calendar-days"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">ปฏิทินการเงิน</span>
 				</a>
-				<a href="#accounts" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#accounts" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-wallet"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">จัดการบัญชีและหมวดหมู่</span>
 				</a>
-				<a href="#settings" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#settings" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-slate-100 dark:bg-slate-900/40 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-gear"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">ตั้งค่าและจัดการข้อมูล</span>
 				</a>
-				<a href="#smart" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#smart" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-pink-100 dark:bg-pink-900/40 rounded-xl flex items-center justify-center text-pink-600 dark:text-pink-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-robot"></i>
 					</div>
 					<span class="font-bold text-gray-800 dark:text-gray-200 text-lg">ฟีเจอร์อัจฉริยะพิเศษ</span>
 				</a>
-				<a href="#trouble" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800 toc-link">
+				<a href="#trouble" class="group flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all border border-transparent hover:border-primary-200 dark:hover:border-primary-800 toc-link">
 					<div class="w-12 h-12 bg-rose-100 dark:bg-rose-900/40 rounded-xl flex items-center justify-center text-rose-600 dark:text-rose-400 text-2xl group-hover:scale-110 transition">
 						<i class="fa-solid fa-circle-question"></i>
 					</div>
@@ -94,7 +94,7 @@ window.guideHTML = `
 		<div class="space-y-12">
 
 			<section id="start" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700 transition-colors scroll-mt-24">
-				<div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 flex items-center gap-4 hover:opacity-90 transition-opacity relative">
+				<div class="bg-gradient-to-r from-primary-600 to-indigo-600 p-6 flex items-center gap-4 hover:opacity-90 transition-opacity relative">
 					<div class="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl text-white shadow-lg">
 						<i class="fa-solid fa-rocket"></i>
 					</div>
@@ -125,8 +125,8 @@ window.guideHTML = `
 								เมื่อคุณเข้าใช้งานครั้งแรก ระบบจะมีหน้าต่างแนะนำการเริ่มต้นใช้งานที่สำคัญ 2 ขั้นตอน:
 							</p>
 							<ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-								<li><b class="text-purple-600 dark:text-purple-400">ตั้งรหัสผ่านแอป:</b> เพื่อล็อคป้องกันข้อมูลส่วนตัวของคุณ</li>
-								<li><b class="text-purple-600 dark:text-purple-400">ติดตั้งแอปลงเครื่อง:</b> เพื่อให้เข้าใช้งานได้ง่ายและไม่ต้องรอโหลดผ่านเบราว์เซอร์</li>
+								<li><b class="text-primary-600 dark:text-primary-400">ตั้งรหัสผ่านแอป:</b> เพื่อล็อคป้องกันข้อมูลส่วนตัวของคุณ</li>
+								<li><b class="text-primary-600 dark:text-primary-400">ติดตั้งแอปลงเครื่อง:</b> เพื่อให้เข้าใช้งานได้ง่ายและไม่ต้องรอโหลดผ่านเบราว์เซอร์</li>
 							</ul>
 							<button onclick="window.showWelcomeDemo()" class="mt-4 bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2">
 								<i class="fa-regular fa-eye"></i> ดูตัวอย่างหน้าต้อนรับ
@@ -136,25 +136,25 @@ window.guideHTML = `
 
 					<div class="flex flex-col md:flex-row gap-6 items-start relative pb-2">
 						<div class="md:w-1/4 flex justify-center">
-							<div class="w-32 h-32 bg-purple-50 dark:bg-purple-900/20 rounded-3xl flex items-center justify-center text-5xl text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-800">
+							<div class="w-32 h-32 bg-primary-50 dark:bg-primary-900/20 rounded-3xl flex items-center justify-center text-5xl text-primary-600 dark:text-primary-400 border-2 border-primary-200 dark:border-primary-800">
 								<i class="fa-solid fa-mobile-screen-button"></i>
 							</div>
 						</div>
 						<div class="md:w-3/4">
 							<h3 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-								<i class="fa-solid fa-download text-purple-600"></i> 
+								<i class="fa-solid fa-download text-primary-600"></i> 
 								ติดตั้งแอปพลิเคชัน (PWA)
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="การติดตั้งแอปพลิเคชันแบบ PWA ช่วยให้คุณสามารถใช้งานระบบได้เหมือนแอปทั่วไป ติดตั้งง่ายโดยไม่ต้องผ่าน App Store หรือ Play Store สำหรับ Android ให้เปิดเว็บด้วย Chrome กดเมนูสามจุดที่มุมขวาบน แล้วเลือก 'ติดตั้งแอป' หรือ 'Add to Home screen' สำหรับ iPhone ใช้เบราว์เซอร์ Safari กดไอคอนแชร์ด้านล่าง แล้วเลือก 'เพิ่มไปยังหน้าจอโฮม' หลังจากติดตั้ง คุณจะเห็นไอคอนแอปบนหน้าจอหลัก สามารถเปิดใช้งานได้ทันทีแม้ไม่มีอินเทอร์เน็ต ข้อมูลจะถูกบันทึกในเครื่องและซิงค์เมื่อมีการเชื่อมต่อ">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<ul class="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-								<li><b class="text-purple-600">Android/Chrome</b> : เปิดเว็บด้วย Chrome → กดเมนูสามจุด → “ติดตั้งแอป” หรือ “Add to Home screen”</li>
-								<li><b class="text-purple-600">iPhone/Safari</b> : กดไอคอนแชร์ → “เพิ่มไปยังหน้าจอโฮม”</li>
+								<li><b class="text-primary-600">Android/Chrome</b> : เปิดเว็บด้วย Chrome → กดเมนูสามจุด → “ติดตั้งแอป” หรือ “Add to Home screen”</li>
+								<li><b class="text-primary-600">iPhone/Safari</b> : กดไอคอนแชร์ → “เพิ่มไปยังหน้าจอโฮม”</li>
 								<li>เมื่อติดตั้งแล้ว คุณจะเห็นไอคอนแอปบนหน้าจอหลัก ใช้งานได้แม้ไม่มีอินเทอร์เน็ต</li>
 							</ul>
-							<button data-demo="pwa" class="mt-3 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md transition">
+							<button data-demo="pwa" class="mt-3 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
@@ -174,7 +174,7 @@ window.guideHTML = `
 								</h4>
 							</div>
 							<p class="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
-								เพื่อความปลอดภัย <span class="font-bold text-red-500">ระบบจะไม่มีรหัสผ่านเริ่มต้นแล้ว</span> คุณต้องตั้งรหัสผ่านด้วยตนเอง สามารถตั้งได้ที่หน้าต้อนรับ หรือไปที่ <span class="bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-purple-700 dark:text-purple-400 text-sm whitespace-nowrap">ตั้งค่า → จัดการรหัสผ่าน</span>
+								เพื่อความปลอดภัย <span class="font-bold text-red-500">ระบบจะไม่มีรหัสผ่านเริ่มต้นแล้ว</span> คุณต้องตั้งรหัสผ่านด้วยตนเอง สามารถตั้งได้ที่หน้าต้อนรับ หรือไปที่ <span class="bg-primary-100 dark:bg-primary-900/30 px-2 py-1 rounded text-primary-700 dark:text-primary-400 text-sm whitespace-nowrap">ตั้งค่า → จัดการรหัสผ่าน</span>
 							</p>
 							<button onclick="window.showNewPasswordDemo()" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 px-3 py-1 rounded-full text-xs shadow border border-green-200 dark:border-green-700 hover:bg-green-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูวิธีตั้งค่า
@@ -192,7 +192,7 @@ window.guideHTML = `
 									</button>
 								</h4>
 							</div>
-							<p class="text-gray-600 dark:text-gray-400 text-lg">หากอุปกรณ์รองรับ สามารถเปิดใช้งานสแกนนิ้ว/ใบหน้าแทนรหัสผ่านได้ที่ <span class="bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-purple-700 dark:text-purple-400 whitespace-nowrap">ตั้งค่า → Biometric</span></p>
+							<p class="text-gray-600 dark:text-gray-400 text-lg">หากอุปกรณ์รองรับ สามารถเปิดใช้งานสแกนนิ้ว/ใบหน้าแทนรหัสผ่านได้ที่ <span class="bg-primary-100 dark:bg-primary-900/30 px-2 py-1 rounded text-primary-700 dark:text-primary-400 whitespace-nowrap">ตั้งค่า → Biometric</span></p>
 							<button data-demo="biometric" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs shadow border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
@@ -212,7 +212,7 @@ window.guideHTML = `
 			</section>
 
 			<section id="dashboard" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700 transition-colors scroll-mt-24">
-				<div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 flex items-center gap-4 hover:opacity-90 transition-opacity relative">
+				<div class="bg-gradient-to-r from-indigo-600 to-primary-600 p-6 flex items-center gap-4 hover:opacity-90 transition-opacity relative">
 					<div class="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl text-white shadow-lg">
 						<i class="fa-solid fa-chart-pie"></i>
 					</div>
@@ -282,27 +282,27 @@ window.guideHTML = `
 					<div class="grid md:grid-cols-2 gap-6">
 						<div class="cursor-pointer hover:shadow-lg transition relative">
 							<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-								<i class="fa-solid fa-layer-group text-purple-600"></i> บัญชีทั้งหมด (ภาพรวม)
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<i class="fa-solid fa-layer-group text-primary-600"></i> บัญชีทั้งหมด (ภาพรวม)
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="ส่วนสรุปบัญชีทั้งหมดจะแสดงการ์ดของแต่ละบัญชีที่คุณสร้างไว้ พร้อมยอดคงเหลือปัจจุบัน คุณสามารถคลิกสั้น ๆ ที่การ์ดเพื่อดูประวัติธุรกรรมของบัญชีนั้น หรือหากกดค้างไว้ประมาณ 0.8 วินาที ระบบจะให้คุณดาวน์โหลดรายการเคลื่อนไหวของบัญชีนั้นในรูปแบบ Excel">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<p class="text-gray-600 dark:text-gray-400">คลิกสั้นที่การ์ดเพื่อดูประวัติบัญชีนั้น กดค้างเพื่อส่งออก Excel</p>
-							<button data-demo="accountsSummary" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+							<button data-demo="accountsSummary" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
-						<div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
-							<p class="text-sm text-purple-700 dark:text-purple-300"><i class="fa-regular fa-clock mr-1"></i> การกดค้าง (Long press) 0.8 วินาที</p>
+						<div class="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-xl">
+							<p class="text-sm text-primary-700 dark:text-primary-300"><i class="fa-regular fa-clock mr-1"></i> การกดค้าง (Long press) 0.8 วินาที</p>
 						</div>
 					</div>
 
 					<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-						<div onclick="openModal()" class="bg-purple-600 text-white p-4 rounded-xl text-center shadow-lg cursor-pointer hover:bg-purple-700 transition relative">
+						<div onclick="openModal()" class="bg-primary-600 text-white p-4 rounded-xl text-center shadow-lg cursor-pointer hover:bg-primary-700 transition relative">
 							<i class="fa-solid fa-plus text-3xl mb-2"></i>
 							<div class="font-bold">เพิ่มธุรกรรมใหม่</div>
-							<button class="speak-btn absolute -top-2 -right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 w-8 h-8 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition flex items-center justify-center" 
+							<button class="speak-btn absolute -top-2 -right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 w-8 h-8 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition flex items-center justify-center" 
 								data-speak="ปุ่มเพิ่มธุรกรรมใหม่ เมื่อคลิกจะเปิดฟอร์มให้คุณกรอกรายละเอียดของรายการ ไม่ว่าจะเป็นรายรับ รายจ่าย หรือโอนย้าย คุณสามารถระบุชื่อรายการ หมวดหมู่ จำนวนเงิน วันที่ และแนบรูปใบเสร็จได้ ระบบจะจำชื่อรายการและหมวดหมู่ที่ใช้บ่อยเพื่อความสะดวกในการกรอกครั้งต่อไป"
 								title="ฟังคำอธิบาย">
 								<i class="fa-solid fa-volume-high"></i>
@@ -341,7 +341,7 @@ window.guideHTML = `
 						<div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl relative">
 							<p class="font-semibold text-center mb-2">สัดส่วน รายรับ vs รายจ่าย</p>
 							<canvas id="manualOverviewChart" class="w-full h-40 object-contain rounded-lg shadow-md" style="max-height: 160px;"></canvas>
-							<button class="speak-btn absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition" 
+							<button class="speak-btn absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition" 
 								data-speak="กราฟวงกลมแสดงสัดส่วนระหว่างรายรับและรายจ่ายในช่วงเวลาที่เลือก (เดือนนี้ หรือปีนี้) หากกราฟไม่มีข้อมูลจะขึ้นข้อความว่าไม่มีข้อมูล คุณสามารถดูตัวเลขเปรียบเทียบได้ง่าย ๆ จากขนาดของวงกลม">
 								<i class="fa-solid fa-volume-high"></i>
 							</button>
@@ -349,7 +349,7 @@ window.guideHTML = `
 						<div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl relative">
 							<p class="font-semibold text-center mb-2">Top 10 รายจ่าย</p>
 							<canvas id="manualTop10Chart" class="w-full h-40 object-contain rounded-lg shadow-md" style="max-height: 160px;"></canvas>
-							<button class="speak-btn absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition" 
+							<button class="speak-btn absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition" 
 								data-speak="กราฟแสดง 10 รายการที่คุณใช้จ่ายสูงสุดในช่วงเวลาที่เลือก โดยจะแสดงชื่อรายการและจำนวนเงิน หากมีรายการมากกว่า 10 รายการ รายการที่เหลือจะถูกรวมเป็น 'อื่นๆ' เพื่อให้กราฟไม่รกเกินไป">
 								<i class="fa-solid fa-volume-high"></i>
 							</button>
@@ -383,24 +383,24 @@ window.guideHTML = `
 						<div class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-xl relative">
 							<h3 class="font-bold text-lg mb-3 flex items-center gap-2">
 								<i class="fa-solid fa-filter"></i> ตัวกรองขั้นสูง
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="ตัวกรองขั้นสูงช่วยให้คุณค้นหารายการได้ตรงตามต้องการ คุณสามารถเลือกช่วงวันที่เริ่มต้นและสิ้นสุด เลือกประเภท (ทั้งหมด, รายรับ, รายจ่าย, โอนย้าย) และพิมพ์คำค้นหาเพื่อค้นหาจากชื่อรายการ หมวดหมู่ หมายเหตุ หรือชื่อบัญชี ผลการค้นหาจะอัปเดตทันที">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<ul class="space-y-2 text-gray-600 dark:text-gray-300">
-								<li><span class="bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-purple-700 dark:text-purple-400">ช่วงวันที่</span> เริ่มต้น-สิ้นสุด</li>
-								<li><span class="bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-purple-700 dark:text-purple-400">ประเภท</span> ทั้งหมด/รายรับ/รายจ่าย/โอนย้าย</li>
-								<li><span class="bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded text-purple-700 dark:text-purple-400">ค้นหา</span> ชื่อรายการ, หมวดหมู่, หมายเหตุ, บัญชี</li>
+								<li><span class="bg-primary-100 dark:bg-primary-900/30 px-2 py-1 rounded text-primary-700 dark:text-primary-400">ช่วงวันที่</span> เริ่มต้น-สิ้นสุด</li>
+								<li><span class="bg-primary-100 dark:bg-primary-900/30 px-2 py-1 rounded text-primary-700 dark:text-primary-400">ประเภท</span> ทั้งหมด/รายรับ/รายจ่าย/โอนย้าย</li>
+								<li><span class="bg-primary-100 dark:bg-primary-900/30 px-2 py-1 rounded text-primary-700 dark:text-primary-400">ค้นหา</span> ชื่อรายการ, หมวดหมู่, หมายเหตุ, บัญชี</li>
 							</ul>
-							<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+							<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
 						<div class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-xl">
 							<h3 class="font-bold text-lg mb-3 flex items-center gap-2">
 								<i class="fa-solid fa-chart-line"></i> สรุปยอดแบบไดนามิก
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="ด้านล่างตัวกรองคุณจะเห็นสรุปยอดแบบไดนามิกที่คำนวณจากรายการที่กำลังแสดงอยู่ ประกอบด้วยยอดรวมรายรับ ยอดรวมรายจ่าย และยอดสุทธิ (รายรับลบรายจ่าย) โดยมีสีตามสถานะ สีเขียวหมายถึงสุทธิบวก สีแดงหมายถึงติดลบ">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
@@ -410,15 +410,15 @@ window.guideHTML = `
 					</div>
 					<div class="grid md:grid-cols-2 gap-6">
 						<div>
-							<div class="bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 p-4 rounded-xl relative">
-								<p class="font-bold mb-2"><i class="fa-solid fa-chart-pie text-purple-600"></i> หมวดหมู่ (โดนัท)
-									<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+							<div class="bg-gradient-to-br from-pink-100 to-primary-100 dark:from-pink-900/30 dark:to-primary-900/30 p-4 rounded-xl relative">
+								<p class="font-bold mb-2"><i class="fa-solid fa-chart-pie text-primary-600"></i> หมวดหมู่ (โดนัท)
+									<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 										data-speak="กราฟโดนัทแสดงสัดส่วนของรายจ่ายตามหมวดหมู่ โดยจะแสดงเฉพาะ 5 หมวดหมู่ที่มียอดสูงสุด ที่เหลือจะรวมเป็น 'อื่นๆ' เพื่อให้เห็นภาพรวมง่ายขึ้น เมื่อวางเมาส์บนกราฟจะเห็นจำนวนเงิน">
 										<i class="fa-solid fa-volume-high"></i>
 									</button>
 								</p>
 								<canvas id="manualAccountsChart" class="w-full h-40 object-contain rounded-lg shadow-md" style="max-height: 160px;"></canvas>
-								<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+								<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 									<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 								</button>
 							</div>
@@ -432,7 +432,7 @@ window.guideHTML = `
 									</button>
 								</p>
 								<canvas id="manualTrendChart" class="w-full h-40 object-contain rounded-lg shadow-md" style="max-height: 160px;"></canvas>
-								<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+								<button data-demo="chart-list" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 									<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 								</button>
 							</div>
@@ -477,7 +477,7 @@ window.guideHTML = `
 							</label>
 							<label class="inline-flex items-center cursor-pointer">
 								<input type="checkbox" id="demo-cal-toggle-imported" class="sr-only peer" checked>
-								<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+								<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
 								<span class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">ปฏิทินกิจกรรม</span>
 							</label>
 						</div>
@@ -573,7 +573,7 @@ window.guideHTML = `
 						<div class="p-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 flex flex-wrap gap-4 justify-center">
 							<span class="flex items-center gap-1"><span class="text-green-600">+</span> รายรับ</span>
 							<span class="flex items-center gap-1"><span class="text-red-600">-</span> รายจ่าย</span>
-							<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-600"></span> กิจกรรมที่นำเข้า</span>
+							<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-primary-600"></span> กิจกรรมที่นำเข้า</span>
 						</div>
 					</div>
 
@@ -618,14 +618,14 @@ window.guideHTML = `
 						</div>
 						<div class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-xl cursor-pointer hover:shadow-lg transition relative">
 							<h3 class="font-bold text-xl mb-3 flex items-center gap-2">
-								<i class="fa-solid fa-arrows-up-down text-purple-600"></i> จัดเรียงลำดับ
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<i class="fa-solid fa-arrows-up-down text-primary-600"></i> จัดเรียงลำดับ
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="คุณสามารถจัดเรียงลำดับบัญชีที่แสดงในหน้าแรกได้ โดยใช้ปุ่มลูกศรขึ้น/ลงที่อยู่ข้างบัญชี เพื่อให้บัญชีที่ใช้บ่อยขึ้นไปอยู่ด้านบน สะดวกต่อการมองเห็น">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<p>ใช้ปุ่มลูกศรขึ้น/ลง เพื่อเลื่อนบัญชีที่ใช้บ่อยขึ้นไปด้านบน</p>
-							<button data-demo="manageAccounts" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+							<button data-demo="manageAccounts" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
@@ -659,43 +659,43 @@ window.guideHTML = `
 					<div class="grid md:grid-cols-2 gap-6">
 						<div class="cursor-pointer hover:shadow-lg transition p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 relative">
 							<h3 class="font-bold text-xl mb-3">หมวดหมู่รายรับ/รายจ่าย
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="คุณสามารถเพิ่มหรือลบหมวดหมู่สำหรับรายรับและรายจ่ายได้ตามต้องการ โดยหมวดหมู่ที่เพิ่มจะปรากฏใน dropdown ตอนเพิ่มหรือแก้ไขรายการ">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<p>เพิ่ม/ลบหมวดหมู่ได้ตามต้องการ</p>
-							<button data-demo="categories" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+							<button data-demo="categories" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
 						<div class="cursor-pointer hover:shadow-lg transition p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 relative">
 							<h3 class="font-bold text-xl mb-3">รายการที่ใช้บ่อย (Favorite)
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="คุณสามารถเพิ่มชื่อรายการที่ใช้บ่อยได้ที่นี่ เพื่อให้เวลาพิมพ์ชื่อรายการในฟอร์ม ระบบจะแนะนำชื่อเหล่านี้ นอกจากนี้ระบบ Auto-Learn จะจดจำชื่อรายการ หมวดหมู่ และราคาล่าสุดโดยอัตโนมัติ">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<p>เพิ่มชื่อรายการที่ใช้ประจำ และระบบ Auto‑Learn จะจำชื่อ/หมวดหมู่/ราคาล่าสุดให้อัตโนมัติ</p>
-							<button data-demo="frequent" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+							<button data-demo="frequent" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
 					</div>
-					<div class="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-xl flex flex-col md:flex-row gap-4 items-start cursor-pointer hover:shadow-lg transition relative">
-						<div class="w-16 h-16 bg-purple-200 dark:bg-purple-800 rounded-2xl flex items-center justify-center text-3xl text-purple-700 dark:text-purple-300">
+					<div class="bg-primary-50 dark:bg-primary-900/20 p-5 rounded-xl flex flex-col md:flex-row gap-4 items-start cursor-pointer hover:shadow-lg transition relative">
+						<div class="w-16 h-16 bg-primary-200 dark:bg-primary-800 rounded-2xl flex items-center justify-center text-3xl text-primary-700 dark:text-primary-300">
 							<i class="fa-solid fa-clock-rotate-left"></i>
 						</div>
 						<div>
-							<h4 class="font-bold text-xl text-purple-800 dark:text-purple-400">รายการประจำ (Recurring)
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+							<h4 class="font-bold text-xl text-primary-800 dark:text-primary-400">รายการประจำ (Recurring)
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="ตั้งค่ารายการที่เกิดซ้ำ เช่น ค่าสมาชิกรายเดือน, ค่าเช่ารายเดือน, เงินเดือน ฯลฯ โดยระบุความถี่ (ทุกวัน/สัปดาห์/เดือน/ปี) และวันเริ่มต้น ระบบจะสร้างธุรกรรมให้อัตโนมัติเมื่อถึงกำหนด และอัปเดตรอบถัดไปให้">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h4>
 							<p>ตั้งค่ารายการที่เกิดซ้ำ (ทุกวัน/สัปดาห์/เดือน/ปี) ระบบจะสร้างธุรกรรมให้อัตโนมัติเมื่อถึงกำหนด</p>
 						</div>
-						<button data-demo="recurring" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs shadow border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600 transition">
+						<button data-demo="recurring" class="absolute top-2 right-2 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 px-3 py-1 rounded-full text-xs shadow border border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-600 transition">
 							<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 						</button>
 					</div>
@@ -871,18 +871,18 @@ window.guideHTML = `
 						</div>
 					</div>
 					<div class="flex flex-col md:flex-row gap-6 items-center relative">
-						<div class="w-32 h-32 bg-purple-100 dark:bg-purple-900/30 rounded-3xl flex items-center justify-center text-5xl text-purple-600">
+						<div class="w-32 h-32 bg-primary-100 dark:bg-primary-900/30 rounded-3xl flex items-center justify-center text-5xl text-primary-600">
 							<i class="fa-solid fa-calculator"></i>
 						</div>
 						<div>
 							<h3 class="text-2xl font-bold mb-2">เครื่องคิดเลขในตัว
-								<button class="speak-btn ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400" 
+								<button class="speak-btn ml-2 text-primary-600 hover:text-primary-800 dark:text-primary-400" 
 									data-speak="ขณะกรอกจำนวนเงิน คุณสามารถกดไอคอนเครื่องคิดเลขเพื่อเปิดหน้าต่างเครื่องคิดเลข พิมพ์สูตร เช่น 150+20*2 แล้วกด = หรือ Enter ผลลัพธ์จะถูกใส่ในช่องจำนวนเงินทันที รองรับการคำนวณพื้นฐาน">
 									<i class="fa-solid fa-volume-high"></i>
 								</button>
 							</h3>
 							<p>กดไอคอนเครื่องคิดเลขขณะกรอกจำนวนเงิน พิมพ์สูตร เช่น <code class="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">150+20*2</code> กด = ผลลัพธ์จะถูกใส่ในช่องอัตโนมัติ</p>
-							<button data-demo="calc" class="mt-3 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md transition">
+							<button data-demo="calc" class="mt-3 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md transition">
 								<i class="fa-regular fa-eye mr-1"></i> ดูตัวอย่าง
 							</button>
 						</div>
@@ -1029,7 +1029,7 @@ window.guideHTML = `
 			</div>
 
 			<div class="fixed bottom-56 right-5 z-50">
-				<a href="javascript:void(0)" id="guide-back-to-top" class="bg-purple-600 hover:bg-purple-700 text-white w-12 h-12 rounded-full shadow-2xl transition flex items-center justify-center" title="กลับด้านบน">
+				<a href="javascript:void(0)" id="guide-back-to-top" class="bg-primary-600 hover:bg-primary-700 text-white w-12 h-12 rounded-full shadow-2xl transition flex items-center justify-center" title="กลับด้านบน">
 					<i class="fa-solid fa-arrow-up text-xl"></i>
 				</a>
 			</div>

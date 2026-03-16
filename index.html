@@ -11,7 +11,25 @@
     <script src="./libs/tailwindcss.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class', // สั่งให้ Tailwind ตรวจจับ Dark Mode จาก Class 'dark' ใน body
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: 'rgb(var(--theme-50) / <alpha-value>)',
+                            100: 'rgb(var(--theme-100) / <alpha-value>)',
+                            200: 'rgb(var(--theme-200) / <alpha-value>)',
+                            300: 'rgb(var(--theme-300) / <alpha-value>)',
+                            400: 'rgb(var(--theme-400) / <alpha-value>)',
+                            500: 'rgb(var(--theme-500) / <alpha-value>)',
+                            600: 'rgb(var(--theme-600) / <alpha-value>)',
+                            700: 'rgb(var(--theme-700) / <alpha-value>)',
+                            800: 'rgb(var(--theme-800) / <alpha-value>)',
+                            900: 'rgb(var(--theme-900) / <alpha-value>)',
+                        }
+                    }
+                }
+            }
         }
     </script>
 
@@ -51,11 +69,11 @@
 <body class="bg-gray-100 text-gray-700">
 
     <nav class="bg-white shadow-md sticky top-0 z-50">
-        <div id="app-lock-screen" class="fixed inset-0 bg-gradient-to-br from-purple-900 to-indigo-900 z-[70] flex flex-col items-center justify-center p-4 hidden">
+        <div id="app-lock-screen" class="fixed inset-0 bg-gradient-to-br from-primary-900 to-indigo-900 z-[70] flex flex-col items-center justify-center p-4 hidden">
             <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center transform transition-all scale-100">
                 <div class="mb-6">
-                    <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa-solid fa-lock text-4xl text-purple-600"></i>
+                    <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-lock text-4xl text-primary-600"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-gray-800">กรุณาใส่รหัสผ่าน</h2>
                     <p class="text-gray-500 mt-2">เพื่อเข้าใช้งานระบบจัดการรายรับ-รายจ่าย</p>
@@ -63,15 +81,15 @@
                 
                 <form id="unlock-form" class="space-y-4">
 					<div class="relative">
-						<input type="password" id="unlock-password" placeholder="รหัสผ่าน" class="w-full text-center text-2xl tracking-widest py-3 px-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-200 focus:border-purple-500 outline-none transition-all" required
+						<input type="password" id="unlock-password" placeholder="รหัสผ่าน" class="w-full text-center text-2xl tracking-widest py-3 px-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-200 focus:border-primary-500 outline-none transition-all" required
 						autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
 					</div>
 					
-					<button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-300 text-lg flex items-center justify-center gap-2">
+					<button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-300 text-lg flex items-center justify-center gap-2">
 						<i class="fa-solid fa-door-open"></i> เข้าสู่ระบบ
 					</button>
 
-					<button type="button" id="btn-bio-unlock" class="w-full bg-white border-2 border-purple-200 hover:bg-purple-50 text-purple-700 font-bold py-3 px-6 rounded-xl transition duration-300 text-lg flex items-center justify-center gap-2 hidden">
+					<button type="button" id="btn-bio-unlock" class="w-full bg-white border-2 border-primary-200 hover:bg-primary-50 text-primary-700 font-bold py-3 px-6 rounded-xl transition duration-300 text-lg flex items-center justify-center gap-2 hidden">
 						<i class="fa-solid fa-fingerprint text-2xl"></i> สแกนลายนิ้วมือ / ใบหน้า
 					</button>
 				</form>
@@ -80,7 +98,7 @@
         </div>
 
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="text-lg font-bold text-purple-600">
+            <div class="text-lg font-bold text-primary-600">
                 <i class="fa-solid fa-wallet mr-2"></i>
                 <span>ระบบจัดการรายรับ-รายจ่าย</span>
             </div>
@@ -91,15 +109,15 @@
 					<i class="fa-solid fa-rotate"></i>
 				</button>
 				<!-- ปุ่มกระดิ่งมือถือ (เพิ่มตรงนี้) -->
-				<button id="notification-bell-mobile" class="relative text-gray-600 hover:text-purple-600 p-2 rounded-lg" title="ประวัติกิจกรรม">
+				<button id="notification-bell-mobile" class="relative text-gray-600 hover:text-primary-600 p-2 rounded-lg" title="ประวัติกิจกรรม">
 					<i class="fa-solid fa-bell text-lg"></i>
 					<span id="notification-badge-mobile" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
 				</button>
 
-				<button id="mobile-home-button" class="text-purple-600 hover:text-purple-800 p-2 rounded-lg">
+				<button id="mobile-home-button" class="text-primary-600 hover:text-primary-800 p-2 rounded-lg">
 					<i class="fa-solid fa-house text-2xl"></i> 
 				</button>
-				<button id="mobile-menu-button" class="text-purple-600 hover:text-purple-800 p-2 rounded-lg">
+				<button id="mobile-menu-button" class="text-primary-600 hover:text-primary-800 p-2 rounded-lg">
 					<i id="mobile-menu-icon" class="fa-solid fa-bars text-2xl"></i>
 				</button>
 			</div>
@@ -109,13 +127,13 @@
                 <button id="refresh-cloud-desktop" class="text-blue-500 hover:text-blue-700 p-1 rounded-lg text-sm" title="รีเฟรชข้อมูลจากคลาวด์">
 					<i class="fa-solid fa-rotate"></i>
 				</button>
-				<button id="nav-home" class="text-purple-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-house mr-1"></i> หน้าแรก</button>
-                <button id="nav-list" class="text-gray-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-list-ul mr-1"></i> รายการ</button>
-                <button id="nav-calendar" class="text-gray-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-calendar-days mr-1"></i> ปฏิทิน</button>
-                <button id="nav-accounts" class="text-gray-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-wallet mr-1"></i> บัญชี</button>
-                <button id="nav-settings" class="text-gray-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-gear mr-1"></i> ตั้งค่า</button>
-				<button id="nav-guide" class="text-gray-600 hover:text-purple-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-book mr-1"></i> คู่มือ</button>
-				<button id="notification-bell" class="relative text-gray-600 hover:text-purple-600 p-2 rounded-lg" title="ประวัติกิจกรรม">
+				<button id="nav-home" class="text-primary-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-house mr-1"></i> หน้าแรก</button>
+                <button id="nav-list" class="text-gray-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-list-ul mr-1"></i> รายการ</button>
+                <button id="nav-calendar" class="text-gray-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-calendar-days mr-1"></i> ปฏิทิน</button>
+                <button id="nav-accounts" class="text-gray-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-wallet mr-1"></i> บัญชี</button>
+                <button id="nav-settings" class="text-gray-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-gear mr-1"></i> ตั้งค่า</button>
+				<button id="nav-guide" class="text-gray-600 hover:text-primary-800 font-medium px-4 py-3 rounded-lg text-lg"><i class="fa-solid fa-book mr-1"></i> คู่มือ</button>
+				<button id="notification-bell" class="relative text-gray-600 hover:text-primary-600 p-2 rounded-lg" title="ประวัติกิจกรรม">
 					<i class="fa-solid fa-bell text-lg"></i>
 					<span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
 				</button>
@@ -123,12 +141,12 @@
         </div>
 
         <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
-            <button id="nav-home-mobile" class="block w-full text-left text-purple-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-house mr-2"></i> หน้าแรก</button>
-            <button id="nav-list-mobile" class="block w-full text-left text-gray-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-list-ul mr-2"></i> รายการ</button>
-            <button id="nav-calendar-mobile" class="block w-full text-left text-gray-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-calendar-days mr-2"></i> ปฏิทิน</button>
-            <button id="nav-accounts-mobile" class="block w-full text-left text-gray-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-wallet mr-2"></i> บัญชี</button>
-            <button id="nav-settings-mobile" class="block w-full text-left text-gray-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-gear mr-2"></i> ตั้งค่า</button>
-            <button id="nav-guide-mobile" class="block w-full text-left text-gray-600 hover:bg-purple-100 font-medium px-6 py-4 text-lg"><i class="fa-solid fa-book mr-2"></i> คู่มือ</button>
+            <button id="nav-home-mobile" class="block w-full text-left text-primary-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-house mr-2"></i> หน้าแรก</button>
+            <button id="nav-list-mobile" class="block w-full text-left text-gray-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-list-ul mr-2"></i> รายการ</button>
+            <button id="nav-calendar-mobile" class="block w-full text-left text-gray-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-calendar-days mr-2"></i> ปฏิทิน</button>
+            <button id="nav-accounts-mobile" class="block w-full text-left text-gray-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-wallet mr-2"></i> บัญชี</button>
+            <button id="nav-settings-mobile" class="block w-full text-left text-gray-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg border-b border-gray-100"><i class="fa-solid fa-gear mr-2"></i> ตั้งค่า</button>
+            <button id="nav-guide-mobile" class="block w-full text-left text-gray-600 hover:bg-primary-100 font-medium px-6 py-4 text-lg"><i class="fa-solid fa-book mr-2"></i> คู่มือ</button>
 		</div>
     </nav>
 	
@@ -151,20 +169,20 @@
     <div id="main-content" class="container mx-auto p-4 md:p-6">
         <header id="shared-controls-header" class="flex flex-col md:flex-row justify-end items-center mb-3 gap-2" style="display: none;">
             <div class="flex flex-wrap justify-center md:justify-end items-center gap-1.5 bg-white p-2 rounded-xl shadow-sm w-full md:w-auto">
-                <select id="view-mode-select" class="form-select text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500 py-1.5 px-2 h-[34px]">
+                <select id="view-mode-select" class="form-select text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500 py-1.5 px-2 h-[34px]">
                     <option value="all">ดูทั้งหมด</option>
                     <option value="month">ดูรายเดือน</option>
                     <option value="year">ดูรายปี</option>
                 </select>
                 <div id="month-controls" class="flex items-center gap-1 h-[34px]">
-                    <button id="month-prev" class="px-3 py-1 h-full bg-gray-100 hover:bg-purple-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
-                    <input type="month" id="month-picker" class="form-input text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500 w-auto h-full py-1 px-2 text-center">
-                    <button id="month-next" class="px-3 py-1 h-full bg-gray-100 hover:bg-purple-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button id="month-prev" class="px-3 py-1 h-full bg-gray-100 hover:bg-primary-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
+                    <input type="month" id="month-picker" class="form-input text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-auto h-full py-1 px-2 text-center">
+                    <button id="month-next" class="px-3 py-1 h-full bg-gray-100 hover:bg-primary-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
                 <div id="year-controls" class="flex items-center gap-1 h-[34px] hidden">
-                    <button id="year-prev" class="px-3 py-1 h-full bg-gray-100 hover:bg-purple-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
-                    <input type="number" id="year-picker" class="form-input text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500 w-20 text-center h-full py-1 px-2" placeholder="YYYY">
-                    <button id="year-next" class="px-3 py-1 h-full bg-gray-100 hover:bg-purple-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button id="year-prev" class="px-3 py-1 h-full bg-gray-100 hover:bg-primary-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
+                    <input type="number" id="year-picker" class="form-input text-sm text-gray-700 bg-gray-50 border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-20 text-center h-full py-1 px-2" placeholder="YYYY">
+                    <button id="year-next" class="px-3 py-1 h-full bg-gray-100 hover:bg-primary-200 rounded-lg text-xs text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
             </div>
         </header>
@@ -191,7 +209,7 @@
                         <h2 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
                             <i class="fa-solid fa-bullseye text-red-500"></i> งบประมาณ
                         </h2>
-                        <button id="btn-go-budget-settings" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-600 px-2 py-1 rounded font-medium transition">จัดการงบ</button>
+                        <button id="btn-go-budget-settings" class="text-[10px] bg-primary-50 hover:bg-primary-100 text-primary-600 px-2 py-1 rounded font-medium transition">จัดการงบ</button>
                     </div>
                     <div id="budget-list-container" class="space-y-1.5">
                         </div>
@@ -199,7 +217,7 @@
 
                 <div class="bg-white p-4 md:p-6 rounded-xl shadow-sm mb-4">
                     <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="home-accounts-content">
-                        <h2 class="text-base md:text-lg font-bold text-purple-600">สรุปบัญชีทั้งหมด</h2>
+                        <h2 class="text-base md:text-lg font-bold text-primary-600">สรุปบัญชีทั้งหมด</h2>
                         <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                     </div>
 
@@ -214,11 +232,11 @@
 
                     <div class="lg:col-span-1 bg-white p-4 md:p-6 rounded-xl shadow-sm flex flex-col lg:order-1 h-full">
                         <div class="flex justify-between items-end mb-3 md:mb-4">
-                            <h2 class="text-base md:text-lg font-bold text-purple-600">เมนูจัดการ</h2>
+                            <h2 class="text-base md:text-lg font-bold text-primary-600">เมนูจัดการ</h2>
                             <p class="text-[10px] md:text-sm text-gray-500">ระบบจำหมวดหมู่อัตโนมัติ</p>
                         </div>
                         <div class="grid grid-cols-2 gap-2 md:gap-3 flex-grow">
-                            <button id="add-tx-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl shadow-sm transition duration-300 flex flex-col items-center justify-center gap-1.5 py-3 md:py-4">
+                            <button id="add-tx-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-sm transition duration-300 flex flex-col items-center justify-center gap-1.5 py-3 md:py-4">
                                 <i class="fa-solid fa-plus text-lg md:text-2xl"></i>
                                 <span class="text-xs md:text-sm">เพิ่มธุรกรรม</span>
                             </button>
@@ -243,8 +261,8 @@
                     
                     <div class="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-sm lg:order-2 flex flex-col h-full" id="home-charts-section">
                         <div class="flex justify-between items-center mb-3 flex-shrink-0">
-                            <h2 class="text-base md:text-lg font-bold text-purple-600">สรุปภาพรวม</h2>
-                            <button id="toggle-charts-btn" onclick="toggleHomeCharts()" class="text-xs text-purple-600 hover:text-purple-800 font-bold bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-800 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors flex items-center">
+                            <h2 class="text-base md:text-lg font-bold text-primary-600">สรุปภาพรวม</h2>
+                            <button id="toggle-charts-btn" onclick="toggleHomeCharts()" class="text-xs text-primary-600 hover:text-primary-800 font-bold bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors flex items-center">
                                 ย่อกราฟ <i class="fa-solid fa-compress ml-1.5"></i>
                             </button>
                         </div>
@@ -294,14 +312,14 @@
                 
                 <div id="home-transaction-list-container" class="bg-white p-4 md:p-6 rounded-xl shadow-sm mt-4"> 
                     <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="home-transactions-content">
-                        <h2 class="text-base md:text-lg font-bold text-purple-600">รายการธุรกรรมล่าสุด</h2>
+                        <h2 class="text-base md:text-lg font-bold text-primary-600">รายการธุรกรรมล่าสุด</h2>
                         <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 text-lg md:text-lg"></i>
                     </div>
 
                     <div id="home-transactions-content" class="mt-3 transition-all">
                         <div class="flex flex-col sm:flex-row gap-2.5 mb-3 items-start sm:items-center justify-between">
                             <div class="flex-shrink-0 w-full sm:w-auto">
-                                <select id="home-items-per-page-select" class="form-select text-xs md:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 py-1.5 px-2 w-full sm:w-auto h-[32px]">
+                                <select id="home-items-per-page-select" class="form-select text-xs md:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500 py-1.5 px-2 w-full sm:w-auto h-[32px]">
                                     <option value="10">แสดง 10</option>
                                     <option value="20">แสดง 20</option>
                                     <option value="50">แสดง 50</option>
@@ -309,7 +327,7 @@
                             </div>
                             
                             <div class="flex flex-wrap gap-1 w-full sm:w-auto justify-start sm:justify-end bg-gray-100 p-1 rounded-lg" id="home-filter-buttons">
-                                <button class="home-filter-btn bg-purple-500 text-white px-2.5 py-1 text-xs md:text-xs font-medium rounded-md shadow-sm transition-colors flex-1 sm:flex-none" data-filter="all">ทั้งหมด</button>
+                                <button class="home-filter-btn bg-primary-500 text-white px-2.5 py-1 text-xs md:text-xs font-medium rounded-md shadow-sm transition-colors flex-1 sm:flex-none" data-filter="all">ทั้งหมด</button>
                                 <button class="home-filter-btn bg-transparent text-gray-600 hover:bg-gray-200 px-2.5 py-1 text-xs md:text-xs font-medium rounded-md transition-colors flex-1 sm:flex-none" data-filter="income">รายรับ</button>
                                 <button class="home-filter-btn bg-transparent text-gray-600 hover:bg-gray-200 px-2.5 py-1 text-xs md:text-xs font-medium rounded-md transition-colors flex-1 sm:flex-none" data-filter="expense">รายจ่าย</button>
                                 <button class="home-filter-btn bg-transparent text-gray-600 hover:bg-gray-200 px-2.5 py-1 text-xs md:text-xs font-medium rounded-md transition-colors flex-1 sm:flex-none" data-filter="transfer">โอนย้าย</button>
@@ -323,7 +341,7 @@
         
 			<div id="page-list" class="app-page hidden">
 				<div id="transaction-list-container" class="bg-white p-4 md:p-6 rounded-xl shadow-lg pb-24">
-					<h2 class="text-lg font-bold text-purple-600 mb-4 flex items-center">
+					<h2 class="text-lg font-bold text-primary-600 mb-4 flex items-center">
 						<i class="fa-solid fa-filter mr-2"></i> ค้นหาและวิเคราะห์ (Advanced Filter)
 					</h2>
 
@@ -337,16 +355,16 @@
 									<div class="flex items-center gap-1.5 sm:gap-2 flex-1 md:flex-none">
 										<div class="flex-1 md:w-[135px] min-w-0">
 											<label class="block text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ตั้งแต่วันที่</label>
-											<input type="date" id="adv-filter-start" onchange="renderListPage()" class="w-full px-1.5 sm:px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 shadow-sm transition-all">
+											<input type="date" id="adv-filter-start" onchange="renderListPage()" class="w-full px-1.5 sm:px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 shadow-sm transition-all">
 										</div>
 										<div class="text-gray-400 font-bold mb-1 shrink-0">-</div>
 										<div class="flex-1 md:w-[135px] min-w-0">
 											<label class="block text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ถึงวันที่</label>
-											<input type="date" id="adv-filter-end" onchange="renderListPage()" class="w-full px-1.5 sm:px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 shadow-sm transition-all">
+											<input type="date" id="adv-filter-end" onchange="renderListPage()" class="w-full px-1.5 sm:px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 shadow-sm transition-all">
 										</div>
 									</div>
 
-									<button id="btn-this-month" class="shrink-0 md:flex-1 bg-purple-600 hover:bg-purple-700 text-white border border-purple-600 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-sm font-medium shadow-sm transition-colors flex items-center justify-center gap-1 h-[34px] mb-[1px] whitespace-nowrap">
+									<button id="btn-this-month" class="shrink-0 md:flex-1 bg-primary-600 hover:bg-primary-700 text-white border border-primary-600 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-sm font-medium shadow-sm transition-colors flex items-center justify-center gap-1 h-[34px] mb-[1px] whitespace-nowrap">
 										<i class="fa-solid fa-rotate-left"></i> คืนค่าเริ่มต้น
 									</button>
 									
@@ -356,11 +374,11 @@
 									
 									<div class="hidden md:block w-[1px] h-6 bg-gray-300 mx-1 shrink-0 mb-[3px]"></div> 
 									
-									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="today">วันนี้</button>
-									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisWeek">สัปดาห์นี้</button>
-									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-purple-100 text-purple-700 font-medium border border-purple-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisMonth">เดือนนี้</button>
-									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisYear">ปีนี้</button>
-									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-gray-100 hover:bg-purple-100 text-gray-600 hover:text-purple-600 border border-gray-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap" data-range="all">ทั้งหมด</button>
+									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-primary-100 text-gray-600 hover:text-primary-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="today">วันนี้</button>
+									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-primary-100 text-gray-600 hover:text-primary-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisWeek">สัปดาห์นี้</button>
+									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-primary-100 text-primary-700 font-medium border border-primary-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisMonth">เดือนนี้</button>
+									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-xs bg-gray-100 hover:bg-primary-100 text-gray-600 hover:text-primary-600 border border-gray-200 py-1.5 px-2 rounded-full transition-colors whitespace-nowrap" data-range="thisYear">ปีนี้</button>
+									<button type="button" class="quick-date-btn flex-1 shrink-0 justify-center text-[11px] sm:text-xs bg-gray-100 hover:bg-primary-100 text-gray-600 hover:text-primary-600 border border-gray-200 py-1.5 px-1 sm:px-2 rounded-full transition-colors whitespace-nowrap" data-range="all">ทั้งหมด</button>
 								</div>
 								
 							</div>
@@ -369,7 +387,7 @@
 								<div class="min-w-0">
 									<label class="block text-xs font-bold text-gray-500 mb-1 ml-1 truncate">บัญชี</label>
 									<div class="relative">
-										<select id="adv-filter-account" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 appearance-none cursor-pointer shadow-sm transition-all truncate">
+										<select id="adv-filter-account" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 appearance-none cursor-pointer shadow-sm transition-all truncate">
 											<option value="all">💳 ทั้งหมด</option>
 										</select>
 										<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 md:px-2 text-gray-400">
@@ -381,7 +399,7 @@
 								<div class="min-w-0">
 									<label class="block text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ประเภท</label>
 									<div class="relative">
-										<select id="adv-filter-type" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 appearance-none cursor-pointer shadow-sm transition-all truncate">
+										<select id="adv-filter-type" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 appearance-none cursor-pointer shadow-sm transition-all truncate">
 											<option value="all">📊 ทั้งหมด</option>
 											<option value="income">💰 รายรับ</option>
 											<option value="expense">💸 รายจ่าย</option>
@@ -396,7 +414,7 @@
 								<div class="min-w-0">
 									<label class="block text-xs font-bold text-gray-500 mb-1 ml-1 truncate">หมวดหมู่</label>
 									<div class="relative">
-										<select id="adv-filter-category" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 shadow-sm transition-all appearance-none cursor-pointer truncate">
+										<select id="adv-filter-category" onchange="renderListPage()" class="w-full px-2 py-1.5 pr-6 md:pr-7 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 shadow-sm transition-all appearance-none cursor-pointer truncate">
 											<option value="all">ทุกหมวดหมู่</option>
 										</select>
 										<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 md:px-2 text-gray-400">
@@ -412,7 +430,7 @@
 									<div class="flex-1 min-w-0">
 										<label class="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ยอดต่ำสุด</label>
 										<div class="relative">
-											<input type="number" id="adv-filter-min" oninput="renderListPage()" placeholder="0" class="w-full pl-1.5 sm:pl-2 pr-6 sm:pr-7 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 shadow-sm transition-all">
+											<input type="number" id="adv-filter-min" oninput="renderListPage()" placeholder="0" class="w-full pl-1.5 sm:pl-2 pr-6 sm:pr-7 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 shadow-sm transition-all">
 											<button type="button" id="btn-clear-min" onclick="document.getElementById('adv-filter-min').value=''; renderListPage();" class="absolute inset-y-0 right-0 flex items-center px-1.5 text-gray-400 hover:text-red-500 hidden">
 												<i class="fa-solid fa-circle-xmark text-[10px] sm:text-xs"></i>
 											</button>
@@ -422,7 +440,7 @@
 									<div class="flex-1 min-w-0">
 										<label class="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ยอดสูงสุด</label>
 										<div class="relative">
-											<input type="number" id="adv-filter-max" oninput="renderListPage()" placeholder="Max" class="w-full pl-1.5 sm:pl-2 pr-6 sm:pr-7 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 shadow-sm transition-all">
+											<input type="number" id="adv-filter-max" oninput="renderListPage()" placeholder="Max" class="w-full pl-1.5 sm:pl-2 pr-6 sm:pr-7 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 shadow-sm transition-all">
 											<button type="button" id="btn-clear-max" onclick="document.getElementById('adv-filter-max').value=''; renderListPage();" class="absolute inset-y-0 right-0 flex items-center px-1.5 text-gray-400 hover:text-red-500 hidden">
 												<i class="fa-solid fa-circle-xmark text-[10px] sm:text-xs"></i>
 											</button>
@@ -433,7 +451,7 @@
 								<div class="flex-1 min-w-0">
 									<label class="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 ml-1 truncate">ค้นหา (ชื่อ/หมายเหตุ)</label>
 									<div class="relative">
-										<input type="text" id="adv-filter-search" oninput="renderListPage()" placeholder="ค้นหา..." class="w-full py-1.5 pl-8 sm:pl-10 pr-7 sm:pr-8 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-gray-700 transition shadow-sm">
+										<input type="text" id="adv-filter-search" oninput="renderListPage()" placeholder="ค้นหา..." class="w-full py-1.5 pl-8 sm:pl-10 pr-7 sm:pr-8 text-xs sm:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-gray-700 transition shadow-sm">
 										<div class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">
 											<i class="fa-solid fa-magnifying-glass text-[10px] sm:text-xs"></i>
 										</div>
@@ -448,7 +466,7 @@
 						</div>
 					</div>
 
-						<div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border border-purple-100 dark:border-gray-700 rounded-lg p-3 md:p-5 mt-4 transition-colors duration-200 w-full">
+						<div class="bg-gradient-to-r from-indigo-50 to-primary-50 dark:from-gray-900 dark:to-gray-800 border border-primary-100 dark:border-gray-700 rounded-lg p-3 md:p-5 mt-4 transition-colors duration-200 w-full">
 							
 							<div class="flex justify-between items-center text-xs md:text-sm text-gray-500 mb-3">
 								<span><i class="fa-solid fa-chart-simple mr-1"></i>สรุปยอด (ตามรายการที่ค้นหา)</span>
@@ -457,8 +475,8 @@
 
 							<div id="analytics-section" class="mt-4 mb-6 hidden w-full">
 								<div class="flex justify-between items-center mb-3">
-									<h3 class="text-sm md:text-base font-bold text-purple-600"><i class="fa-solid fa-chart-line mr-1"></i> กราฟวิเคราะห์</h3>
-									<button id="toggle-list-charts-btn" onclick="toggleListCharts()" class="text-xs text-purple-600 hover:text-purple-800 font-bold bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-800 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors flex items-center">
+									<h3 class="text-sm md:text-base font-bold text-primary-600"><i class="fa-solid fa-chart-line mr-1"></i> กราฟวิเคราะห์</h3>
+									<button id="toggle-list-charts-btn" onclick="toggleListCharts()" class="text-xs text-primary-600 hover:text-primary-800 font-bold bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors flex items-center">
 										ย่อกราฟ <i class="fa-solid fa-compress ml-1.5"></i>
 									</button>
 								</div>
@@ -466,7 +484,7 @@
 								<div id="list-charts-wrapper" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full h-full transition-all duration-300">
 									<div class="list-chart-card bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm p-3 md:p-4 min-h-[220px] md:min-h-[350px] lg:min-h-[420px] flex flex-col transition-all duration-300 w-full">
 										<h3 class="list-chart-title text-sm md:text-base font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-1.5 flex-shrink-0 justify-center">
-											<i class="fa-solid fa-chart-pie text-purple-500"></i> <span class="list-chart-title-text">สัดส่วนหมวดหมู่</span>
+											<i class="fa-solid fa-chart-pie text-primary-500"></i> <span class="list-chart-title-text">สัดส่วนหมวดหมู่</span>
 										</h3>
 										<div class="relative w-full flex-grow min-h-[160px] md:min-h-[250px] list-chart-canvas-container">
 											<canvas id="chart-category"></canvas>
@@ -534,7 +552,7 @@
             
           <div id="page-calendar" class="app-page hidden">
 			<div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
-				<h1 class="text-lg md:text-2xl font-bold text-purple-600 mb-4">ปฏิทินการเงินและกิจกรรม</h1>
+				<h1 class="text-lg md:text-2xl font-bold text-primary-600 mb-4">ปฏิทินการเงินและกิจกรรม</h1>
 				
 				<!-- ตัวเลือกการแสดงผล + ปุ่มจัดการ (อยู่แถวเดียวกัน) -->
 				<div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
@@ -554,13 +572,13 @@
 							<!-- สวิตช์แสดงกิจกรรมที่นำเข้า -->
 							<label class="inline-flex items-center cursor-pointer">
 								<input type="checkbox" id="cal-toggle-imported" class="sr-only peer" checked>
-								<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+								<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
 								<span class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">ปฏิทินกิจกรรม</span>
 							</label>
 						</div>
 
 						<!-- ปุ่มจัดการกิจกรรม (อยู่ขวา) -->
-						<button id="btn-manage-imported" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition flex items-center gap-2">
+						<button id="btn-manage-imported" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition flex items-center gap-2">
 							<i class="fa-solid fa-list-ul"></i> จัดการกิจกรรมที่นำเข้า
 						</button>
 					</div>
@@ -569,14 +587,14 @@
 				<!-- แถบควบคุมปี (เหลือแค่ปุ่มเปลี่ยนเดือน/ปี) -->
 				<div class="flex flex-col md:flex-row justify-end items-center mb-4 gap-4">
 					<div class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl shadow-sm border border-gray-200">
-						<button id="cal-prev-btn" class="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-600 hover:border-purple-300 transition-colors shadow-sm">
+						<button id="cal-prev-btn" class="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-primary-100 hover:text-primary-600 hover:border-primary-300 transition-colors shadow-sm">
 							<i class="fa-solid fa-chevron-left"></i>
 						</button>
 						<div class="flex items-center">
 							<label for="cal-year-input" class="mr-2 text-gray-700 font-medium">ปี:</label>
-							<input type="number" id="cal-year-input" class="form-input w-24 text-center text-lg font-bold text-purple-700 bg-white border border-gray-200 rounded-lg focus:ring-purple-500 focus:border-purple-500 py-1" placeholder="YYYY">
+							<input type="number" id="cal-year-input" class="form-input w-24 text-center text-lg font-bold text-primary-700 bg-white border border-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500 py-1" placeholder="YYYY">
 						</div>
-						<button id="cal-next-btn" class="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-600 hover:border-purple-300 transition-colors shadow-sm">
+						<button id="cal-next-btn" class="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-primary-100 hover:text-primary-600 hover:border-primary-300 transition-colors shadow-sm">
 							<i class="fa-solid fa-chevron-right"></i>
 						</button>
 					</div>
@@ -593,7 +611,7 @@
 				<!-- ===== ปฏิทินกิจกรรม (นำเข้า) ===== -->
 				<div id="calendar-imported-container">
 					<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-2">
-						<i class="fa-regular fa-calendar-check text-purple-500"></i> กิจกรรมที่นำเข้า
+						<i class="fa-regular fa-calendar-check text-primary-500"></i> กิจกรรมที่นำเข้า
 					</h2>
 					<div id="calendar-imported"></div>
 				</div>
@@ -601,27 +619,27 @@
 		</div>
 
             <div id="page-accounts" class="app-page hidden">
-                <h1 class="text-lg font-bold text-purple-600 mb-6"><i class="fa-solid fa-wallet mr-2"></i>จัดการบัญชีและหมวดหมู่</h1>
+                <h1 class="text-lg font-bold text-primary-600 mb-6"><i class="fa-solid fa-wallet mr-2"></i>จัดการบัญชีและหมวดหมู่</h1>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                     <div class="flex flex-col gap-6">
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-accounts-content">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-wallet mr-2"></i>จัดการบัญชี</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-wallet mr-2"></i>จัดการบัญชี</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                             </div>
                             
                             <div id="settings-accounts-content" class="mt-4 transition-all">
                                 <form id="form-add-account" class="space-y-3 mb-4 p-4 bg-gray-50 rounded-lg">
-                                    <h3 class="text-lg font-semibold text-purple-700">เพิ่มบัญชีใหม่</h3>
+                                    <h3 class="text-lg font-semibold text-primary-700">เพิ่มบัญชีใหม่</h3>
                                     <div>
                                         <label for="input-account-name" class="block text-sm font-medium text-gray-700">ชื่อบัญชี</label>
-                                        <input type="text" id="input-account-name" placeholder="เช่น เงินเดือน, บัตร KBank" class="mt-1 flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 w-full" required>
+                                        <input type="text" id="input-account-name" placeholder="เช่น เงินเดือน, บัตร KBank" class="mt-1 flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500 w-full" required>
                                     </div>
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label for="select-account-type" class="block text-sm font-medium text-gray-700">ประเภทบัญชี</label>
-                                            <select id="select-account-type" class="mt-1 w-full form-select text-lg text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                                            <select id="select-account-type" class="mt-1 w-full form-select text-lg text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                                                 <option value="cash">เงินสด/ออมทรัพย์/วอลเล็ท</option>
                                                 <option value="credit">บัตรเครดิต</option>
                                                 <option value="liability">บัญชีหนี้สิน</option>
@@ -631,14 +649,14 @@
                                         <div>
                                             <label for="input-account-balance" class="block text-sm font-medium text-gray-700">ยอดเริ่มต้น</label>
                                             <div class="relative mt-1">
-                                                <input type="text" id="input-account-balance" inputmode="decimal" placeholder="0.00 หรือ 50+20" value="0" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 w-full pr-12" required>
-                                                <button type="button" id="toggle-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-600 hover:text-purple-800 p-1 rounded-lg">
+                                                <input type="text" id="input-account-balance" inputmode="decimal" placeholder="0.00 หรือ 50+20" value="0" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-white border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500 w-full pr-12" required>
+                                                <button type="button" id="toggle-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-primary-600 hover:text-primary-800 p-1 rounded-lg">
                                                     <i class="fa-solid fa-calculator text-lg"></i>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="submit" class="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-xl font-medium text-lg"><i class="fa-solid fa-plus mr-2"></i>เพิ่มบัญชี</button>
+                                    <button type="submit" class="w-full bg-primary-500 hover:bg-primary-600 text-white px-4 py-3 rounded-xl font-medium text-lg"><i class="fa-solid fa-plus mr-2"></i>เพิ่มบัญชี</button>
                                 </form>
                                 <ul id="list-accounts" class="space-y-2"></ul>
                             </div>
@@ -646,7 +664,7 @@
 
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer" id="btn-manage-recurring">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-clock-rotate-left mr-2"></i> รายการประจำ (Recurring)</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-clock-rotate-left mr-2"></i> รายการประจำ (Recurring)</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500"></i>
                             </div>
                             
@@ -663,7 +681,7 @@
 
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-budget-content">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-sack-dollar mr-2"></i>ตั้งค่างบประมาณ (รายเดือน)</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-sack-dollar mr-2"></i>ตั้งค่างบประมาณ (รายเดือน)</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                             </div>
 
@@ -696,12 +714,12 @@
                         
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-manual-content">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-keyboard mr-2"></i>รายการที่บันทึกไว้ (Manual)</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-keyboard mr-2"></i>รายการที่บันทึกไว้ (Manual)</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                             </div>
                             <div id="settings-manual-content" class="mt-4 transition-all">
                                 <form id="form-add-frequent-item" class="flex gap-2 mb-3">
-                                    <input type="text" id="input-frequent-item" placeholder="เพิ่มชื่อรายการ" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500"> 
+                                    <input type="text" id="input-frequent-item" placeholder="เพิ่มชื่อรายการ" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500"> 
                                     <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-medium text-lg"><i class="fa-solid fa-plus"></i></button> 
                                 </form>
                                 <ul id="list-frequent-item" class="space-y-2"></ul>
@@ -711,12 +729,12 @@
 
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-income-content">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-hand-holding-dollar mr-2"></i>หมวดหมู่รายรับ</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-hand-holding-dollar mr-2"></i>หมวดหมู่รายรับ</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                             </div>
                             <div id="settings-income-content" class="mt-4 transition-all">
                                 <form id="form-add-income-cat" class="flex gap-2 mb-3">
-                                    <input type="text" id="input-income-cat" placeholder="เพิ่มหมวดหมู่รายรับ" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500"> 
+                                    <input type="text" id="input-income-cat" placeholder="เพิ่มหมวดหมู่รายรับ" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500"> 
                                     <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-medium text-lg"><i class="fa-solid fa-plus"></i></button> 
                                 </form>
                                 <ul id="list-income-cat" class="space-y-2"></ul>
@@ -725,12 +743,12 @@
 
                         <div class="bg-white p-5 md:p-6 rounded-xl shadow-lg">
                             <div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-expense-content">
-                                <h2 class="text-lg font-bold text-purple-600"><i class="fa-solid fa-cart-shopping mr-2"></i>หมวดหมู่รายจ่าย</h2>
+                                <h2 class="text-lg font-bold text-primary-600"><i class="fa-solid fa-cart-shopping mr-2"></i>หมวดหมู่รายจ่าย</h2>
                                 <i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
                             </div>
                             <div id="settings-expense-content" class="mt-4 transition-all">
                                 <form id="form-add-expense-cat" class="flex gap-2 mb-3">
-                                    <input type="text" id="input-expense-cat" placeholder="เพิ่มหมวดหมู่รายจ่าย" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500"> 
+                                    <input type="text" id="input-expense-cat" placeholder="เพิ่มหมวดหมู่รายจ่าย" class="flex-grow form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500"> 
                                     <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium text-lg"><i class="fa-solid fa-plus"></i></button> 
                                 </form>
                                 <ul id="list-expense-cat" class="space-y-2"></ul>
@@ -742,7 +760,7 @@
             </div>
 
           <div id="page-settings" class="app-page hidden">
-				<h1 class="text-lg md:text-2xl font-bold text-purple-600 dark:text-purple-400 mb-6 flex items-center">
+				<h1 class="text-lg md:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-6 flex items-center">
 					<i class="fa-solid fa-gear mr-3"></i>ตั้งค่าระบบ
 				</h1>
 
@@ -813,7 +831,7 @@
 										</div>
 										<label class="relative inline-flex items-center cursor-pointer shrink-0">
 											<input type="checkbox" id="toggle-auto-confirm-password" class="sr-only peer">
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 										</label>
 									</div>
 									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">ตรวจสอบและยืนยันทันทีเมื่อพิมพ์รหัสผ่านถูกต้อง</p>
@@ -827,7 +845,7 @@
 											</div>
 											<span class="text-base text-gray-700 dark:text-gray-200 font-medium">ตั้งค่า Auto Lock</span>
 										</div>
-										<select id="auto-lock-select" class="form-select text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 py-2 px-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white shrink-0">
+										<select id="auto-lock-select" class="form-select text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500 py-2 px-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white shrink-0">
 											<option value="0">ปิด</option>
 											<option value="1">1 นาที</option>
 											<option value="5">5 นาที</option>
@@ -841,26 +859,65 @@
 							</div>
 						</div>
 
-						<div class="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-gray-700 transition-colors mb-6">
-							<h2 class="text-lg font-bold text-purple-600 dark:text-purple-400 mb-5 flex items-center">
+						<div class="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-2xl shadow-lg border border-primary-100 dark:border-gray-700 transition-colors mb-6">
+							<h2 class="text-lg font-bold text-primary-600 dark:text-primary-400 mb-5 flex items-center">
 								<i class="fa-solid fa-display mr-2"></i> การแสดงผลและเสียง
 							</h2>
 
 							<div class="space-y-4 divide-y divide-gray-100 dark:divide-gray-700">
-								<div class="pt-4 first:pt-0">
-									<div class="flex items-center justify-between mb-2">
-										<div class="flex items-center gap-3">
-											<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 shrink-0">
-												<i class="fa-solid fa-moon"></i>
-											</div>
-											<span class="text-base text-gray-700 dark:text-gray-200 font-medium">Dark Mode</span>
+								<div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-600 transition-colors">
+									<div class="flex items-center gap-3">
+										<div class="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300">
+											<i class="fa-solid fa-moon"></i>
 										</div>
-										<label class="relative inline-flex items-center cursor-pointer shrink-0">
-											<input type="checkbox" id="toggle-dark-mode" class="sr-only peer">
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
-										</label>
+										<div>
+											<h3 class="font-bold text-gray-800 dark:text-gray-200">โหมดกลางคืน (Dark Mode)</h3>
+											<p class="text-xs text-gray-500 dark:text-gray-400">เปลี่ยนธีมเป็นสีเข้ม</p>
+										</div>
 									</div>
-									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">เปลี่ยนธีมเป็นสีดำสนิทเพื่อถนอมสายตา</p>
+									<label class="relative inline-flex items-center cursor-pointer">
+										<input type="checkbox" id="toggle-dark-mode" class="sr-only peer">
+										<div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+									</label>
+								</div>
+
+								<div class="pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
+									<div class="flex flex-col mb-2">
+										<div class="flex items-center gap-3 mb-3">
+											<div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0 transition-colors">
+												<i class="fa-solid fa-palette"></i>
+											</div>
+											<span class="text-base text-gray-700 dark:text-gray-200 font-medium">สีธีมแอปพลิเคชัน</span>
+										</div>
+										<div class="flex flex-wrap items-center gap-2 ml-14" id="theme-color-selector">
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#9333ea" style="background-color: #9333ea;" title="ม่วง (Purple)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#3b82f6" style="background-color: #3b82f6;" title="ฟ้า (Blue)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#22c55e" style="background-color: #22c55e;" title="เขียว (Green)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#ef4444" style="background-color: #ef4444;" title="แดง (Red)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#f97316" style="background-color: #f97316;" title="ส้ม (Orange)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#ec4899" style="background-color: #ec4899;" title="ชมพู (Pink)"></button>
+											<button type="button" class="theme-color-btn w-8 h-8 rounded-full border-2 border-transparent hover:scale-110 transition-transform focus:outline-none shadow-sm" data-color="#171717" style="background-color: #171717;" title="ดำ (Black)"></button>
+											
+											<div class="flex items-center gap-2 ml-1 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+												<button type="button" id="custom-color-wrapper" class="relative w-8 h-8 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-500 hover:scale-110 transition-transform cursor-pointer flex items-center justify-center bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 shadow-sm" title="ใช้สีที่ตั้งค่าไว้ล่าสุด">
+													<i class="fa-solid fa-plus text-white text-xs drop-shadow-md pointer-events-none" id="custom-color-icon"></i>
+												</button>
+												<input type="color" id="custom-theme-picker" class="hidden">
+												<span class="text-xs text-gray-500 dark:text-gray-400 font-medium cursor-pointer hover:text-primary-600 transition-colors flex items-center gap-1" onclick="document.getElementById('custom-theme-picker').click()">
+													<i class="fa-solid fa-pen"></i> แก้ไขสี
+												</span>
+											</div>
+										</div>
+										
+										<div id="custom-color-confirm-area" class="hidden ml-14 mt-3 items-center gap-3 bg-primary-50 dark:bg-gray-800 p-3 rounded-xl border border-primary-100 dark:border-gray-700 transition-all shadow-sm">
+											<div id="custom-color-preview" class="w-7 h-7 rounded-full border-2 border-white shadow-md"></div>
+											<span class="text-sm font-bold text-gray-700 dark:text-gray-200">ใช้สีนี้หรือไม่?</span>
+											<div class="ml-auto flex gap-2">
+												<button type="button" id="btn-cancel-custom-color" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs px-3 py-2 rounded-lg font-bold transition">ยกเลิก</button>
+												<button type="button" id="btn-confirm-custom-color" class="text-white text-xs px-3 py-2 rounded-lg font-bold shadow-sm transition hover:brightness-90">ยืนยัน</button>
+											</div>
+										</div>
+									</div>
 								</div>
 
 								<div class="pt-4">
@@ -873,7 +930,7 @@
 										</div>
 										<label class="relative inline-flex items-center cursor-pointer shrink-0">
 											<input type="checkbox" id="toggle-smart-voice" class="sr-only peer" checked>
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 										</label>
 									</div>
 									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">เปิด/ปิด เสียงโต้ตอบจากระบบอัจฉริยะ</p>
@@ -889,7 +946,7 @@
 										</div>
 										<label class="relative inline-flex items-center cursor-pointer shrink-0">
 											<input type="checkbox" id="toggle-haptic-feedback" class="sr-only peer" checked>
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 										</label>
 									</div>
 									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">เปิด/ปิด การสั่นตอบสนองเมื่อกดปุ่มหรือแจ้งเตือน( เฉพาะอุปกรณ์ที่รองรับ )</p>
@@ -905,7 +962,7 @@
 										</div>
 										<label class="relative inline-flex items-center cursor-pointer shrink-0">
 											<input type="checkbox" id="toggle-double-tap-lock" class="sr-only peer">
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 										</label>
 									</div>
 									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">แตะพื้นที่ว่างบนหน้าจอติดกัน 2 ครั้ง เพื่อล็อคแอปทันที</p>
@@ -914,7 +971,7 @@
 								<div class="pt-4">
 									<div class="flex items-center justify-between mb-2">
 										<div class="flex items-center gap-3">
-											<div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+											<div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 shrink-0">
 												<i class="fa-solid fa-bars"></i>
 											</div>
 											<span class="text-base text-gray-700 dark:text-gray-200 font-medium">รูปแบบเมนูมือถือ</span>
@@ -922,11 +979,11 @@
 									</div>
 									<div class="ml-14 space-y-3 mt-1">
 										<label class="flex items-center gap-2 cursor-pointer">
-											<input type="radio" name="mobile-menu-style" value="hamburger" class="form-radio text-purple-600 w-4 h-4">
+											<input type="radio" name="mobile-menu-style" value="hamburger" class="form-radio text-primary-600 w-4 h-4">
 											<span class="text-sm text-gray-500 dark:text-gray-400">เมนูแฮมเบอร์เกอร์ (กดปุ่มสามขีดเพื่อเปิดเมนู)</span>
 										</label>
 										<label class="flex items-center gap-2 cursor-pointer">
-											<input type="radio" name="mobile-menu-style" value="bottom" class="form-radio text-purple-600 w-4 h-4">
+											<input type="radio" name="mobile-menu-style" value="bottom" class="form-radio text-primary-600 w-4 h-4">
 											<span class="text-sm text-gray-500 dark:text-gray-400">เมนูด้านล่าง (กดไอคอนเปลี่ยนหน้าทันที)</span>
 										</label>
 									</div>
@@ -942,7 +999,7 @@
 										</div>
 										<label class="relative inline-flex items-center cursor-pointer shrink-0">
 											<input type="checkbox" id="toggle-show-balance" class="sr-only peer">
-											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+											<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 										</label>
 									</div>
 									<p class="text-sm text-gray-500 dark:text-gray-400 ml-14">หากปิด ยอดคงเหลือสุทธิจะถูกซ่อนจากหน้าแรก</p>
@@ -1011,21 +1068,21 @@
 												<span class="text-sm text-gray-700 dark:text-gray-300">➕ เพิ่มรายการใหม่</span>
 												<label class="relative inline-flex items-center cursor-pointer pointer-events-none">
 													<input type="checkbox" id="notify-on-add" class="sr-only peer">
-													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
 												</label>
 											</label>
 											<label class="flex items-center justify-between cursor-pointer">
 												<span class="text-sm text-gray-700 dark:text-gray-300">✏️ แก้ไขรายการ</span>
 												<label class="relative inline-flex items-center cursor-pointer pointer-events-none">
 													<input type="checkbox" id="notify-on-edit" class="sr-only peer">
-													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
 												</label>
 											</label>
 											<label class="flex items-center justify-between cursor-pointer">
 												<span class="text-sm text-gray-700 dark:text-gray-300">🗑️ ลบรายการ</span>
 												<label class="relative inline-flex items-center cursor-pointer pointer-events-none">
 													<input type="checkbox" id="notify-on-delete" class="sr-only peer">
-													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+													<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
 												</label>
 											</label>
 										</div>
@@ -1034,8 +1091,8 @@
 									<div class="flex flex-col gap-3 mb-3">
 										<h4 class="font-bold text-gray-700 dark:text-gray-300 text-sm">ตั้งค่าผู้รับ (LINE User ID):</h4>
 										<div class="flex gap-2">
-											<input type="text" id="input-line-nickname" class="w-1/3 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:border-purple-500" placeholder="ชื่อเล่น">
-											<input type="text" id="input-line-user-id" class="flex-1 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:border-purple-500" placeholder="User ID (U...)">
+											<input type="text" id="input-line-nickname" class="w-1/3 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:border-primary-500" placeholder="ชื่อเล่น">
+											<input type="text" id="input-line-user-id" class="flex-1 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:border-primary-500" placeholder="User ID (U...)">
 										</div>
 										<button id="btn-add-line-id" class="bg-green-500 hover:bg-green-600 text-white w-full py-2.5 rounded-lg transition-colors font-bold text-sm shadow-sm flex items-center justify-center gap-2">
 											<i class="fa-solid fa-plus"></i> เพิ่มผู้รับ
@@ -1058,7 +1115,7 @@
 							<div class="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-200 dark:border-gray-600 transition-colors">
 								<div class="flex justify-between items-center cursor-pointer settings-toggle-header" data-target="settings-notification-content">
 									<h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center text-sm md:text-base">
-										<i class="fa-solid fa-mobile-screen text-purple-500 mr-2 text-lg"></i> แจ้งเตือนในแอปพลิเคชัน
+										<i class="fa-solid fa-mobile-screen text-primary-500 mr-2 text-lg"></i> แจ้งเตือนในแอปพลิเคชัน
 									</h3>
 									<i class="fa-solid fa-chevron-down text-green-500 transition-transform duration-300 rotate-180"></i>
 								</div>
@@ -1066,31 +1123,31 @@
 								<div id="settings-notification-content" class="mt-4 transition-all pt-4 border-t border-gray-200 dark:border-gray-600">
 									<div class="flex flex-wrap items-center gap-x-5 gap-y-4 mb-5 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
 										<label class="inline-flex items-center cursor-pointer group w-full sm:w-auto">
-											<input type="checkbox" id="toggle-notify-scheduled" class="form-checkbox w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 dark:bg-gray-600 dark:border-gray-500 cursor-pointer transition">
-											<span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">รายการล่วงหน้า</span>
+											<input type="checkbox" id="toggle-notify-scheduled" class="form-checkbox w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-600 dark:border-gray-500 cursor-pointer transition">
+											<span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary-600 transition-colors">รายการล่วงหน้า</span>
 										</label>
 										
 										<label class="inline-flex items-center cursor-pointer group w-full sm:w-auto">
-											<input type="checkbox" id="toggle-notify-recurring" class="form-checkbox w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 dark:bg-gray-600 dark:border-gray-500 cursor-pointer transition">
-											<span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">รายการประจำ</span>
+											<input type="checkbox" id="toggle-notify-recurring" class="form-checkbox w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-600 dark:border-gray-500 cursor-pointer transition">
+											<span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary-600 transition-colors">รายการประจำ</span>
 										</label>
 
 										<div class="w-full mt-2 pt-3 border-t border-gray-100 dark:border-gray-700">
 											<span class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">แจ้งเตือน "งบประมาณ" ใกล้หมด:</span>
 											<div class="flex flex-wrap items-center gap-4">
 												<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
-													<input type="checkbox" id="toggle-notify-budget-1" class="form-checkbox w-5 h-5 text-purple-600 border-gray-300 rounded cursor-pointer transition">
+													<input type="checkbox" id="toggle-notify-budget-1" class="form-checkbox w-5 h-5 text-primary-600 border-gray-300 rounded cursor-pointer transition">
 													<div class="flex items-center relative">
 														<span class="text-xs text-gray-500 mr-2">ระดับ 1</span>
-														<input type="number" id="input-notify-budget-percent-1" value="50" min="1" max="100" class="w-16 py-1 px-2 text-center text-sm font-bold text-purple-700 dark:text-purple-400 rounded-md border border-gray-300 dark:border-gray-500 dark:bg-gray-800 focus:ring-1 focus:ring-purple-500 pr-5">
+														<input type="number" id="input-notify-budget-percent-1" value="50" min="1" max="100" class="w-16 py-1 px-2 text-center text-sm font-bold text-primary-700 dark:text-primary-400 rounded-md border border-gray-300 dark:border-gray-500 dark:bg-gray-800 focus:ring-1 focus:ring-primary-500 pr-5">
 														<span class="absolute right-2 text-[10px] font-bold text-gray-400 pointer-events-none">%</span>
 													</div>
 												</div>
 												<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
-													<input type="checkbox" id="toggle-notify-budget-2" class="form-checkbox w-5 h-5 text-purple-600 border-gray-300 rounded cursor-pointer transition">
+													<input type="checkbox" id="toggle-notify-budget-2" class="form-checkbox w-5 h-5 text-primary-600 border-gray-300 rounded cursor-pointer transition">
 													<div class="flex items-center relative">
 														<span class="text-xs text-gray-500 mr-2">ระดับ 2</span>
-														<input type="number" id="input-notify-budget-percent-2" value="90" min="1" max="100" class="w-16 py-1 px-2 text-center text-sm font-bold text-purple-700 dark:text-purple-400 rounded-md border border-gray-300 dark:border-gray-500 dark:bg-gray-800 focus:ring-1 focus:ring-purple-500 pr-5">
+														<input type="number" id="input-notify-budget-percent-2" value="90" min="1" max="100" class="w-16 py-1 px-2 text-center text-sm font-bold text-primary-700 dark:text-primary-400 rounded-md border border-gray-300 dark:border-gray-500 dark:bg-gray-800 focus:ring-1 focus:ring-primary-500 pr-5">
 														<span class="absolute right-2 text-[10px] font-bold text-gray-400 pointer-events-none">%</span>
 													</div>
 												</div>
@@ -1115,7 +1172,7 @@
 								</div>
 								<button type="button" onclick="openPersistentLogModal()" class="w-full mt-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-left px-4 py-3 rounded-xl flex items-center justify-between transition-colors shadow-sm">
 									<div class="flex items-center">
-										<div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mr-3">
+										<div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center mr-3">
 											<i class="fa-solid fa-clock-rotate-left"></i>
 										</div>
 										<div>
@@ -1229,13 +1286,13 @@
 											<span class="text-gray-700 dark:text-gray-300 font-medium text-sm">เปิดใช้งาน (เก็บลงเครื่อง)</span>
 											<label class="relative inline-flex items-center cursor-pointer">
 												<input type="checkbox" id="toggle-auto-backup" class="sr-only peer">
-												<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+												<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-600"></div>
 											</label>
 										</div>
 
 										<div>
 											<label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">ความถี่</label>
-											<select id="auto-backup-frequency" class="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm" disabled>
+											<select id="auto-backup-frequency" class="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 text-sm" disabled>
 												<option value="daily">ทุกวัน</option>
 												<option value="weekly">ทุกสัปดาห์ (ทุกวันจันทร์)</option>
 												<option value="monthly">ทุกเดือน (วันที่ 1)</option>
@@ -1264,7 +1321,7 @@
 
 						<div class="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-2xl shadow-lg border border-indigo-100 dark:border-gray-700 transition-colors mb-6">
 							<div class="flex items-center gap-3 mb-4">
-								<div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+								<div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
 									<i class="fa-solid fa-mobile-screen-button"></i>
 								</div>
 								<div>
@@ -1273,7 +1330,7 @@
 								</div>
 							</div>
 
-							<button id="btn-pwa-install" class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+							<button id="btn-pwa-install" class="w-full py-3 px-4 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
 								<i class="fa-solid fa-download"></i>
 								<span>ติดตั้งลงเครื่องนี้</span>
 							</button>
@@ -1313,7 +1370,7 @@
     <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center mb-4">
-                <h2 id="modal-title" class="text-lg font-bold text-purple-600">เพิ่มรายการใหม่</h2>
+                <h2 id="modal-title" class="text-lg font-bold text-primary-600">เพิ่มรายการใหม่</h2>
                 <button id="modal-close-btn" class="text-gray-400 hover:text-red-500 text-4xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all absolute top-2 right-2 md:static md:w-auto md:h-auto md:hover:bg-transparent">
                     
                 </button>
@@ -1344,19 +1401,19 @@
 
                 <div id="tx-account-container">
                     <label for="tx-account" class="block text-lg text-gray-700 font-medium mb-2">บัญชี <span class="text-red-500">*</span></label>
-                    <select id="tx-account" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <select id="tx-account" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                     </select>
                 </div>
 
                 <div id="tx-account-from-container" class="hidden">
                     <label for="tx-account-from" class="block text-lg text-gray-700 font-medium mb-2">โอนจาก <span class="text-red-500">*</span></label>
-                    <select id="tx-account-from" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <select id="tx-account-from" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                         </select>
                 </div>
 
                 <div id="tx-account-to-container" class="hidden">
                     <label for="tx-account-to" class="block text-lg text-gray-700 font-medium mb-2">โอนไป <span class="text-red-500">*</span></label>
-                    <select id="tx-account-to" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <select id="tx-account-to" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                         </select>
                 </div>
    
@@ -1375,7 +1432,7 @@
                             </button>
                         </div>
                         </div>
-                    <input list="frequent-items-datalist" id="tx-name" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required autocomplete="off">
+                    <input list="frequent-items-datalist" id="tx-name" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required autocomplete="off">
                     <p id="auto-fill-hint" class="text-xs text-green-600 mt-1 hidden"><i class="fa-solid fa-magic-wand-sparkles"></i> เติมข้อมูลอัตโนมัติแล้ว</p>
                     <datalist id="frequent-items-datalist">
                     </datalist>
@@ -1383,24 +1440,24 @@
 
                 <div id="tx-category-container">
                     <label for="tx-category" class="block text-lg text-gray-700 font-medium mb-2">หมวดหมู่ <span class="text-red-500">*</span></label>
-                    <select id="tx-category" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <select id="tx-category" class="w-full form-select text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                     </select>
                 </div>
 
                 <div class="relative">
                      <div class="flex justify-between items-center mb-2">
                         <label for="tx-amount" class="block text-lg text-gray-700 font-medium mb-0">จำนวนเงิน (บาท) <span class="text-red-500">*</span></label>
-                        <button type="button" id="toggle-calc-btn" class="text-purple-600 hover:text-purple-800 p-1 rounded-lg">
+                        <button type="button" id="toggle-calc-btn" class="text-primary-600 hover:text-primary-800 p-1 rounded-lg">
                             <i class="fa-solid fa-calculator text-lg"></i>
                         </button>
                     </div>
-                    <input type="text" id="tx-amount" inputmode="decimal" placeholder="0.00 หรือ 50+20" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <input type="text" id="tx-amount" inputmode="decimal" placeholder="0.00 หรือ 50+20" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                     <input type="hidden" id="hidden-draft-id">
                 </div>
 
                 <div>
                    <label for="tx-date" class="block text-lg text-gray-700 font-medium mb-2">วันที่ <span class="text-red-500">*</span></label>
-                    <input type="datetime-local" id="tx-date" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500" required>
+                    <input type="datetime-local" id="tx-date" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500" required>
                 </div>
                 
                 <div>
@@ -1410,8 +1467,8 @@
                             file:mr-4 file:py-2 file:px-4
                             file:rounded-full file:border-0
                             file:text-sm file:font-semibold
-                            file:bg-purple-50 file:text-purple-700
-                            hover:file:bg-purple-100"
+                            file:bg-primary-50 file:text-primary-700
+                            hover:file:bg-primary-100"
                         >
                         <button type="button" id="clear-receipt-btn" class="text-red-500 hover:text-red-700 p-2 hidden">
                             <i class="fa-solid fa-circle-xmark text-lg"></i>
@@ -1423,7 +1480,7 @@
                 </div>
                 <div>
                  <label for="tx-desc" class="block text-lg text-gray-700 font-medium mb-2">คำอธิบาย (ไม่บังคับ)</label>
-                    <textarea id="tx-desc" rows="3" class="w-full form-textarea text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500"></textarea>
+                    <textarea id="tx-desc" rows="3" class="w-full form-textarea text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500"></textarea>
                 </div>
 
 				<div class="mt-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 dark:bg-gray-800 dark:border-gray-700 transition-colors">
@@ -1459,7 +1516,7 @@
 				</div>
 
                 <div class="flex justify-end gap-4 pt-4">
-                 <button type="button" id="modal-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-xl text-lg">ยกเลิก</button> <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button> </div>
+                 <button type="button" id="modal-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-xl text-lg">ยกเลิก</button> <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button> </div>
             </form>
         </div>
     </div>
@@ -1467,7 +1524,7 @@
     <div id="account-form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center mb-4">
-                <h2 id="account-modal-title" class="text-lg font-bold text-purple-600">แก้ไขบัญชี</h2>
+                <h2 id="account-modal-title" class="text-lg font-bold text-primary-600">แก้ไขบัญชี</h2>
                 <button id="account-modal-close-btn" class="text-gray-400 hover:text-red-500 text-4xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all absolute top-2 right-2 md:static md:w-auto md:h-auto md:hover:bg-transparent">
                     
                 </button>
@@ -1491,7 +1548,7 @@
                     
                     <div class="relative">
                         <input type="text" id="edit-account-balance" inputmode="decimal" value="0" class="w-full form-input text-lg text-gray-700 bg-gray-50 border border-gray-200 rounded-xl pr-12" required>
-                        <button type="button" id="toggle-edit-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-600 hover:text-purple-800 p-1 rounded-lg">
+                        <button type="button" id="toggle-edit-account-calc-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-primary-600 hover:text-primary-800 p-1 rounded-lg">
                             <i class="fa-solid fa-calculator text-lg"></i>
                         </button>
                     </div>
@@ -1500,7 +1557,7 @@
                 </div>
 				
 				<div class="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
-                    <label class="block text-base font-bold text-purple-600 dark:text-purple-400 mb-3 flex items-center">
+                    <label class="block text-base font-bold text-primary-600 dark:text-primary-400 mb-3 flex items-center">
                         <i class="fa-solid fa-calculator mr-2"></i> ปรับปรุงยอดให้ตรงกับความจริง
                     </label>
                     
@@ -1511,19 +1568,19 @@
 
                     <div class="mb-3">
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ยอดเงินคงเหลือจริง (พิมพ์ยอดใหม่ลงไปเลย):</label>
-						<input type="text" id="smart-input-new" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-lg p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors" placeholder="ระบุยอดเงินที่มีอยู่จริง...">
+						<input type="text" id="smart-input-new" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-lg p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors" placeholder="ระบุยอดเงินที่มีอยู่จริง...">
 					</div>
 
                     <div id="smart-display-diff" class="hidden mb-3 p-3 rounded-xl text-center text-sm font-semibold transition-all"></div>
 
                     <div class="mb-2">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมายเหตุ (เช่น ดอกเบี้ย, ค่าธรรมเนียม):</label>
-                        <input type="text" id="smart-input-desc" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors" placeholder="เว้นว่างได้...">
+                        <input type="text" id="smart-input-desc" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors" placeholder="เว้นว่างได้...">
                     </div>
                     <!-- ช่องเลือกวันที่สำหรับรายการปรับปรุงยอด -->
 					<div class="mb-3">
 						<label for="adjust-tx-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันที่ต้องการให้บันทึก</label>
-						<input type="datetime-local" id="adjust-tx-date" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-lg p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors">
+						<input type="datetime-local" id="adjust-tx-date" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-lg p-3 bg-white dark:bg-gray-900 dark:border-gray-600 dark:text-white transition-colors">
 						<p class="text-xs text-gray-400 mt-1">* หากไม่ระบุ ระบบจะใช้วันที่ปัจจุบัน</p>
 					</div>
                     <input type="hidden" id="adjust-tx-type" value="">
@@ -1533,7 +1590,7 @@
 				
                 <div class="flex justify-end gap-4 pt-4">
                     <button type="button" id="account-modal-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-xl text-lg">ยกเลิก</button>
-                    <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button>
+                    <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button>
                 </div>
             </form>
         </div>
@@ -1543,9 +1600,9 @@
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-start md:items-center mb-4 border-b pb-3">
                 <div class="flex flex-col md:flex-row md:items-center justify-between w-full md:gap-4 pr-10 md:pr-0">
-                     <h2 id="account-detail-modal-title" class="text-lg md:text-2xl font-bold text-purple-600 mb-2 md:mb-0">รายการธุรกรรมของบัญชี [ชื่อบัญชี]</h2>
+                     <h2 id="account-detail-modal-title" class="text-lg md:text-2xl font-bold text-primary-600 mb-2 md:mb-0">รายการธุรกรรมของบัญชี [ชื่อบัญชี]</h2>
                      
-                     <button id="add-tx-from-account-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-1.5 px-3 md:py-2 md:px-4 rounded-xl shadow-md text-sm md:text-base transition duration-300 flex items-center gap-2 w-fit">
+                     <button id="add-tx-from-account-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-1.5 px-3 md:py-2 md:px-4 rounded-xl shadow-md text-sm md:text-base transition duration-300 flex items-center gap-2 w-fit">
                         <i class="fa-solid fa-plus"></i> เพิ่มธุรกรรมใหม่
                      </button>
                 </div>
@@ -1559,20 +1616,20 @@
             </div>
             <div id="acc-detail-controls-header" class="flex flex-col md:flex-row justify-end items-center mb-4 gap-4">
                 <div class="flex flex-wrap justify-center md:justify-end items-center gap-3 bg-gray-50 p-3 rounded-xl shadow-inner border border-gray-200 w-full md:w-auto">
-                    <select id="acc-detail-view-mode-select" class="form-select text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                    <select id="acc-detail-view-mode-select" class="form-select text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500">
                         <option value="all">ดูทั้งหมด</option>
                         <option value="month">ดูรายเดือน</option>
                         <option value="year">ดูรายปี</option>
                     </select>
                     <div id="acc-detail-month-controls" class="flex items-center gap-1 hidden">
-                        <button id="acc-detail-month-prev" class="px-3 py-2 bg-gray-200 hover:bg-purple-200 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
-                        <input type="month" id="acc-detail-month-picker" class="form-input text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500 w-auto">
-                        <button id="acc-detail-month-next" class="px-3 py-2 bg-gray-200 hover:bg-purple-200 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button id="acc-detail-month-prev" class="px-3 py-2 bg-gray-200 hover:bg-primary-200 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
+                        <input type="month" id="acc-detail-month-picker" class="form-input text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-auto">
+                        <button id="acc-detail-month-next" class="px-3 py-2 bg-gray-200 hover:bg-primary-200 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                     <div id="acc-detail-year-controls" class="flex items-center gap-1 hidden">
-                        <button id="acc-detail-year-prev" class="px-3 py-2 bg-gray-200 hover:bg-purple-200 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
-                        <input type="number" id="acc-detail-year-picker" class="form-input text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-purple-500 focus:border-purple-500 w-24 text-center" placeholder="YYYY">
-                        <button id="acc-detail-year-next" class="px-3 py-2 bg-gray-200 hover:bg-purple-200 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button id="acc-detail-year-prev" class="px-3 py-2 bg-gray-200 hover:bg-primary-200 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
+                        <input type="number" id="acc-detail-year-picker" class="form-input text-base text-gray-700 bg-white border-0 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-24 text-center" placeholder="YYYY">
+                        <button id="acc-detail-year-next" class="px-3 py-2 bg-gray-200 hover:bg-primary-200 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -1610,7 +1667,7 @@
     <div id="icon-form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[60]">
         <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-xl max-h-[90vh] overflow-y-auto relative">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h2 class="text-lg font-bold text-purple-600">เลือกไอคอนสำหรับบัญชี <span id="icon-acc-name"></span></h2>
+                <h2 class="text-lg font-bold text-primary-600">เลือกไอคอนสำหรับบัญชี <span id="icon-acc-name"></span></h2>
                 <button id="icon-modal-close-btn" class="text-gray-400 hover:text-red-500 text-4xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all absolute top-2 right-2 md:static md:w-auto md:h-auto md:hover:bg-transparent">
                     
                 </button>
@@ -1619,8 +1676,8 @@
             <input type="hidden" id="edit-icon-account-id">
             
             <div class="mb-4">
-                <div class="text-lg font-medium text-gray-700 mb-2">ไอคอนปัจจุบัน: <i id="icon-preview" class="fa-solid fa-wallet text-purple-600 text-2xl ml-2"></i></div>
-                <input type="text" id="icon-search" placeholder="ค้นหาไอคอน..." class="w-full form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-purple-500 focus:border-purple-500">
+                <div class="text-lg font-medium text-gray-700 mb-2">ไอคอนปัจจุบัน: <i id="icon-preview" class="fa-solid fa-wallet text-primary-600 text-2xl ml-2"></i></div>
+                <input type="text" id="icon-search" placeholder="ค้นหาไอคอน..." class="w-full form-input text-lg py-3 px-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div id="icon-list-container" class="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-80 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
@@ -1628,7 +1685,7 @@
 
             <div class="flex justify-end gap-4 pt-4">
                 <button type="button" id="icon-modal-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-xl text-lg">ยกเลิก</button>
-                <button type="button" id="icon-modal-save-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button>
+                <button type="button" id="icon-modal-save-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg text-lg">บันทึก</button>
             </div>
         </div>
     </div>
@@ -1636,7 +1693,7 @@
     <div id="recurring-form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-[65]">
 		<div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
 			<div class="flex justify-between items-center mb-4">
-				<h2 class="text-lg font-bold text-purple-600">ตั้งค่ารายการประจำ</h2>
+				<h2 class="text-lg font-bold text-primary-600">ตั้งค่ารายการประจำ</h2>
 				<button id="rec-modal-close-btn" class="text-gray-400 hover:text-red-500 text-4xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100 absolute top-2 right-2 md:static md:w-auto md:h-auto"></button>
 			</div>
 			
@@ -1692,7 +1749,7 @@
 
 				<div class="flex justify-end gap-3 pt-4">
 					<button type="button" id="rec-modal-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-xl">ยกเลิก</button>
-					<button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg">บันทึก</button>
+					<button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg">บันทึก</button>
 				</div>
 			</form>
 		</div>
@@ -1700,9 +1757,9 @@
 
 	<div id="calculator-popover" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden transition-opacity duration-300" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-[360px] mx-4 overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
-            <div class="bg-purple-600 p-4 flex justify-between items-center">
+            <div class="bg-primary-600 p-4 flex justify-between items-center">
                 <h3 class="text-white text-lg font-bold"><i class="fa-solid fa-calculator mr-2"></i>เครื่องคิดเลข</h3>
-                <button type="button" onclick="document.getElementById('calculator-popover').classList.add('hidden')" class="text-white hover:text-purple-200 transition p-1">
+                <button type="button" onclick="document.getElementById('calculator-popover').classList.add('hidden')" class="text-white hover:text-primary-200 transition p-1">
                     <i class="fa-solid fa-xmark text-3xl"></i>
                 </button>
             </div>
@@ -1713,28 +1770,28 @@
             <div class="p-4 grid grid-cols-4 gap-3 bg-white dark:bg-gray-800" id="calculator-grid">
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-red-100 text-red-600 text-2xl font-bold hover:bg-red-200 active:scale-95 transition" data-value="C">C</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-orange-100 text-orange-600 text-2xl font-bold hover:bg-orange-200 active:scale-95 transition flex items-center justify-center" data-value="backspace"><i class="fa-solid fa-delete-left"></i></button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="/">÷</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="*">×</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="/">÷</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="*">×</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="7">7</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="8">8</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="9">9</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="-">-</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="-">-</button>
 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="4">4</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="5">5</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="6">6</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="+">+</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="+">+</button>
                 
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="=">=</button>
 
 				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
 				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
 				
-				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-primary-600 text-white text-2xl font-bold hover:bg-primary-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
 					<i class="fa-solid fa-check"></i>
 				</button>
             </div>
@@ -1772,12 +1829,12 @@
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="1">1</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="=">=</button>
 
 				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
 				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
 				
-				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-primary-600 text-white text-2xl font-bold hover:bg-primary-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
 					<i class="fa-solid fa-check"></i>
 				</button>
             </div>
@@ -1816,12 +1873,12 @@
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="2">2</button>
                 <button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="3">3</button>
                 
-                <button type="button" class="calc-btn h-16 rounded-2xl bg-purple-100 text-purple-700 text-2xl font-bold hover:bg-purple-200 active:scale-95 transition" data-value="=">=</button>
+                <button type="button" class="calc-btn h-16 rounded-2xl bg-primary-100 text-primary-700 text-2xl font-bold hover:bg-primary-200 active:scale-95 transition" data-value="=">=</button>
 
 				<button type="button" class="calc-btn col-span-2 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value="0">0</button>
 				<button type="button" class="calc-btn h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white text-2xl font-bold hover:bg-gray-200 active:scale-95 transition" data-value=".">.</button>
 				
-				<button type="button" class="calc-btn h-16 rounded-2xl bg-purple-600 text-white text-2xl font-bold hover:bg-purple-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
+				<button type="button" class="calc-btn h-16 rounded-2xl bg-primary-600 text-white text-2xl font-bold hover:bg-primary-700 active:scale-95 transition shadow-lg flex items-center justify-center" data-value="enter">
 					<i class="fa-solid fa-check"></i>
 				</button>
             </div>
@@ -1829,13 +1886,13 @@
     </div>
 		<div id="notification-modal" class="fixed inset-0 bg-black/80 z-[90] flex items-center justify-center p-4 hidden backdrop-blur-sm transition-opacity duration-300">
 		<div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-100 transition-transform duration-300">
-			<div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 flex items-center gap-4">
+			<div class="bg-gradient-to-r from-primary-600 to-indigo-600 p-6 flex items-center gap-4">
 				<div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center animate-bounce">
 					<i class="fa-solid fa-bell text-4xl text-white"></i>
 				</div>
 				<div>
 					<h2 class="text-3xl font-bold text-white">แจ้งเตือน</h2>
-					<p class="text-purple-100 text-lg">มีรายการที่ต้องจัดการ</p>
+					<p class="text-primary-100 text-lg">มีรายการที่ต้องจัดการ</p>
 				</div>
 			</div>
 			
@@ -1843,7 +1900,7 @@
 				</div>
 
 			<div class="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
-				<button id="btn-notify-ack" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold py-4 px-6 rounded-2xl shadow-lg transition transform active:scale-95">
+				<button id="btn-notify-ack" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-lg font-bold py-4 px-6 rounded-2xl shadow-lg transition transform active:scale-95">
 					รับทราบ
 				</button>
 				<button id="btn-notify-ignore" class="flex-1 bg-white border-2 border-gray-300 text-gray-500 hover:bg-gray-100 text-lg font-bold py-4 px-6 rounded-2xl transition">
@@ -1900,7 +1957,7 @@
 	<div id="voice-command-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 hidden z-[85] backdrop-blur-sm">
 		<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
 			<div class="flex justify-between items-center mb-6 pb-2 border-b border-gray-100 dark:border-gray-700">
-				<h2 class="text-2xl font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+				<h2 class="text-2xl font-bold text-primary-600 dark:text-primary-400 flex items-center gap-2">
 					<i class="fa-solid fa-microphone-lines"></i>
 					<span id="voice-modal-title">สอนคำสั่งใหม่</span>
 				</h2>
@@ -1916,8 +1973,8 @@
 				<div>
 					<label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">🗣️ คำพูดที่ต้องการให้จำ <span class="text-red-500">*</span></label>
 					<div class="relative">
-						<input type="text" id="voice-command-text" class="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 pr-12" placeholder="เช่น เปิดบัญชี, เปลี่ยนรหัสผ่าน" required>
-						<button type="button" id="btn-voice-command-mic" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-600 hover:text-purple-800 dark:text-purple-400">
+						<input type="text" id="voice-command-text" class="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 pr-12" placeholder="เช่น เปิดบัญชี, เปลี่ยนรหัสผ่าน" required>
+						<button type="button" id="btn-voice-command-mic" class="absolute inset-y-0 right-0 flex items-center pr-3 text-primary-600 hover:text-primary-800 dark:text-primary-400">
 							<i class="fa-solid fa-microphone text-lg"></i>
 						</button>
 					</div>
@@ -1927,7 +1984,7 @@
 				<!-- เลือก Action -->
 				<div>
 					<label class="block text-gray-700 dark:text-gray-300 font-medium mb-1">🎯 เลือก Action ที่จะทำ <span class="text-red-500">*</span></label>
-					<select id="voice-command-action" class="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500" required>
+					<select id="voice-command-action" class="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500" required>
 						<option value="">-- กรุณาเลือก --</option>
 						<optgroup label="📱 การนำทาง">
 							<!-- options เดิม -->
@@ -1978,7 +2035,7 @@
 				<!-- ปุ่มบันทึก/ยกเลิก -->
 				<div class="flex justify-end gap-3 pt-4">
 					<button type="button" onclick="closeVoiceCommandModal()" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-6 py-2 rounded-xl font-medium transition">ยกเลิก</button>
-					<button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition">บันทึกคำสั่ง</button>
+					<button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition">บันทึกคำสั่ง</button>
 				</div>
 			</form>
 		</div>
@@ -1995,7 +2052,7 @@
 	
 	<!-- Bottom Navigation (มือถือ) -->
 	<div id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 grid grid-cols-6 items-center py-1 z-40 hidden md:hidden shadow-lg">
-		<button data-page="home" class="flex flex-col items-center text-purple-600">
+		<button data-page="home" class="flex flex-col items-center text-primary-600">
 			<i class="fa-solid fa-house text-lg"></i>
 			<span class="text-[10px] mt-0.5">หน้าแรก</span>
 		</button>
@@ -2026,7 +2083,7 @@
 		<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6">
 			
             <div class="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 pb-2 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-bold text-purple-600">📂 กิจกรรมที่นำเข้า</h3>
+				<h3 class="text-lg font-bold text-primary-600">📂 กิจกรรมที่นำเข้า</h3>
 				
                 <div class="flex items-center gap-4">
                     <button id="btn-import-ics-modal" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm">
@@ -2049,15 +2106,15 @@
 	</div>
 	
 	<div id="welcome-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 transition-opacity duration-300">
-		<div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-purple-100 dark:border-gray-700">
+		<div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-primary-100 dark:border-gray-700">
 			
-			<div class="bg-gradient-to-br from-purple-600 to-indigo-600 p-8 text-center relative overflow-hidden">
+			<div class="bg-gradient-to-br from-primary-600 to-indigo-600 p-8 text-center relative overflow-hidden">
 				<div class="absolute inset-0 bg-white/10 pattern-dots"></div>
 				<div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-4xl shadow-inner relative z-10 backdrop-blur-sm">
 					<i class="fa-solid fa-wallet"></i>
 				</div>
 				<h2 class="text-2xl font-bold text-white relative z-10">ยินดีต้อนรับ!</h2>
-				<p class="text-purple-100 text-sm mt-2 relative z-10 font-medium">Finance Manager Pro</p>
+				<p class="text-primary-100 text-sm mt-2 relative z-10 font-medium">Finance Manager Pro</p>
 			</div>
 			
 			<div class="p-6 space-y-4">
@@ -2114,7 +2171,7 @@
 	<div id="custom-notify-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 hidden z-[85] backdrop-blur-sm">
 		<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
 			<div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-gray-700">
-				<h2 class="text-lg font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+				<h2 class="text-lg font-bold text-primary-600 dark:text-primary-400 flex items-center gap-2">
 					<i class="fa-solid fa-bell"></i>
 					<span id="custom-notify-modal-title">ตั้งค่าการแจ้งเตือนพิเศษ</span>
 				</h2>
@@ -2127,16 +2184,16 @@
 				<input type="hidden" id="custom-notify-idx">
 				<div>
 					<label class="block text-sm text-gray-600 dark:text-gray-300 mb-1 font-bold">ข้อความแจ้งเตือน <span class="text-red-500">*</span></label>
-					<input type="text" id="modal-custom-notify-msg" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors" placeholder="เช่น จ่ายค่าประกันรถยนต์ (ต้องกรอก)">
+					<input type="text" id="modal-custom-notify-msg" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors" placeholder="เช่น จ่ายค่าประกันรถยนต์ (ต้องกรอก)">
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm text-gray-600 dark:text-gray-300 mb-1 font-bold">วันที่ <span class="text-red-500">*</span></label>
-						<input type="date" id="modal-custom-notify-date" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors">
+						<input type="date" id="modal-custom-notify-date" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors">
 					</div>
 					<div>
 						<label class="block text-sm text-gray-600 dark:text-gray-300 mb-1 font-bold">เตือนล่วงหน้า (วัน)</label>
-						<input type="number" id="modal-custom-notify-days" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors" value="0" min="0">
+						<input type="number" id="modal-custom-notify-days" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors" value="0" min="0">
 					</div>
 				</div>
 				
@@ -2144,17 +2201,17 @@
 					<label class="block text-sm text-gray-600 dark:text-gray-300 mb-2 font-bold">เวลาแจ้งเตือน</label>
 					<div class="flex flex-wrap items-center gap-4">
 						<label class="inline-flex items-center cursor-pointer">
-							<input type="radio" name="modal-notify-time-type" value="all1day" class="form-radio text-purple-600 w-4 h-4" checked>
+							<input type="radio" name="modal-notify-time-type" value="all1day" class="form-radio text-primary-600 w-4 h-4" checked>
 							<span class="ml-2 text-sm text-gray-700 dark:text-gray-300">เตือนทั้งวัน</span>
 						</label>
 						<label class="inline-flex items-center cursor-pointer">
-							<input type="radio" name="modal-notify-time-type" value="specific" class="form-radio text-purple-600 w-4 h-4">
+							<input type="radio" name="modal-notify-time-type" value="specific" class="form-radio text-primary-600 w-4 h-4">
 							<span class="ml-2 text-sm text-gray-700 dark:text-gray-300">ระบุเวลา</span>
 						</label>
 
 						<div class="ml-auto flex items-center gap-2">
 							<label class="text-sm text-gray-600 dark:text-gray-400 font-bold"><i class="fa-solid fa-rotate mr-1"></i>ทำซ้ำ:</label>
-							<select id="modal-custom-notify-repeat" class="text-sm bg-gray-50 border border-gray-300 text-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+							<select id="modal-custom-notify-repeat" class="text-sm bg-gray-50 border border-gray-300 text-gray-700 rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
 								<option value="none">ไม่ซ้ำ (ครั้งเดียว)</option>
 								<option value="weekly">ทุกสัปดาห์</option>
 								<option value="monthly">ทุกเดือน</option>
@@ -2164,13 +2221,13 @@
 					</div>
 
 					<div id="modal-notify-time-input-wrapper" class="hidden mt-3">
-						<input type="time" id="modal-custom-notify-time" class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition-colors">
+						<input type="time" id="modal-custom-notify-time" class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors">
 					</div>
 				</div>
 				
 				<div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
 					<button type="button" onclick="closeCustomNotifyModal()" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-6 py-2.5 rounded-xl font-medium transition">ยกเลิก</button>
-					<button type="button" id="modal-btn-save-custom-notify" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition">บันทึกข้อมูล</button>
+					<button type="button" id="modal-btn-save-custom-notify" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition">บันทึกข้อมูล</button>
 				</div>
 			</div>
 		</div>
@@ -2181,7 +2238,7 @@
 			
 			<div class="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
 				<h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center">
-					<i class="fa-solid fa-clock-rotate-left mr-2 text-purple-600 dark:text-purple-400"></i> ประวัติกิจกรรมระบบ
+					<i class="fa-solid fa-clock-rotate-left mr-2 text-primary-600 dark:text-primary-400"></i> ประวัติกิจกรรมระบบ
 				</h3>
 				<button type="button" onclick="closePersistentLogModal()" class="text-gray-400 hover:text-red-500 transition-colors bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
 					<i class="fa-solid fa-xmark text-lg"></i>
@@ -2381,8 +2438,8 @@
 	</script>
 
  <div id="update-alert-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4 transition-opacity duration-300">
-        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-purple-100 dark:border-gray-700 text-center p-5 md:p-6">
-            <div class="w-16 h-16 md:w-20 md:h-20 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600 dark:text-purple-400 text-3xl md:text-4xl shadow-inner">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-primary-100 dark:border-gray-700 text-center p-5 md:p-6">
+            <div class="w-16 h-16 md:w-20 md:h-20 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4 text-primary-600 dark:text-primary-400 text-3xl md:text-4xl shadow-inner">
                 <i class="fa-solid fa-cloud-arrow-down animate-bounce"></i>
             </div>
             <h2 class="text-lg md:text-2xl font-bold text-gray-800 dark:text-white mb-2">มีอัปเดตใหม่!</h2>
@@ -2393,10 +2450,10 @@
                     <span class="block text-xs md:text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1.5">เวอร์ชันปัจจุบัน</span>
                     <span id="display-current-version" class="inline-block bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-sm md:text-base font-bold min-w-[70px]">-</span>
                 </div>
-                <div class="text-purple-400 mx-2 text-lg md:text-2xl"><i class="fa-solid fa-arrow-right-long"></i></div>
+                <div class="text-primary-400 mx-2 text-lg md:text-2xl"><i class="fa-solid fa-arrow-right-long"></i></div>
                 <div class="text-center w-full">
-                    <span class="block text-xs md:text-sm text-purple-500 dark:text-purple-400 uppercase tracking-wider font-bold mb-1.5">เวอร์ชันใหม่</span>
-                    <span id="display-new-version" class="inline-block bg-purple-200 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-lg text-lg md:text-lg font-bold min-w-[70px] animate-pulse">-</span>
+                    <span class="block text-xs md:text-sm text-primary-500 dark:text-primary-400 uppercase tracking-wider font-bold mb-1.5">เวอร์ชันใหม่</span>
+                    <span id="display-new-version" class="inline-block bg-primary-200 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 px-3 py-1.5 rounded-lg text-lg md:text-lg font-bold min-w-[70px] animate-pulse">-</span>
                 </div>
             </div>
 
@@ -2413,12 +2470,13 @@
                 <button id="btn-cancel-update" class="flex-1 py-2.5 md:py-3 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-[13px] md:text-sm font-bold transition-all">
                     ไว้ภายหลัง
                 </button>
-                <button id="btn-confirm-update" class="flex-1 py-2.5 md:py-3 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[13px] md:text-sm font-bold shadow-lg transition-all active:scale-95">
+                <button id="btn-confirm-update" class="flex-1 py-2.5 md:py-3 px-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[13px] md:text-sm font-bold shadow-lg transition-all active:scale-95">
                     <i class="fa-solid fa-rotate mr-1"></i> อัปเดตทันที
                 </button>
             </div>
         </div>
     </div>
+	<div id="screen-dimmer" class="hidden fixed inset-0 bg-black z-[99999] cursor-pointer"></div>
 
 	<script>
 				if ('serviceWorker' in navigator) {
