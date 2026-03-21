@@ -2680,6 +2680,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		// [เพิ่มใหม่] ฟังก์ชันสำหรับปลดล็อคเมื่อสำเร็จ (Refactor แยกออกมาเพื่อให้เรียกใช้จากการสแกนนิ้วได้)
 		async function unlockAppSuccess() {
+			// ยกเลิกการสแกนที่ค้างอยู่ก่อน (ถ้ามี)
+			if (window.bioAbortController) {
+				window.bioAbortController.abort();
+				window.bioAbortController = null;
+			}
+
 			const unlockBtn = document.querySelector('#unlock-form button[type="submit"]');
 			if(unlockBtn) unlockBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
 			
@@ -2778,6 +2784,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			// ถ้าไม่มีรหัสผ่าน หรือล็อคอยู่แล้ว ไม่ต้องทำอะไร
 			if (state.password === null || isLocked) {
 				return;
+			}
+			
+			// ✨ ยกเลิกการสแกนที่ค้างอยู่ (ถ้ามี) เพื่อให้ครั้งถัดไปเริ่มใหม่ได้
+			if (window.bioAbortController) {
+				window.bioAbortController.abort();
+				window.bioAbortController = null;
 			}
 			
 			// ปิด Modal ต่างๆ ที่เปิดค้างไว้
@@ -5778,6 +5790,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			// ตรวจสอบและประมวลผลรายการประจำเมื่อผู้ใช้สลับแอปกลับมาใช้งาน (ป้องกันเปิดแอปค้างไว้ข้ามวัน)
 			document.addEventListener('visibilitychange', () => {
 				if (document.visibilityState === 'visible') {
+					// 🧹 ยกเลิกการสแกนที่ค้างอยู่ก่อน (ถ้ามี) เพื่อให้ครั้งถัดไปเริ่มใหม่ได้
+					if (window.bioAbortController) {
+						window.bioAbortController.abort();
+						window.bioAbortController = null;
+					}
+
 					if (typeof checkAndProcessRecurring === 'function') {
 						checkAndProcessRecurring();
 					}
@@ -14769,11 +14787,14 @@ document.addEventListener('DOMContentLoaded', () => {
 				async function verifyBiometricIdentity() {
 					if (!state.biometricId) return false;
 
-					// ถ้าระบบมีการเรียกสแกนค้างไว้ (เช่น จากจอใหญ่) ให้สั่งยกเลิกทิ้งก่อน เพื่อเริ่มใหม่ให้สะอาด
-					if (typeof bioAbortController !== 'undefined' && bioAbortController) {
-						bioAbortController.abort();
+					// ยกเลิกการสแกนเก่าที่อาจค้างอยู่
+					if (window.bioAbortController) {
+						window.bioAbortController.abort();
+						window.bioAbortController = null;
 					}
-					window.bioAbortController = new AbortController();
+
+					const abortController = new AbortController();
+					window.bioAbortController = abortController;
 
 					try {
 						const savedIdBuffer = base64urlToBuffer(state.biometricId);
@@ -14787,31 +14808,30 @@ document.addEventListener('DOMContentLoaded', () => {
 								type: 'public-key',
 								transports: ['internal']
 							}],
-							userVerification: "required"
+							userVerification: "required",
+							timeout: 60000 // 60 วินาที
 						};
 
 						const assertion = await navigator.credentials.get({ 
 							publicKey,
-							signal: window.bioAbortController.signal // ผูก signal เพื่อให้แอปตัดการทำงานเดิมทิ้งได้เมื่อสลับจอ
+							signal: abortController.signal
 						});
-						
+
 						if (assertion) {
 							window.bioAbortController = null;
-							window.appVibrate([50, 50, 50]); // +++ สั่นยืนยันสแกนลายนิ้วมือสำเร็จ +++
-							return true; // สแกนผ่าน
+							return true;
 						}
 					} catch (err) {
 						console.error("Biometric verify failed:", err);
-						
-						// แยกว่าเป็นการกดยกเลิก/พับจอ (NotAllowedError) หรือ สแกนผิดจริงๆ
 						if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+							return 'aborted';
+						}
+					} finally {
+						if (window.bioAbortController === abortController) {
 							window.bioAbortController = null;
-							return 'aborted'; // ส่งค่าพิเศษบอกว่า "แค่ยกเลิก/พับจอ" 
 						}
 					}
-					
-					window.bioAbortController = null;
-					return false; // สแกนไม่ผ่านจริงๆ
+					return false;
 				}
 				
 				// --- ฟังก์ชันส่งแจ้งเตือน LINE (เวอร์ชันรองรับรายการล่วงหน้า) ---
