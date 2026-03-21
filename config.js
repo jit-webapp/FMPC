@@ -4,13 +4,13 @@
 
 // Firebase Configuration
 const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBU9M5C5Q6yIdlvjEQsUpxcYOjHKV_JRc4",
-    authDomain: "fmpro-d66c3.firebaseapp.com",
-    projectId: "fmpro-d66c3",
-    storageBucket: "fmpro-d66c3.firebasestorage.app",
-    messagingSenderId: "1046027421115",
-    appId: "1:1046027421115:web:333a51f45fbf09c556309e",
-    measurementId: "G-KGGDYWYGNM"
+    apiKey: "AIzaSyAlbj8xCy1wvMub_YSpXRzX8cCBCxpygU8",
+	authDomain: "jamesfmp-12b63.firebaseapp.com",
+	projectId: "jamesfmp-12b63",
+	storageBucket: "jamesfmp-12b63.firebasestorage.app",
+	messagingSenderId: "665963407303",
+	appId: "1:665963407303:web:a61568fac2fc5d966f5be2",
+	measurementId: "G-R4SV072W63"
 };
 
 // LINE Integration
@@ -20,9 +20,9 @@ const LINE_CONFIG = {
     //NOTIFY_GAS_URL: "https://script.google.com/macros/s/AKfycbxPpU4YA-L6a5FH0dG6xb9u52gxxbuc5zBlWWkQg2DMDbMRwGNyCn-k4ISPPYRPtRw_/exec", // Google Apps Script สำหรับส่ง LINE Notify
 	
 	//Full Version
-    OA_BOT_URL: "https://line.me/R/ti/p/@660yvqhj", // URL สำหรับแอดเพื่อนบอท
-    NOTIFY_GAS_URL: "https://script.google.com/macros/s/AKfycby1kYAHmnhoPQw3_aW1gvzXDM1QdBXSYAgjT0zUaXmE_UvntboXXMzOZGu_gMob3uzuOg/exec", // Google Apps Script สำหรับส่ง LINE Notify
-
+    OA_BOT_URL: "https://line.me/R/ti/p/@915iftwn", // URL สำหรับแอดเพื่อนบอท
+    NOTIFY_GAS_URL: "https://script.google.com/macros/s/AKfycbzMNMT2zIi08L7wcNhJU1Oq0rgx25f6jkb5rX8PM_7OEI1iP1sk_9BSjO2I5wTPEdVh/exec", // Google Apps Script สำหรับส่ง LINE Notify
+//etWUZCUQiR6uatjHiBh+FN5LMfp1YEwZSzvLgU1znc0hbOo6F0oKQw+ZXQ5JVjX/7dsvTlSYPKYQ4qz/bukqN5MOMVmBXp6XG6UPMFzuQlKljAzBQuTiW+wL+tdI+Cfh0+scH5BJ9wexSlpgRsoi6wdB04t89/1O/w1cDnyilFU=
 };
 
 // รหัสผ่าน Master (สำหรับการกู้คืนฉุกเฉิน)
